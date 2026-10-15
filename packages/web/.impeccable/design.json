@@ -1,0 +1,530 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-15T04:46:34+00:00",
+  "title": "Design System: crypz",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(0.145 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.25 0 0)",
+          "oklch(0.35 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.6 0 0)",
+          "oklch(0.75 0 0)",
+          "oklch(0.88 0 0)",
+          "oklch(0.96 0 0)"
+        ]
+      },
+      "bone": {
+        "role": "primary",
+        "displayName": "Bone",
+        "canonical": "oklch(0.96 0.003 95)",
+        "tonalRamp": [
+          "oklch(0.15 0.003 95)",
+          "oklch(0.25 0.003 95)",
+          "oklch(0.35 0.003 95)",
+          "oklch(0.45 0.003 95)",
+          "oklch(0.6 0.003 95)",
+          "oklch(0.75 0.003 95)",
+          "oklch(0.88 0.003 95)",
+          "oklch(0.96 0.003 95)"
+        ]
+      },
+      "ink-raised": {
+        "role": "neutral",
+        "displayName": "Ink Raised",
+        "canonical": "oklch(0.19 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.25 0 0)",
+          "oklch(0.35 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.6 0 0)",
+          "oklch(0.75 0 0)",
+          "oklch(0.88 0 0)",
+          "oklch(0.96 0 0)"
+        ]
+      },
+      "ink-accent": {
+        "role": "neutral",
+        "displayName": "Ink Accent",
+        "canonical": "oklch(0.23 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.25 0 0)",
+          "oklch(0.35 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.6 0 0)",
+          "oklch(0.75 0 0)",
+          "oklch(0.88 0 0)",
+          "oklch(0.96 0 0)"
+        ]
+      },
+      "ink-hairline": {
+        "role": "neutral",
+        "displayName": "Ink Hairline",
+        "canonical": "oklch(0.215 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.25 0 0)",
+          "oklch(0.35 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.6 0 0)",
+          "oklch(0.75 0 0)",
+          "oklch(0.88 0 0)",
+          "oklch(0.96 0 0)"
+        ]
+      },
+      "ink-border": {
+        "role": "neutral",
+        "displayName": "Ink Border",
+        "canonical": "oklch(0.27 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.25 0 0)",
+          "oklch(0.35 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.6 0 0)",
+          "oklch(0.75 0 0)",
+          "oklch(0.88 0 0)",
+          "oklch(0.96 0 0)"
+        ]
+      },
+      "ink-input": {
+        "role": "neutral",
+        "displayName": "Ink Input Stroke",
+        "canonical": "oklch(0.32 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.25 0 0)",
+          "oklch(0.35 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.6 0 0)",
+          "oklch(0.75 0 0)",
+          "oklch(0.88 0 0)",
+          "oklch(0.96 0 0)"
+        ]
+      },
+      "ink-muted-text": {
+        "role": "neutral",
+        "displayName": "Ink Muted Text",
+        "canonical": "oklch(0.66 0.004 95)",
+        "tonalRamp": [
+          "oklch(0.15 0.004 95)",
+          "oklch(0.25 0.004 95)",
+          "oklch(0.35 0.004 95)",
+          "oklch(0.45 0.004 95)",
+          "oklch(0.6 0.004 95)",
+          "oklch(0.75 0.004 95)",
+          "oklch(0.88 0.004 95)",
+          "oklch(0.96 0.004 95)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Bone Paper",
+        "canonical": "oklch(0.975 0.002 95)",
+        "tonalRamp": [
+          "oklch(0.15 0.002 95)",
+          "oklch(0.25 0.002 95)",
+          "oklch(0.35 0.002 95)",
+          "oklch(0.45 0.002 95)",
+          "oklch(0.6 0.002 95)",
+          "oklch(0.75 0.002 95)",
+          "oklch(0.88 0.002 95)",
+          "oklch(0.96 0.002 95)"
+        ]
+      },
+      "carbon": {
+        "role": "primary",
+        "displayName": "Carbon",
+        "canonical": "oklch(0.16 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.25 0 0)",
+          "oklch(0.35 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.6 0 0)",
+          "oklch(0.75 0 0)",
+          "oklch(0.88 0 0)",
+          "oklch(0.96 0 0)"
+        ]
+      },
+      "paper-accent": {
+        "role": "neutral",
+        "displayName": "Paper Accent",
+        "canonical": "oklch(0.92 0.003 95)",
+        "tonalRamp": [
+          "oklch(0.15 0.003 95)",
+          "oklch(0.25 0.003 95)",
+          "oklch(0.35 0.003 95)",
+          "oklch(0.45 0.003 95)",
+          "oklch(0.6 0.003 95)",
+          "oklch(0.75 0.003 95)",
+          "oklch(0.88 0.003 95)",
+          "oklch(0.96 0.003 95)"
+        ]
+      },
+      "paper-hairline": {
+        "role": "neutral",
+        "displayName": "Paper Hairline",
+        "canonical": "oklch(0.9 0.003 95)",
+        "tonalRamp": [
+          "oklch(0.15 0.003 95)",
+          "oklch(0.25 0.003 95)",
+          "oklch(0.35 0.003 95)",
+          "oklch(0.45 0.003 95)",
+          "oklch(0.6 0.003 95)",
+          "oklch(0.75 0.003 95)",
+          "oklch(0.88 0.003 95)",
+          "oklch(0.96 0.003 95)"
+        ]
+      },
+      "paper-border": {
+        "role": "neutral",
+        "displayName": "Paper Border",
+        "canonical": "oklch(0.86 0.003 95)",
+        "tonalRamp": [
+          "oklch(0.15 0.003 95)",
+          "oklch(0.25 0.003 95)",
+          "oklch(0.35 0.003 95)",
+          "oklch(0.45 0.003 95)",
+          "oklch(0.6 0.003 95)",
+          "oklch(0.75 0.003 95)",
+          "oklch(0.88 0.003 95)",
+          "oklch(0.96 0.003 95)"
+        ]
+      },
+      "paper-input": {
+        "role": "neutral",
+        "displayName": "Paper Input Stroke",
+        "canonical": "oklch(0.82 0.003 95)",
+        "tonalRamp": [
+          "oklch(0.15 0.003 95)",
+          "oklch(0.25 0.003 95)",
+          "oklch(0.35 0.003 95)",
+          "oklch(0.45 0.003 95)",
+          "oklch(0.6 0.003 95)",
+          "oklch(0.75 0.003 95)",
+          "oklch(0.88 0.003 95)",
+          "oklch(0.96 0.003 95)"
+        ]
+      },
+      "paper-muted-text": {
+        "role": "neutral",
+        "displayName": "Paper Muted Text",
+        "canonical": "oklch(0.45 0.004 95)",
+        "tonalRamp": [
+          "oklch(0.15 0.004 95)",
+          "oklch(0.25 0.004 95)",
+          "oklch(0.35 0.004 95)",
+          "oklch(0.45 0.004 95)",
+          "oklch(0.6 0.004 95)",
+          "oklch(0.75 0.004 95)",
+          "oklch(0.88 0.004 95)",
+          "oklch(0.96 0.004 95)"
+        ]
+      },
+      "up-dark": {
+        "role": "signal",
+        "displayName": "Up (dark theme)",
+        "canonical": "oklch(0.74 0.15 162)",
+        "tonalRamp": [
+          "oklch(0.15 0.15 162)",
+          "oklch(0.25 0.15 162)",
+          "oklch(0.35 0.15 162)",
+          "oklch(0.45 0.15 162)",
+          "oklch(0.6 0.15 162)",
+          "oklch(0.75 0.15 162)",
+          "oklch(0.88 0.15 162)",
+          "oklch(0.96 0.15 162)"
+        ]
+      },
+      "down-dark": {
+        "role": "signal",
+        "displayName": "Down (dark theme)",
+        "canonical": "oklch(0.67 0.2 18)",
+        "tonalRamp": [
+          "oklch(0.15 0.2 18)",
+          "oklch(0.25 0.2 18)",
+          "oklch(0.35 0.2 18)",
+          "oklch(0.45 0.2 18)",
+          "oklch(0.6 0.2 18)",
+          "oklch(0.75 0.2 18)",
+          "oklch(0.88 0.2 18)",
+          "oklch(0.96 0.2 18)"
+        ]
+      },
+      "up-light": {
+        "role": "signal",
+        "displayName": "Up (light theme)",
+        "canonical": "oklch(0.56 0.13 160)",
+        "tonalRamp": [
+          "oklch(0.15 0.13 160)",
+          "oklch(0.25 0.13 160)",
+          "oklch(0.35 0.13 160)",
+          "oklch(0.45 0.13 160)",
+          "oklch(0.6 0.13 160)",
+          "oklch(0.75 0.13 160)",
+          "oklch(0.88 0.13 160)",
+          "oklch(0.96 0.13 160)"
+        ]
+      },
+      "down-light": {
+        "role": "signal",
+        "displayName": "Down (light theme)",
+        "canonical": "oklch(0.56 0.2 20)",
+        "tonalRamp": [
+          "oklch(0.15 0.2 20)",
+          "oklch(0.25 0.2 20)",
+          "oklch(0.35 0.2 20)",
+          "oklch(0.45 0.2 20)",
+          "oklch(0.6 0.2 20)",
+          "oklch(0.75 0.2 20)",
+          "oklch(0.88 0.2 20)",
+          "oklch(0.96 0.2 20)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Landing headlines only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Secondary landing statements and the login title."
+      },
+      "figure-hero": {
+        "displayName": "Figure Hero",
+        "purpose": "The equity number; fraction in Muted Text."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Stat-strip values in rolling fixed cells."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Dashboard section headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Prose, insight lines, panel copy."
+      },
+      "data": {
+        "displayName": "Data",
+        "purpose": "Table cells and the phone position list."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase mono names for data: stat names, column headers, definition terms, status. Never an eyebrow."
+      }
+    },
+    "shadows": [
+      {
+        "name": "hollow-cell",
+        "value": "inset 0 0 0 1px var(--foreground)",
+        "purpose": "Not elevation: draws hollow squares and negative bars (loss, leak, disconnected)."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Signature easing for digit roll and cell pop-in."
+      },
+      {
+        "name": "digit-roll",
+        "value": "520ms; translateY(55%) + blur(2px) + fade to rest; 28ms stagger per character",
+        "purpose": "Fixed-cell numerals on value change."
+      },
+      {
+        "name": "cell-in",
+        "value": "420ms; scale(0.4) + fade to rest; 3ms stagger per cell, capped at 900ms",
+        "purpose": "Mosaic cells entering."
+      },
+      {
+        "name": "focus-dim",
+        "value": "opacity 300ms",
+        "purpose": "Corridor focus dimming (cells to 0.12, edge rows to 0.35)."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: no-preference gates digit-roll and cell-in",
+        "purpose": "Motion is opt-out by OS preference."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ],
+    "themes": {
+      "default": "dark",
+      "mechanism": ".dark class on <html>, set by a pre-paint script from localStorage key crypz-theme; toggle in every header"
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ink-on-bone inversion for the main action; trailing arrow allowed.",
+      "html": "<button class=\"ds-btn-primary\">Log in <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; background: var(--foreground, oklch(0.96 0.003 95)); color: var(--background, oklch(0.145 0 0)); border: none; border-radius: 0; font: 500 14px/1 'Geist Variable', ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: opacity 0.15s; } .ds-btn-primary:hover { opacity: 0.9; } .ds-btn-primary:focus-visible { outline: 1px solid var(--foreground, oklch(0.96 0.003 95)); outline-offset: 2px; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary actions, Show more, the corridor clear chip.",
+      "html": "<button class=\"ds-btn-outline\">Open dashboard</button>",
+      "css": ".ds-btn-outline { height: 32px; padding: 0 12px; background: var(--background, oklch(0.145 0 0)); color: var(--foreground, oklch(0.96 0.003 95)); border: 1px solid var(--input, oklch(0.32 0 0)); border-radius: 0; font: 500 14px/1 'Geist Variable', ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: background 0.15s; } .ds-btn-outline:hover { background: var(--accent, oklch(0.23 0 0)); } .ds-btn-outline:focus-visible { outline: 1px solid var(--foreground, oklch(0.96 0.003 95)); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Theme toggle, expanders, timeframes.",
+      "html": "<button class=\"ds-btn-ghost\">Show all 34 assets</button>",
+      "css": ".ds-btn-ghost { height: 32px; padding: 0 12px; background: transparent; color: var(--muted-foreground, oklch(0.66 0.004 95)); border: none; border-radius: 0; font: 500 14px/1 'Geist Variable', ui-sans-serif, system-ui, sans-serif; cursor: pointer; } .ds-btn-ghost:hover { background: var(--accent, oklch(0.23 0 0)); color: var(--foreground, oklch(0.96 0.003 95)); } .ds-btn-ghost:focus-visible { outline: 1px solid var(--foreground, oklch(0.96 0.003 95)); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Square 1px stroke on transparent ground.",
+      "html": "<input class=\"ds-input\" placeholder=\"you@domain.com\" />",
+      "css": ".ds-input { height: 36px; width: 240px; padding: 4px 12px; background: transparent; color: var(--foreground, oklch(0.96 0.003 95)); border: 1px solid var(--input, oklch(0.32 0 0)); border-radius: 0; font: 400 14px/1.4 'Geist Variable', ui-sans-serif, system-ui, sans-serif; outline: none; } .ds-input::placeholder { color: var(--muted-foreground, oklch(0.66 0.004 95)); } .ds-input:focus-visible { border-color: var(--foreground, oklch(0.96 0.003 95)); }"
+    },
+    {
+      "name": "Range Toggle",
+      "kind": "chip",
+      "refersTo": "range-toggle-on",
+      "description": "Joined outline segments; selected inverts to foreground fill.",
+      "html": "<div class=\"ds-range\" role=\"group\"><button>7d</button><button>30d</button><button>90d</button><button class=\"on\" aria-pressed=\"true\">all</button></div>",
+      "css": ".ds-range { display: inline-flex; border: 1px solid var(--input, oklch(0.32 0 0)); } .ds-range button { height: 30px; padding: 0 10px; background: transparent; color: var(--foreground, oklch(0.96 0.003 95)); border: none; border-left: 1px solid var(--input, oklch(0.32 0 0)); border-radius: 0; font-family: 'Geist Mono Variable', ui-monospace, monospace; font-variant-numeric: tabular-nums slashed-zero; letter-spacing: -0.01em; font-size: 12px; text-transform: uppercase; cursor: pointer; } .ds-range button:first-child { border-left: none; } .ds-range button:hover { background: var(--accent, oklch(0.23 0 0)); } .ds-range button.on { background: var(--foreground, oklch(0.96 0.003 95)); color: var(--background, oklch(0.145 0 0)); } .ds-range button:focus-visible { outline: 1px solid var(--foreground, oklch(0.96 0.003 95)); outline-offset: 2px; }"
+    },
+    {
+      "name": "Icon Rail",
+      "kind": "nav",
+      "refersTo": "rail-item",
+      "description": "64px rail, 40px square targets, 1.5-stroke icons, status square at the foot.",
+      "html": "<nav class=\"ds-rail\"><svg class=\"ds-logo\" viewBox=\"0 0 4 4\" shape-rendering=\"crispEdges\"><rect x=\"0\" y=\"0\" width=\"4\" height=\"1\" fill=\"currentColor\"/><rect x=\"0\" y=\"1\" width=\"1\" height=\"2\" fill=\"currentColor\"/><rect x=\"3\" y=\"2\" width=\"1\" height=\"1\" fill=\"currentColor\"/><rect x=\"0\" y=\"3\" width=\"4\" height=\"1\" fill=\"currentColor\"/></svg><a href=\"#\" aria-label=\"Overview\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\"/></svg></a><a href=\"#\" aria-label=\"History\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\"/><path d=\"M21 9H3M21 15H3\"/></svg></a><span class=\"ds-status\"><i></i>OKX</span></nav>",
+      "css": ".ds-rail { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 64px; padding: 20px 0; border-right: 1px solid var(--border, oklch(0.27 0 0)); background: var(--background, oklch(0.145 0 0)); color: var(--foreground, oklch(0.96 0.003 95)); } .ds-logo { width: 24px; height: 24px; margin-bottom: 28px; } .ds-rail a { display: grid; place-items: center; width: 40px; height: 40px; color: var(--muted-foreground, oklch(0.66 0.004 95)); transition: background 0.15s, color 0.15s; } .ds-rail a:hover { background: var(--accent, oklch(0.23 0 0)); color: var(--foreground, oklch(0.96 0.003 95)); } .ds-rail a:focus-visible { outline: 1px solid var(--foreground, oklch(0.96 0.003 95)); outline-offset: 2px; } .ds-status { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 24px; font-family: 'Geist Mono Variable', ui-monospace, monospace; font-variant-numeric: tabular-nums slashed-zero; letter-spacing: -0.01em; font-size: 9px; color: var(--muted-foreground, oklch(0.66 0.004 95)); } .ds-status i { width: 8px; height: 8px; background: var(--foreground, oklch(0.96 0.003 95)); }"
+    },
+    {
+      "name": "Stat Strip",
+      "kind": "card",
+      "refersTo": "stat-cell",
+      "description": "Hairline-ruled cells: label, rolling figure, mono footnote; equity wider.",
+      "html": "<div class=\"ds-stats\"><div class=\"eq\"><span class=\"l\">Equity · USDT</span><b>57<span class=\"frac\">.95</span></b><small>Trading 57.95</small></div><div><span class=\"l\">Realized PnL</span><b class=\"dn\">-74.39</b><small>Gross -47.16</small></div><div><span class=\"l\">Win rate</span><b>44.7%</b><small>149W · 184L</small></div></div>",
+      "css": ".ds-stats { display: grid; grid-template-columns: 1.6fr 1fr 1fr; border: 1px solid var(--border, oklch(0.27 0 0)); background: var(--background, oklch(0.145 0 0)); color: var(--foreground, oklch(0.96 0.003 95)); } .ds-stats > div { display: flex; flex-direction: column; gap: 8px; padding: 20px; } .ds-stats > div + div { border-left: 1px solid var(--hairline, oklch(0.215 0 0)); } .ds-stats .l { font-family: 'Geist Mono Variable', ui-monospace, monospace; font-size: 11px; line-height: 1.2; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted-foreground, oklch(0.66 0.004 95)); } .ds-stats b { font-family: 'Geist Mono Variable', ui-monospace, monospace; font-variant-numeric: tabular-nums slashed-zero; letter-spacing: -0.01em; font-size: 24px; font-weight: 500; } .ds-stats .eq b { font-size: 48px; line-height: 1; } .ds-stats .frac { color: var(--muted-foreground, oklch(0.66 0.004 95)); } .ds-stats .dn { color: var(--down, oklch(0.67 0.2 18)); } .ds-stats small { font-family: 'Geist Mono Variable', ui-monospace, monospace; font-variant-numeric: tabular-nums slashed-zero; letter-spacing: -0.01em; font-size: 12px; color: var(--muted-foreground, oklch(0.66 0.004 95)); }"
+    },
+    {
+      "name": "Trade Mosaic",
+      "kind": "custom",
+      "refersTo": "mosaic-cell-win",
+      "description": "One square per position: filled = win, hollow = loss, ink density = magnitude.",
+      "html": "<div class=\"ds-mosaic\"><i class=\"ds-cell\" style=\"background: color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 100%, transparent)\"></i><i class=\"ds-cell\" style=\"box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 40%, transparent)\"></i><i class=\"ds-cell\" style=\"background: color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 35%, transparent)\"></i><i class=\"ds-cell\" style=\"background: color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 60%, transparent)\"></i><i class=\"ds-cell\" style=\"box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 85%, transparent)\"></i><i class=\"ds-cell\" style=\"background: color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 28%, transparent)\"></i><i class=\"ds-cell\" style=\"box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 30%, transparent)\"></i><i class=\"ds-cell\" style=\"background: color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 80%, transparent)\"></i><i class=\"ds-cell\" style=\"background: color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 100%, transparent)\"></i><i class=\"ds-cell\" style=\"box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 40%, transparent)\"></i><i class=\"ds-cell\" style=\"background: color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 35%, transparent)\"></i><i class=\"ds-cell\" style=\"background: color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 60%, transparent)\"></i><i class=\"ds-cell\" style=\"box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 85%, transparent)\"></i><i class=\"ds-cell\" style=\"background: color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 28%, transparent)\"></i><i class=\"ds-cell\" style=\"box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 30%, transparent)\"></i><i class=\"ds-cell\" style=\"background: color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 80%, transparent)\"></i><i class=\"ds-cell\" style=\"background: color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 100%, transparent)\"></i><i class=\"ds-cell\" style=\"box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 40%, transparent)\"></i><i class=\"ds-cell\" style=\"background: color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 35%, transparent)\"></i><i class=\"ds-cell\" style=\"background: color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 60%, transparent)\"></i><i class=\"ds-cell\" style=\"box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 85%, transparent)\"></i><i class=\"ds-cell\" style=\"background: color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 28%, transparent)\"></i><i class=\"ds-cell\" style=\"box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 30%, transparent)\"></i><i class=\"ds-cell\" style=\"background: color-mix(in oklab, var(--foreground, oklch(0.96 0.003 95)) 80%, transparent)\"></i></div>",
+      "css": ".ds-mosaic { display: grid; grid-template-columns: repeat(12, 18px); gap: 3px; padding: 12px; background: var(--background, oklch(0.145 0 0)); } .ds-cell { display: block; width: 18px; height: 18px; transition: opacity 0.3s; } .ds-cell:hover { outline: 1px solid var(--foreground, oklch(0.96 0.003 95)); outline-offset: 1px; } .ds-mosaic:hover .ds-cell:not(:hover) { opacity: 0.12; }"
+    },
+    {
+      "name": "Edge Bars",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Diverging bars on a 1px zero axis; profit filled right, loss hollow left; rows toggle corridor focus.",
+      "html": "<div class=\"ds-edge\"><button><span>HYPE</span><span class=\"bar\"><i class=\"ax\"></i><i class=\"p\" style=\"width:40%\"></i></span><span class=\"up\">+10.21</span></button><button class=\"on\"><span><i class=\"m\"></i>ETH</span><span class=\"bar\"><i class=\"ax\"></i><i class=\"n\" style=\"width:46%\"></i></span><span class=\"dn\">-32.14</span></button></div>",
+      "css": ".ds-edge { display: flex; flex-direction: column; width: 360px; background: var(--background, oklch(0.145 0 0)); } .ds-edge button { display: grid; grid-template-columns: 5.5rem 1fr 5rem; gap: 12px; align-items: center; padding: 8px 0; background: transparent; color: var(--foreground, oklch(0.96 0.003 95)); border: none; border-bottom: 1px solid var(--hairline, oklch(0.215 0 0)); border-radius: 0; font: 500 14px/1.4 'Geist Variable', ui-sans-serif, system-ui, sans-serif; text-align: left; cursor: pointer; } .ds-edge button:hover { background: color-mix(in oklab, var(--accent, oklch(0.23 0 0)) 60%, transparent); } .ds-edge button.on { background: var(--accent, oklch(0.23 0 0)); } .ds-edge .m { display: inline-block; width: 6px; height: 6px; margin-right: 8px; background: var(--foreground, oklch(0.96 0.003 95)); } .ds-edge .bar { position: relative; height: 8px; } .ds-edge .ax { position: absolute; top: -3px; bottom: -3px; left: 50%; width: 1px; background: var(--border, oklch(0.27 0 0)); } .ds-edge .p { position: absolute; top: 0; bottom: 0; left: 50%; background: var(--foreground, oklch(0.96 0.003 95)); } .ds-edge .n { position: absolute; top: 0; bottom: 0; right: 50%; box-shadow: inset 0 0 0 1px var(--foreground, oklch(0.96 0.003 95)); } .ds-edge .up, .ds-edge .dn { font-family: 'Geist Mono Variable', ui-monospace, monospace; font-variant-numeric: tabular-nums slashed-zero; letter-spacing: -0.01em; text-align: right; } .ds-edge .up { color: var(--up, oklch(0.74 0.15 162)); } .ds-edge .dn { color: var(--down, oklch(0.67 0.2 18)); }"
+    },
+    {
+      "name": "Tooltip",
+      "kind": "custom",
+      "refersTo": "tooltip",
+      "description": "Inverted square chip.",
+      "html": "<span class=\"ds-tip\">03 · 12 trades · -4.21 USDT · 33% win</span>",
+      "css": ".ds-tip { display: inline-block; padding: 6px 12px; background: var(--foreground, oklch(0.96 0.003 95)); color: var(--background, oklch(0.145 0 0)); border-radius: 0; font-family: 'Geist Mono Variable', ui-monospace, monospace; font-variant-numeric: tabular-nums slashed-zero; letter-spacing: -0.01em; font-size: 12px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Trade Mosaic",
+    "overview": "Every closed position is one square pixel, and a trader's history becomes their own punk-grid portrait. The system is monochrome ink and bone, built from hard square cells and 1px hairlines with no curves anywhere. Figures are set in tabular mono so columns of numbers read like a ledger. The only colour on screen is the sign of a result.\n\nThe world is dense but calm. Panels are flat rectangles separated by hairlines, not floating cards. Information lives in ink density (how solid a square is) and in fill versus outline (a win is a filled square, a loss is a hollow one), so the same vocabulary repeats from the 4x4 pixel logo down to the hour-of-day strip. Motion is small and mechanical: digits roll into fixed cells, mosaic cells pop in, and focus dims what it does not select.\n\nThe confirmed rejection is the exchange-clone KPI dashboard: rounded tiles, card stacks, a yellow brand accent.",
+    "keyCharacteristics": [
+      "Ink black ground and bone white ink by default; the light theme inverts to bone paper and carbon ink.",
+      "Zero radius everywhere, 1px hairlines for structure, no drop shadows.",
+      "Fill means positive and outline means negative, in squares, bars and markers alike.",
+      "Green and red appear only on signed PnL figures.",
+      "Geist for words, Geist Mono with tabular, slashed-zero numerals for every figure.",
+      "Corridor focus: selecting an asset dims everything else and rescopes the page."
+    ],
+    "rules": [
+      {
+        "name": "The Sign-Only Colour Rule",
+        "body": "Green and red mark the sign of a PnL figure and nothing else. Status, selection, focus, the live-connection dot, insights markers and mosaic cells are all foreground ink. A zero result is muted, not coloured.",
+        "section": "colors"
+      },
+      {
+        "name": "The Same-Ground Rule",
+        "body": "Card, popover and page share the ground colour. Structure comes from the border and hairline tokens, never from tinted surfaces.",
+        "section": "colors"
+      },
+      {
+        "name": "The Every-Figure-Is-Mono Rule",
+        "body": "Any number a trader might compare (price, size, PnL, percent, count, date, timeframe) is set in the mono face with tabular numerals. Words stay in Geist.",
+        "section": "typography"
+      },
+      {
+        "name": "The Fixed-Cell Numeral Rule",
+        "body": "Headline figures use rolling digits. Each character occupies its own cell and rolls up into place when its value changes, staggered 28ms per character.",
+        "section": "typography"
+      },
+      {
+        "name": "The Corridor Focus Rule",
+        "body": "Focus lives in the URL (`?asset=`). Clicking a mosaic cell or an edge row sets it. Unselected mosaic cells drop to 12% opacity and unselected edge rows to 35%. The position table filters to the asset, and everything below the overview (timing, curve, streaks, insights) recomputes for that asset alone, with its section titles suffixed `· ASSET`. A clear chip in the top bar removes the focus.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat Ledger Rule",
+        "body": "Nothing floats. A panel is a ruled rectangle on the same ground as the page.",
+        "section": "elevation"
+      },
+      {
+        "name": "The No-Curve Rule",
+        "body": "Radius is zero on every element, including primitives that ask for rounding by default.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "**Do** keep every corner at 0px and build structure from the hairline and border tokens.",
+      "**Do** encode results as filled versus hollow squares and as ink density before reaching for any other device.",
+      "**Do** set every figure in Geist Mono with tabular, slashed-zero numerals.",
+      "**Do** colour a figure Up or Down only when it is a signed result, and mute zero.",
+      "**Do** route asset focus through `?asset=` so it dims the mosaic and edge rows, filters history, and rescopes everything below the overview.",
+      "**Do** ship both themes from the toggle, dark by default, with the theme script applied before paint.",
+      "**Do** give phones the two-line position list and edge rows with the bar on its own line."
+    ],
+    "donts": [
+      "**Don't** use rounded tiles, KPI card stacks, or a brand accent hue such as exchange yellow.",
+      "**Don't** use green or red for status, connection, selection, focus or decoration. The live dot is foreground.",
+      "**Don't** add drop shadows or tinted panels to separate surfaces.",
+      "**Don't** place uppercase mono labels above headings as eyebrows. Label style names data."
+    ]
+  }
+}

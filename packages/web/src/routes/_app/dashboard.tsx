@@ -1,22 +1,19 @@
 import { useMemo } from 'react'
-import { X } from 'lucide-react'
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { ArrowRight, X } from 'lucide-react'
+import { Link, createFileRoute, useLoaderData } from '@tanstack/react-router'
 import { computeStats, deriveInsights } from '@crypz/exchanges'
-import { AppShell } from '@/components/dashboard/app-shell'
+import { PageHeader } from '@/components/app/page-header'
 import { BreakdownTable } from '@/components/dashboard/breakdown-table'
 import { CellStrip } from '@/components/dashboard/cell-strip'
-import { ChartSlot } from '@/components/dashboard/chart-slot'
+import { CandleChart } from '@/components/trade/candle-chart'
 import { EdgeBars } from '@/components/dashboard/edge-bars'
 import { EquityCurve } from '@/components/dashboard/equity-curve'
 import { Insights } from '@/components/dashboard/insights'
 import { Mosaic, MosaicLegend } from '@/components/dashboard/mosaic'
 import { PositionsTable } from '@/components/dashboard/positions-table'
 import { StatStrip } from '@/components/dashboard/stat-strip'
-import { PixelLogo } from '@/components/brand/pixel-logo'
-import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { getPortfolio } from '@/server/portfolio'
 import { cn } from '@/lib/utils'
 import { fmtDate, fmtDuration, fmtSigned, tone } from '@/lib/format'
 
@@ -25,23 +22,13 @@ type Range = keyof typeof RANGES
 
 type Search = { range?: Range; asset?: string }
 
-export const Route = createFileRoute('/dashboard')({
+export const Route = createFileRoute('/_app/dashboard')({
   validateSearch: (s: Record<string, unknown>): Search => ({
     range: typeof s.range === 'string' && s.range in RANGES ? (s.range as Range) : undefined,
     asset: typeof s.asset === 'string' ? s.asset : undefined,
   }),
-  loader: () => getPortfolio(),
   head: () => ({ meta: [{ title: 'Overview · crypz' }] }),
   component: Dashboard,
-  errorComponent: ({ error }) => (
-    <main className="grid min-h-dvh place-items-center p-6">
-      <div className="max-w-md border border-border p-6">
-        <h1 className="font-medium">Could not load your portfolio</h1>
-        <p className="mt-2 num text-sm text-down">{error instanceof Error ? error.message : String(error)}</p>
-        <p className="mt-4 text-sm text-muted-foreground">Check the API keys in the root .env, then reload.</p>
-      </div>
-    </main>
-  ),
 })
 
 function Section({
@@ -69,7 +56,7 @@ function Section({
 }
 
 function Dashboard() {
-  const data = Route.useLoaderData()
+  const data = useLoaderData({ from: '/_app' })
   const { range = 'all', asset = null } = Route.useSearch()
   const navigate = Route.useNavigate()
   const setSearch = (patch: Search) =>
@@ -93,53 +80,36 @@ function Dashboard() {
   const anyConfigured = data.exchanges.some((e) => e.configured)
 
   return (
-    <AppShell exchanges={data.exchanges}>
-      <header className="sticky top-0 z-20 border-b border-border bg-background">
-        <div className="mx-auto flex h-16 max-w-[1600px] items-center gap-4 px-4 sm:px-8">
-          <Link to="/" className="md:hidden" aria-label="crypz home">
-            <PixelLogo className="size-5" />
-          </Link>
-          <h1 className="text-lg font-semibold tracking-tight">Overview</h1>
-          {asset && (
+    <>
+      <PageHeader
+        title="Overview"
+        lead={
+          asset && (
             <Button variant="outline" size="xs" onClick={() => setFocus(null)} className="num">
               {asset} <X aria-label="Clear focus" />
             </Button>
-          )}
-          <div className="ml-auto flex items-center gap-2 sm:gap-4">
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              size="sm"
-              value={range}
-              onValueChange={(v) => v && setSearch({ range: v === 'all' ? undefined : (v as Range) })}
-              aria-label="Time range"
+          )
+        }
+      >
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          size="sm"
+          value={range}
+          onValueChange={(v) => v && setSearch({ range: v === 'all' ? undefined : (v as Range) })}
+          aria-label="Time range"
+        >
+          {(Object.keys(RANGES) as Range[]).map((r) => (
+            <ToggleGroupItem
+              key={r}
+              value={r}
+              className="px-2.5 num text-xs uppercase data-[state=on]:bg-foreground data-[state=on]:text-background"
             >
-              {(Object.keys(RANGES) as Range[]).map((r) => (
-                <ToggleGroupItem
-                  key={r}
-                  value={r}
-                  className="px-2.5 num text-xs uppercase data-[state=on]:bg-foreground data-[state=on]:text-background"
-                >
-                  {r}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-            <span className="hidden items-center gap-2 label lg:flex">
-              <i
-                className={cn(
-                  'size-1.5',
-                  anyConfigured ? 'animate-pulse bg-foreground' : 'shadow-[inset_0_0_0_1px_var(--muted-foreground)]',
-                )}
-              />
-              {data.exchanges
-                .filter((e) => e.configured)
-                .map((e) => e.name)
-                .join(' + ') || 'No exchange'}
-            </span>
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
+              {r}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      </PageHeader>
 
       <main className="mx-auto flex max-w-[1600px] flex-col gap-14 px-4 py-8 sm:px-8">
         {!anyConfigured && (
@@ -177,7 +147,29 @@ function Dashboard() {
         </section>
 
         <section id="chart" className="grid scroll-mt-20 gap-8 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-          <ChartSlot symbol={chartPos?.symbol ?? null} tradeUrl={chartPos?.tradeUrl ?? null} />
+          <div className="flex flex-col border border-border">
+            <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
+              <span className="num text-sm">{chartPos?.symbol ?? 'No instrument'}</span>
+              {chartPos && (
+                <Button variant="ghost" size="xs" asChild>
+                  <Link to="/trade" search={{ symbol: chartPos.symbol }}>
+                    Open in Trade <ArrowRight />
+                  </Link>
+                </Button>
+              )}
+            </div>
+            {chartPos ? (
+              <CandleChart
+                exchange={chartPos.exchange}
+                symbol={chartPos.symbol}
+                bar="4H"
+                positions={focused.filter((p) => p.symbol === chartPos.symbol)}
+                className="h-80"
+              />
+            ) : (
+              <p className="grid h-80 place-items-center text-sm text-muted-foreground">No trades in this range.</p>
+            )}
+          </div>
           <Insights insights={insights} scope={scope} />
         </section>
 
@@ -274,7 +266,7 @@ function Dashboard() {
           title="Position history"
           aside={
             <span className="text-xs text-muted-foreground">
-              {asset ? `Filtered to ${asset}` : 'All assets'} · newest first
+              {asset ? `Traced asset: ${asset}` : 'Instrument links open OKX'}
             </span>
           }
         >
@@ -286,6 +278,6 @@ function Dashboard() {
           <span>Binance connection coming next</span>
         </footer>
       </main>
-    </AppShell>
+    </>
   )
 }

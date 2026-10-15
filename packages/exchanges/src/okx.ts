@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto'
-import type { AccountSnapshot, ExchangeAdapter, Position } from './types'
+import type { AccountSnapshot, Candle, ExchangeAdapter, Position } from './types'
 
 const BASE_URL = 'https://www.okx.com'
 
@@ -60,6 +60,16 @@ async function okxGet<T>(path: string, params: Record<string, string> = {}): Pro
   return json.data
 }
 
+async function okxPublic<T>(path: string, params: Record<string, string>): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}?${new URLSearchParams(params)}`)
+  const json = (await res.json()) as { code: string; msg: string; data: T }
+  if (json.code !== '0') throw new Error(`OKX ${json.code}: ${json.msg}`)
+  return json.data
+}
+
+const instType = (symbol: string) => (symbol.endsWith('-SWAP') ? 'swap' : /-\d{6}$/.test(symbol) ? 'futures' : 'spot')
+const tradeUrl = (symbol: string) => `${BASE_URL}/trade-${instType(symbol)}/${symbol.toLowerCase()}`
+
 const num = (v: string) => (v === '' || v == null ? 0 : Number(v))
 
 function toPosition(r: OkxPositionHistory): Position {
@@ -82,7 +92,7 @@ function toPosition(r: OkxPositionHistory): Position {
     pnlRatio: num(r.pnlRatio),
     openedAt: num(r.cTime),
     closedAt: num(r.uTime),
-    tradeUrl: `${BASE_URL}/trade-${r.instType === 'SWAP' ? 'swap' : r.instType === 'FUTURES' ? 'futures' : 'spot'}/${r.instId.toLowerCase()}`,
+    tradeUrl: tradeUrl(r.instId),
   }
 }
 
@@ -126,4 +136,41 @@ export const okx: ExchangeAdapter = {
       unrealizedPnl: upl,
     } satisfies AccountSnapshot
   },
+
+  // Latest bars come from /candles (up to 300); older pages from /history-candles (100 per call).
+  async fetchCandles(symbol, bar, before) {
+    const rows = await okxPublic<string[][]>(before ? '/api/v5/market/history-candles' : '/api/v5/market/candles', {
+      instId: symbol,
+      bar,
+      limit: before ? '100' : '300',
+      ...(before ? { after: String(before) } : {}),
+    })
+    return rows
+      .map((r): Candle => ({
+        time: num(r[0]),
+        open: num(r[1]),
+        high: num(r[2]),
+        low: num(r[3]),
+        close: num(r[4]),
+        volume: num(r[5]),
+      }))
+      .reverse()
+  },
+
+  async fetchTicker(symbol) {
+    const [t] = await okxPublic<{ last: string; open24h: string; high24h: string; low24h: string; vol24h: string }[]>(
+      '/api/v5/market/ticker',
+      { instId: symbol },
+    )
+    return {
+      symbol,
+      last: num(t.last),
+      open24h: num(t.open24h),
+      high24h: num(t.high24h),
+      low24h: num(t.low24h),
+      volume24h: num(t.vol24h),
+    }
+  },
+
+  tradeUrl,
 }

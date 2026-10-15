@@ -1,8 +1,14 @@
 import { binance } from './binance'
 import { okx } from './okx'
-import type { AccountSnapshot, ExchangeAdapter, ExchangeStatus, Position } from './types'
+import type { AccountSnapshot, ExchangeAdapter, ExchangeId, ExchangeStatus, Position } from './types'
 
 export const adapters: ExchangeAdapter[] = [okx, binance]
+
+export function getAdapter(id: ExchangeId): ExchangeAdapter {
+  const a = adapters.find((x) => x.id === id)
+  if (!a) throw new Error(`Unknown exchange ${id}`)
+  return a
+}
 
 export type Portfolio = {
   exchanges: ExchangeStatus[]

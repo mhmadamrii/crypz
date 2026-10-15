@@ -1,27 +1,105 @@
-import { useState } from 'react'
-import { ArrowUpRight } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { ArrowUpRight, X } from 'lucide-react'
 import type { Position } from '@crypz/exchanges'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { HistoryFilterDialog } from '@/components/dashboard/history-filter-dialog'
+import { EMPTY_FILTER, SORT_LABELS, activeChips, applyFilter, type PositionFilter } from '@/lib/position-filter'
 import { cn } from '@/lib/utils'
 import { fmtDate, fmtDuration, fmtNum, fmtPct, fmtPrice, fmtSigned, tone } from '@/lib/format'
 
 const PAGE = 50
 
-/** Newest first. */
+/** Filterable history. Input order does not matter; the filter sorts. */
 export function PositionsTable({ positions }: { positions: Position[] }) {
   const [limit, setLimit] = useState(PAGE)
-  const rows = positions.slice(0, limit)
+  const [filter, setFilter] = useState<PositionFilter>(EMPTY_FILTER)
+  const filtered = useMemo(() => applyFilter(positions, filter), [positions, filter])
+  const chips = activeChips(filter)
+  const rows = filtered.slice(0, limit)
+  const update = (f: PositionFilter) => {
+    setFilter(f)
+    setLimit(PAGE)
+  }
 
-  if (!positions.length)
+  const net = filtered.reduce((s, p) => s + p.realizedPnl, 0)
+  const wins = filtered.filter((p) => p.realizedPnl > 0).length
+
+  const toolbar = (
+    <div className="mb-3 flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <HistoryFilterDialog positions={positions} value={filter} onApply={update} activeCount={chips.length} />
+        <dl className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground [&>div]:flex [&>div]:gap-1.5">
+          <div>
+            <dt>Positions</dt>
+            <dd className="num text-foreground">
+              {filtered.length}
+              {filtered.length !== positions.length && (
+                <span className="text-muted-foreground"> / {positions.length}</span>
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt>Win rate</dt>
+            <dd className="num text-foreground">{filtered.length ? fmtPct(wins / filtered.length, 1) : '–'}</dd>
+          </div>
+          <div>
+            <dt>Net</dt>
+            <dd className={cn('num', tone(net))}>{fmtSigned(net)}</dd>
+          </div>
+          {filter.sort !== 'newest' && (
+            <div>
+              <dt>Sort</dt>
+              <dd className="text-foreground">{SORT_LABELS[filter.sort]}</dd>
+            </div>
+          )}
+        </dl>
+      </div>
+      {chips.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {chips.map((c) => (
+            <Button
+              key={c.key}
+              variant="outline"
+              size="xs"
+              className="num"
+              onClick={() => update({ ...filter, ...c.clear })}
+              aria-label={`Remove filter ${c.label}`}
+            >
+              {c.label} <X />
+            </Button>
+          ))}
+          <Button
+            variant="ghost"
+            size="xs"
+            className="text-muted-foreground"
+            onClick={() => update({ ...EMPTY_FILTER, sort: filter.sort })}
+          >
+            Clear all
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+
+  if (!filtered.length)
     return (
-      <p className="border border-border p-8 text-center text-sm text-muted-foreground">
-        No positions match this range.
-      </p>
+      <div className="flex flex-col">
+        {toolbar}
+        <div className="flex flex-col items-center gap-3 border border-border p-8 text-center text-sm text-muted-foreground">
+          {positions.length ? 'No positions match these filters.' : 'No positions in this range.'}
+          {chips.length > 0 && (
+            <Button variant="outline" size="sm" onClick={() => update(EMPTY_FILTER)}>
+              Clear filters
+            </Button>
+          )}
+        </div>
+      </div>
     )
 
   return (
     <div className="flex flex-col">
+      {toolbar}
       {/* Phones: two-line rows so the result is never off-screen. */}
       <ul className="flex flex-col sm:hidden">
         {rows.map((p) => (
@@ -98,11 +176,11 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
       </Table>
       <div className="flex items-center justify-between border-t border-hairline pt-4 text-sm text-muted-foreground">
         <span className="num">
-          {rows.length} of {positions.length}
+          {rows.length} of {filtered.length}
         </span>
-        {limit < positions.length && (
+        {limit < filtered.length && (
           <Button variant="outline" size="sm" onClick={() => setLimit((l) => l + PAGE)}>
-            Show {Math.min(PAGE, positions.length - limit)} more
+            Show {Math.min(PAGE, filtered.length - limit)} more
           </Button>
         )}
       </div>

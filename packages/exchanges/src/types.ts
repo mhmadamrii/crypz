@@ -37,10 +37,28 @@ export type ExchangeStatus = {
   configured: boolean
 }
 
+export const BARS = ['15m', '1H', '4H', '1D'] as const
+export type Bar = (typeof BARS)[number]
+
+export type Candle = { time: number; open: number; high: number; low: number; close: number; volume: number }
+
+export type Ticker = {
+  symbol: string
+  last: number
+  open24h: number
+  high24h: number
+  low24h: number
+  volume24h: number
+}
+
 export interface ExchangeAdapter {
   id: ExchangeId
   name: string
   isConfigured(): boolean
   fetchClosedPositions(): Promise<Position[]>
   fetchAccount(): Promise<AccountSnapshot>
+  /** Public market data, oldest first. `before` (ms) pages back into history. */
+  fetchCandles(symbol: string, bar: Bar, before?: number): Promise<Candle[]>
+  fetchTicker(symbol: string): Promise<Ticker>
+  tradeUrl(symbol: string): string
 }

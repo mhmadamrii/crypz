@@ -1,10 +1,52 @@
-import { fmtSigned } from '@/lib/format'
+import { useMemo } from 'react'
+import { CartesianGrid, Line, LineChart, ReferenceArea, ReferenceLine, XAxis, YAxis } from 'recharts'
+import type { CurvePoint } from '@crypz/exchanges'
+import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/chart'
 import { cn } from '@/lib/utils'
+import { fmtDate, fmtSigned, tone } from '@/lib/format'
 
 const fmtDay = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
 
-/** Cumulative realized PnL over close time; zero, peak, trough and last value labelled, deepest drawdown shaded. */
-export function EquityCurve({ curve, maxDrawdown }: { curve: { t: number; v: number }[]; maxDrawdown: number }) {
+const config = { v: { label: 'Cumulative PnL', color: 'var(--foreground)' } } satisfies ChartConfig
+
+const AXIS_TICK = { fill: 'var(--muted-foreground)', fontSize: 11, fontFamily: 'var(--font-mono)' }
+
+function CurveTooltip({ active, payload }: { active?: boolean; payload?: { payload: CurvePoint }[] }) {
+  const p = active ? payload?.[0]?.payload : undefined
+  if (!p) return null
+  return (
+    <div className="grid min-w-52 gap-2 border border-border bg-popover px-3 py-2.5 text-xs text-popover-foreground">
+      <span className="num text-muted-foreground">{fmtDate(p.t)}</span>
+      <div className="flex items-baseline justify-between gap-6">
+        <span className="text-muted-foreground">Cumulative</span>
+        <span className={cn('num text-sm font-medium', tone(p.v))}>{fmtSigned(p.v)}</span>
+      </div>
+      <div className="flex items-baseline justify-between gap-6 border-t border-hairline pt-2">
+        <span>
+          {p.symbol} <span className="label">{p.side}</span>
+        </span>
+        <span className={cn('num', tone(p.delta))}>{fmtSigned(p.delta, 4)}</span>
+      </div>
+    </div>
+  )
+}
+
+/** Cumulative realized PnL over close time. Steps, because PnL only changes when a position closes. */
+export function EquityCurve({ curve, maxDrawdown }: { curve: CurvePoint[]; maxDrawdown: number }) {
+  const dd = useMemo(() => {
+    let peak = -Infinity
+    let peakI = 0
+    let best = { from: 0, to: 0, depth: 0 }
+    curve.forEach((c, i) => {
+      if (c.v > peak) {
+        peak = c.v
+        peakI = i
+      }
+      if (peak - c.v > best.depth) best = { from: peakI, to: i, depth: peak - c.v }
+    })
+    return best
+  }, [curve])
+
   if (curve.length < 2)
     return (
       <div className="grid h-48 place-items-center text-sm text-muted-foreground">
@@ -12,111 +54,69 @@ export function EquityCurve({ curve, maxDrawdown }: { curve: { t: number; v: num
       </div>
     )
 
-  const W = 1000
-  const H = 220
-  const t0 = curve[0].t
-  const t1 = curve[curve.length - 1].t
-  const vs = curve.map((c) => c.v)
-  const min = Math.min(0, ...vs)
-  const max = Math.max(0, ...vs)
-  const x = (t: number) => ((t - t0) / (t1 - t0 || 1)) * W
-  const y = (v: number) => H - ((v - min) / (max - min || 1)) * H
-  const d = curve.map((c, i) => `${i ? 'L' : 'M'}${x(c.t).toFixed(1)},${y(c.v).toFixed(1)}`).join('')
-
-  let peak = -Infinity
-  let peakI = 0
-  let dd = { from: 0, to: 0, depth: 0 }
-  curve.forEach((c, i) => {
-    if (c.v > peak) {
-      peak = c.v
-      peakI = i
-    }
-    if (peak - c.v > dd.depth) dd = { from: peakI, to: i, depth: peak - c.v }
-  })
-
   const last = curve[curve.length - 1]
-  const lo = curve[vs.indexOf(min)] ?? last
-  const pct = (v: number) => `${(y(v) / H) * 100}%`
-  // Gutter labels must not collide: place in priority order, skip any within 14px of one already placed.
-  const PLOT_PX = 224 // h-56
-  const placed = [y(last.v)]
-  const clear = (v: number) => {
-    const py = (y(v) / H) * PLOT_PX
-    if (placed.some((q) => Math.abs((q / H) * PLOT_PX - py) < 14)) return false
-    placed.push(y(v))
-    return true
-  }
-  const marks = [
-    { key: 'low', v: min, label: `low ${fmtSigned(min)}`, show: min < 0 && clear(min) },
-    { key: 'peak', v: max, label: `peak ${fmtSigned(max)}`, show: max > 0 && clear(max) },
-    { key: 'zero', v: 0, label: '0', show: clear(0) },
-  ]
+  const low = curve.reduce((m, c) => (c.v < m.v ? c : m), curve[0])
 
   return (
     <figure className="flex flex-col gap-2">
-      <div className="relative grid grid-cols-[minmax(0,1fr)_8rem] gap-3">
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          preserveAspectRatio="none"
-          className="h-56 w-full overflow-visible"
-          role="img"
-          aria-label={`Cumulative realized PnL from ${fmtDay(t0)} to ${fmtDay(t1)}, ending at ${fmtSigned(last.v)} USDT; peak ${fmtSigned(max)}, low ${fmtSigned(min)}`}
-        >
-          <rect
-            x={x(curve[dd.from].t)}
-            y={0}
-            width={Math.max(x(curve[dd.to].t) - x(curve[dd.from].t), 1)}
-            height={H}
-            fill="var(--foreground)"
-            opacity="0.05"
+      <ChartContainer config={config} className="aspect-auto h-64 w-full">
+        <LineChart data={curve} margin={{ top: 8, right: 4, bottom: 0, left: 4 }} accessibilityLayer>
+          <CartesianGrid vertical={false} stroke="var(--hairline)" />
+          {dd.depth > 0 && (
+            <ReferenceArea
+              x1={curve[dd.from].t}
+              x2={curve[dd.to].t}
+              fill="var(--foreground)"
+              fillOpacity={0.05}
+              stroke="none"
+              ifOverflow="hidden"
+            />
+          )}
+          <ReferenceLine y={0} stroke="var(--border)" strokeDasharray="4 4" />
+          <XAxis
+            dataKey="t"
+            type="number"
+            scale="time"
+            domain={['dataMin', 'dataMax']}
+            tickFormatter={fmtDay}
+            tick={AXIS_TICK}
+            tickLine={false}
+            axisLine={{ stroke: 'var(--border)' }}
+            minTickGap={48}
           />
-          {marks
-            .filter((m) => m.show || m.key === 'zero')
-            .map((m) => (
-              <line
-                key={m.key}
-                x1={0}
-                x2={W}
-                y1={y(m.v)}
-                y2={y(m.v)}
-                stroke="var(--border)"
-                strokeDasharray={m.key === 'zero' ? '4 4' : '1 5'}
-                vectorEffect="non-scaling-stroke"
-              />
-            ))}
-          <path d={d} fill="none" stroke="var(--foreground)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
-        </svg>
-        <div className="relative h-56" aria-hidden>
-          {marks
-            .filter((m) => m.show)
-            .map((m) => (
-              <span
-                key={m.key}
-                className="absolute right-0 -translate-y-1/2 num text-[11px] whitespace-nowrap text-muted-foreground"
-                style={{ top: pct(m.v) }}
-              >
-                {m.label}
-              </span>
-            ))}
-          <span
-            className={cn(
-              'absolute left-0 -translate-y-1/2 bg-background px-1 num text-xs font-medium whitespace-nowrap',
-              last.v >= 0 ? 'text-up' : 'text-down',
+          <YAxis
+            orientation="right"
+            tickFormatter={(v: number) => fmtSigned(v, 0)}
+            tick={AXIS_TICK}
+            tickLine={false}
+            axisLine={false}
+            width={44}
+          />
+          <ChartTooltip
+            cursor={{ stroke: 'var(--muted-foreground)', strokeWidth: 1, strokeDasharray: '2 3' }}
+            content={<CurveTooltip />}
+            isAnimationActive={false}
+          />
+          <Line
+            dataKey="v"
+            type="stepAfter"
+            stroke="var(--color-v)"
+            strokeWidth={1.5}
+            dot={false}
+            isAnimationActive={false}
+            activeDot={({ cx, cy }: { cx?: number; cy?: number }) => (
+              <rect x={(cx ?? 0) - 3.5} y={(cy ?? 0) - 3.5} width={7} height={7} fill="var(--foreground)" />
             )}
-            style={{ top: pct(last.v) }}
-          >
-            {fmtSigned(last.v)}
-          </span>
-        </div>
-      </div>
-      <figcaption className="grid grid-cols-[minmax(0,1fr)_8rem] gap-3 text-xs text-muted-foreground">
-        <span className="flex justify-between gap-4">
-          <span className="num">{fmtDay(t0)}</span>
-          <span>
-            Shaded: max drawdown <span className="num text-down">−{maxDrawdown.toFixed(2)}</span>
-            {lo !== last && <span className="hidden sm:inline"> · low on {fmtDay(lo.t)}</span>}
-          </span>
-          <span className="num">{fmtDay(t1)}</span>
+          />
+        </LineChart>
+      </ChartContainer>
+      <figcaption className="flex flex-wrap justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        <span>
+          Now <span className={cn('num', tone(last.v))}>{fmtSigned(last.v)}</span> · low{' '}
+          <span className="num text-down">{fmtSigned(low.v)}</span> on {fmtDay(low.t)}
+        </span>
+        <span>
+          Shaded: max drawdown <span className="num text-down">−{maxDrawdown.toFixed(2)}</span> · hover for each close
         </span>
       </figcaption>
     </figure>

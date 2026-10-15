@@ -10,6 +10,8 @@ export type Bucket = {
   fees: number
 }
 
+export type CurvePoint = { t: number; v: number; symbol: string; side: Position['side']; delta: number }
+
 export type Stats = {
   count: number
   wins: number
@@ -32,7 +34,8 @@ export type Stats = {
   avgHoldMs: number
   avgHoldWinMs: number
   avgHoldLossMs: number
-  curve: { t: number; v: number }[]
+  /** Cumulative realized PnL after each close, with the trade that moved it. */
+  curve: CurvePoint[]
   maxDrawdown: number
   byInstrument: Bucket[]
   bySide: Bucket[]
@@ -110,7 +113,7 @@ export function computeStats(input: Position[]): Stats {
     cum += p.realizedPnl
     peak = Math.max(peak, cum)
     maxDrawdown = Math.max(maxDrawdown, peak - cum)
-    return { t: p.closedAt, v: cum }
+    return { t: p.closedAt, v: cum, symbol: p.symbol, side: p.side, delta: p.realizedPnl }
   })
 
   const hold = (p: Position) => p.closedAt - p.openedAt
