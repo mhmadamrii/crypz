@@ -1,17 +1,48 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { authClient } from '@/lib/auth-client'
+import { searchText } from '@/lib/search'
+
+type Search = { redirect?: string; mode?: 'signup' }
 
 export const Route = createFileRoute('/(public)/login')({
+  validateSearch: (s: Record<string, unknown>): Search => ({
+    // only same-site paths, never an absolute URL to somewhere else
+    redirect: /^\/(?!\/)/.test(searchText(s.redirect) ?? '') ? searchText(s.redirect) : undefined,
+    mode: s.mode === 'signup' ? 'signup' : undefined,
+  }),
   head: () => ({ meta: [{ title: 'Log in · crypz' }] }),
   component: Login,
 })
 
-// Dummy gate: no auth yet. Any submit goes straight to the dashboard.
 function Login() {
-  const navigate = useNavigate()
+  const { redirect, mode } = Route.useSearch()
+  const navigate = Route.useNavigate()
+  const router = useRouter()
+  const queryClient = useQueryClient()
+  const signup = mode === 'signup'
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const submit = async (form: FormData) => {
+    setBusy(true)
+    setError(null)
+    const email = String(form.get('email'))
+    const password = String(form.get('password'))
+    const res = signup
+      ? await authClient.signUp.email({ email, password, name: String(form.get('name') || email.split('@')[0]) })
+      : await authClient.signIn.email({ email, password })
+    setBusy(false)
+    if (res.error) return setError(res.error.message ?? 'Could not sign you in.')
+    queryClient.clear() // nothing cached for a previous user survives a sign-in
+    router.history.push(redirect ?? '/dashboard')
+  }
+
   return (
     <div className="grid flex-1">
       <main className="grid place-items-center px-4 py-16">
@@ -19,26 +50,56 @@ function Login() {
           className="flex w-full max-w-sm flex-col gap-6"
           onSubmit={(e) => {
             e.preventDefault()
-            navigate({ to: '/dashboard' })
+            void submit(new FormData(e.currentTarget))
           }}
         >
           <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold tracking-[-0.03em]">Log in</h1>
-            <p className="text-sm text-muted-foreground">Authentication is not wired yet. Any details get you in.</p>
+            <h1 className="text-3xl font-semibold tracking-[-0.03em]">{signup ? 'Create your account' : 'Log in'}</h1>
+            <p className="text-sm text-muted-foreground">
+              {signup ? 'Email and a password of 10+ characters.' : 'Welcome back to your desk.'}
+            </p>
           </div>
+          {signup && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="name">Name</Label>
+              <Input id="name" name="name" autoComplete="name" placeholder="optional" />
+            </div>
+          )}
           <div className="flex flex-col gap-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="you@domain.com" autoComplete="email" />
+            <Input id="email" name="email" type="email" required placeholder="you@domain.com" autoComplete="email" />
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" autoComplete="current-password" />
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              required
+              minLength={signup ? 10 : undefined}
+              autoComplete={signup ? 'new-password' : 'current-password'}
+            />
           </div>
-          <Button type="submit" size="lg">
-            Log in <ArrowRight />
+          {error && (
+            <p role="alert" className="text-sm text-down">
+              {error}
+            </p>
+          )}
+          <Button type="submit" size="lg" disabled={busy}>
+            {busy ? 'One moment…' : signup ? 'Create account' : 'Log in'} {!busy && <ArrowRight />}
           </Button>
-          <p className="text-center text-xs text-muted-foreground">
-            Exchange keys are read from the server .env, never entered here.
+          <p className="text-center text-sm text-muted-foreground">
+            {signup ? 'Already have an account?' : 'New here?'}{' '}
+            <button
+              type="button"
+              className="text-foreground underline underline-offset-4"
+              onClick={() => {
+                setError(null)
+                navigate({ search: (s) => ({ ...s, mode: signup ? undefined : 'signup' }), replace: true })
+              }}
+            >
+              {signup ? 'Log in' : 'Create an account'}
+            </button>
           </p>
         </form>
       </main>

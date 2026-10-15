@@ -378,8 +378,14 @@ function ReplaySession({
       </section>
 
       {!panel ? (
-        <aside className="flex shrink-0 justify-center border-t border-border p-1.5 lg:flex-col lg:justify-end lg:border-t-0 lg:border-l">
-          <Button variant="ghost" size="sm" onClick={() => onPanel(true)} aria-label="Show trade panel">
+        <aside className="flex shrink-0 border-t border-border lg:border-t-0 lg:border-l">
+          {/* the whole strip is the button: full width on phones, full height on desktop */}
+          <Button
+            variant="ghost"
+            onClick={() => onPanel(true)}
+            aria-label="Show trade panel"
+            className="h-11 w-full lg:h-full lg:w-11 lg:items-end lg:pb-3"
+          >
             {/* the panel sits right of the chart on desktop, under it on phones */}
             <ChevronLeft className="hidden lg:block" />
             <ChevronUp className="lg:hidden" />
@@ -520,8 +526,8 @@ function ReplaySession({
               stays hidden until you reveal it.
             </p>
           )}
-          <div className="flex shrink-0 justify-center border-t border-border p-1.5">
-            <Button variant="ghost" size="sm" onClick={() => onPanel(false)}>
+          <div className="flex shrink-0 border-t border-border">
+            <Button variant="ghost" onClick={() => onPanel(false)} className="h-11 w-full">
               <ChevronRight className="hidden lg:block" />
               <ChevronDown className="lg:hidden" />
               Hide panel

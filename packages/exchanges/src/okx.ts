@@ -1,5 +1,13 @@
 import { createHmac } from 'node:crypto'
-import { BAR_MS, type AccountSnapshot, type Bar, type Candle, type ExchangeAdapter, type Position } from './types'
+import {
+  BAR_MS,
+  type AccountSnapshot,
+  type Bar,
+  type Candle,
+  type Credentials,
+  type ExchangeAdapter,
+  type Position,
+} from './types'
 
 const BASE_URL = 'https://www.okx.com'
 
@@ -32,27 +40,20 @@ type OkxBalance = {
   details: { ccy: string; upl: string; eqUsd: string }[]
 }
 
-// Read env dynamically: bundlers may inline static `process.env.X` references at build time.
-function env(name: string) {
-  const value = process.env[name]
-  if (!value) throw new Error(`Missing env var ${name}`)
-  return value
-}
-
-async function okxGet<T>(path: string, params: Record<string, string> = {}): Promise<T> {
+async function okxGet<T>(c: Credentials, path: string, params: Record<string, string> = {}): Promise<T> {
   const query = new URLSearchParams(params).toString()
   const requestPath = query ? `${path}?${query}` : path
   const timestamp = new Date().toISOString()
-  const sign = createHmac('sha256', env('OKX_API_SECRET')).update(`${timestamp}GET${requestPath}`).digest('base64')
+  const sign = createHmac('sha256', c.secret).update(`${timestamp}GET${requestPath}`).digest('base64')
 
   const headers: Record<string, string> = {
-    'OK-ACCESS-KEY': env('OKX_API_KEY'),
+    'OK-ACCESS-KEY': c.apiKey,
     'OK-ACCESS-SIGN': sign,
     'OK-ACCESS-TIMESTAMP': timestamp,
-    'OK-ACCESS-PASSPHRASE': env('OKX_API_PASSPHRASE'),
+    'OK-ACCESS-PASSPHRASE': c.passphrase ?? '',
     'Content-Type': 'application/json',
   }
-  if (process.env['OKX_DEMO'] === '1') headers['x-simulated-trading'] = '1'
+  if (c.demo) headers['x-simulated-trading'] = '1'
 
   const res = await fetch(BASE_URL + requestPath, { headers })
   const json = (await res.json()) as { code: string; msg: string; data: T }
@@ -102,14 +103,29 @@ function toPosition(r: OkxPositionHistory): Position {
 export const okx: ExchangeAdapter = {
   id: 'okx',
   name: 'OKX',
-  isConfigured: () => ['OKX_API_KEY', 'OKX_API_SECRET', 'OKX_API_PASSPHRASE'].every((k) => Boolean(process.env[k])),
+  available: true,
+  needsPassphrase: true,
+
+  // perm is a comma list: read_only, trade, withdraw
+  async verifyKey(c) {
+    const [cfg] = await okxGet<{ perm: string; uid: string; label: string }[]>(c, '/api/v5/account/config')
+    const permissions = cfg.perm
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean)
+    return {
+      permissions,
+      readOnly: permissions.length > 0 && permissions.every((p) => p === 'read_only'),
+      account: cfg.uid,
+    }
+  },
 
   // OKX returns max 100 rows per page and only ~3 months. Paginate backwards via `after` (uTime).
-  async fetchClosedPositions() {
+  async fetchClosedPositions(c) {
     const all: OkxPositionHistory[] = []
     let after: string | undefined
     for (let i = 0; i < 10; i++) {
-      const page = await okxGet<OkxPositionHistory[]>('/api/v5/account/positions-history', {
+      const page = await okxGet<OkxPositionHistory[]>(c, '/api/v5/account/positions-history', {
         limit: '100',
         ...(after ? { after } : {}),
       })
@@ -120,10 +136,10 @@ export const okx: ExchangeAdapter = {
     return all.map(toPosition)
   },
 
-  async fetchAccount() {
+  async fetchAccount(c) {
     const [valuation, balance] = await Promise.all([
-      okxGet<OkxAssetValuation[]>('/api/v5/asset/asset-valuation', { ccy: 'USDT' }),
-      okxGet<OkxBalance[]>('/api/v5/account/balance'),
+      okxGet<OkxAssetValuation[]>(c, '/api/v5/asset/asset-valuation', { ccy: 'USDT' }),
+      okxGet<OkxBalance[]>(c, '/api/v5/account/balance'),
     ])
     const v = valuation[0]
     const upl = balance[0]?.details.reduce((s, d) => s + num(d.upl), 0) ?? null

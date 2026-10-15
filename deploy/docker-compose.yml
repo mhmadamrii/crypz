@@ -1,0 +1,38 @@
+# crypz API on the VPS. Run from this folder:  docker compose up -d --build
+# Assumes Postgres already runs in Docker on a network called `postgres` (change below to match yours).
+
+services:
+  # Applies pending Prisma migrations, then exits. The api starts only after it succeeds.
+  migrate:
+    build:
+      context: ..
+      dockerfile: packages/api/Dockerfile
+      target: deps
+    command: pnpm --filter @crypz/db migrate:deploy
+    env_file: .env.api
+    networks: [postgres]
+    restart: 'no'
+
+  api:
+    build:
+      context: ..
+      dockerfile: packages/api/Dockerfile
+    env_file: .env.api
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    # Caddy on the host proxies to this; nothing else can reach it.
+    ports:
+      - '127.0.0.1:3001:3001'
+    networks: [postgres]
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'bun', '-e', "fetch('http://localhost:3001/health').then(r => process.exit(r.ok ? 0 : 1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  postgres:
+    external: true
+    name: postgres

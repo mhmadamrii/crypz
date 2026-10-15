@@ -4,7 +4,11 @@ import type { ExchangeAdapter } from './types'
 export const binance: ExchangeAdapter = {
   id: 'binance',
   name: 'Binance',
-  isConfigured: () => false,
+  available: false,
+  needsPassphrase: false,
+  verifyKey: async () => {
+    throw new Error('Binance adapter not implemented yet')
+  },
   fetchClosedPositions: async () => {
     throw new Error('Binance adapter not implemented yet')
   },

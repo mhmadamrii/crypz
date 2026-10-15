@@ -2,11 +2,16 @@
   "name": "crypz",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter web dev",
+    "dev": "pnpm --parallel --filter web --filter @crypz/api dev",
     "build": "pnpm --filter web build",
     "start": "pnpm --filter web start",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "pnpm --filter @crypz/api dev",
+    "db:migrate": "pnpm --filter @crypz/db migrate",
+    "db:studio": "pnpm --filter @crypz/db studio",
+    "typecheck": "pnpm --filter web exec tsc --noEmit -p . && pnpm --filter @crypz/api typecheck"
   },
   "packageManager": "pnpm@12.11.2",
   "devDependencies": {

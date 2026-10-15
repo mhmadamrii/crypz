@@ -1,6 +1,8 @@
 import type { ExchangeStatus } from '@crypz/exchanges'
 
-import { Link, useRouterState } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
+import { authClient } from '@/lib/auth-client'
 import { cn } from '@/lib/utils'
 import { PixelLogo } from '@/components/brand/pixel-logo'
 
@@ -8,6 +10,7 @@ import {
   CandlestickChart,
   ChartColumn,
   ChevronsUpDown,
+  KeyRound,
   LayoutGrid,
   LogOut,
   Newspaper,
@@ -63,7 +66,28 @@ function StatusSquare({ on }: { on: boolean }) {
   )
 }
 
-export function AppSidebar({ exchanges }: { exchanges: ExchangeStatus[] }) {
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join('') || '?'
+
+export function AppSidebar({
+  exchanges,
+  user,
+}: {
+  exchanges: ExchangeStatus[]
+  user: { name: string; email: string }
+}) {
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const signOut = async () => {
+    await authClient.signOut()
+    queryClient.clear()
+    navigate({ to: '/' })
+  }
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
   return (
@@ -151,17 +175,16 @@ export function AppSidebar({ exchanges }: { exchanges: ExchangeStatus[] }) {
             <SidebarMenu>
               {exchanges.map((e) => (
                 <SidebarMenuItem key={e.id}>
-                  <SidebarMenuButton
-                    tooltip={`${e.name} · ${e.configured ? 'connected' : 'not connected'}`}
-                    className="cursor-default hover:bg-transparent"
-                  >
-                    <span className="grid size-4 place-items-center">
-                      <StatusSquare on={e.configured} />
-                    </span>
-                    <span className="group-data-[collapsible=icon]:hidden">{e.name}</span>
-                    <span className="ml-auto label group-data-[collapsible=icon]:hidden">
-                      {e.configured ? 'Live' : 'Off'}
-                    </span>
+                  <SidebarMenuButton asChild tooltip={`${e.name} · ${e.configured ? 'connected' : 'not connected'}`}>
+                    <Link to="/settings/exchanges">
+                      <span className="grid size-4 place-items-center">
+                        <StatusSquare on={e.configured} />
+                      </span>
+                      <span className="group-data-[collapsible=icon]:hidden">{e.name}</span>
+                      <span className="ml-auto label group-data-[collapsible=icon]:hidden">
+                        {e.configured ? 'Live' : 'Off'}
+                      </span>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -177,22 +200,25 @@ export function AppSidebar({ exchanges }: { exchanges: ExchangeStatus[] }) {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton size="lg" tooltip="Account">
                   <span className="grid size-8 shrink-0 place-items-center bg-foreground num text-xs font-medium text-background">
-                    DE
+                    {initials(user.name)}
                   </span>
-                  <span className="flex flex-col text-left leading-tight">
-                    <span className="text-sm font-medium">Demo trader</span>
-                    <span className="text-xs text-muted-foreground">No auth yet</span>
+                  <span className="flex min-w-0 flex-col text-left leading-tight">
+                    <span className="truncate text-sm font-medium">{user.name}</span>
+                    <span className="truncate text-xs text-muted-foreground">{user.email}</span>
                   </span>
                   <ChevronsUpDown className="ml-auto" strokeWidth={1.5} />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="right" align="end" className="min-w-52">
-                <DropdownMenuLabel className="label">Signed in as demo</DropdownMenuLabel>
+                <DropdownMenuLabel className="label">Signed in</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/">
-                    <LogOut /> Log out
+                  <Link to="/settings/exchanges">
+                    <KeyRound /> Exchange keys
                   </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => void signOut()}>
+                  <LogOut /> Log out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

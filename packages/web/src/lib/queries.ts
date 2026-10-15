@@ -1,22 +1,28 @@
 import { infiniteQueryOptions, queryOptions, useSuspenseQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { BAR_MS, type Bar, type Candle, type ExchangeId } from '@crypz/exchanges'
-import { getPortfolio } from '@/server/portfolio'
-import { getCandles, getTicker } from '@/server/market'
+
+const getCandles = ({ data: q }: { data: { exchange: ExchangeId; symbol: string; bar: Bar; before?: number } }) =>
+  unwrap(
+    api.market.candles.$get({
+      query: { exchange: q.exchange, symbol: q.symbol, bar: q.bar, ...(q.before ? { before: String(q.before) } : {}) },
+    }),
+  )
+import { api, unwrap } from './api'
 
 // Every server read goes through these, so caching, polling and dedupe live in one place.
 
 export const portfolioQuery = () =>
   queryOptions({
     queryKey: ['portfolio'],
-    queryFn: () => getPortfolio(),
+    queryFn: () => unwrap(api.portfolio.$get({ query: {} })),
     staleTime: 60_000,
   })
 
 export const tickerQuery = (exchange: ExchangeId, symbol: string) =>
   queryOptions({
     queryKey: ['ticker', exchange, symbol],
-    queryFn: () => getTicker({ data: { exchange, symbol } }),
+    queryFn: () => unwrap(api.market.ticker.$get({ query: { exchange, symbol } })),
     refetchInterval: 10_000,
   })
 
@@ -70,6 +76,12 @@ export const replayCandlesQuery = (exchange: ExchangeId, symbol: string, bar: Ba
     },
     staleTime: Infinity,
     gcTime: 10 * 60_000,
+  })
+
+export const connectionsQuery = () =>
+  queryOptions({
+    queryKey: ['connections'],
+    queryFn: () => unwrap(api.connections.$get()),
   })
 
 /** Portfolio for pages under the (main) layout, whose loader has already filled the cache. */

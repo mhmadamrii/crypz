@@ -1,0 +1,11 @@
+**/node_modules
+**/.output
+**/.vercel
+**/.tanstack
+**/dist
+.env
+.env.*
+!.env.example
+packages/web
+packages/db/src/generated
+.git

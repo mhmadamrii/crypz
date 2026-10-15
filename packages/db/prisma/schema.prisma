@@ -1,0 +1,98 @@
+// crypz database. Auth tables follow Better Auth's core schema; everything else hangs off User.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String   @id
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions    Session[]
+  accounts    Account[]
+  connections ExchangeConnection[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  /// Password hash for email/password sign-in (scrypt, by Better Auth).
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+/// An exchange API key a user connected. The key, secret and passphrase are sealed with AES-256-GCM using the
+/// server's CREDENTIALS_KEY; the database alone can never decrypt them.
+model ExchangeConnection {
+  id          String    @id
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exchange    String
+  label       String
+  /// Last 4 characters of the API key, for display only.
+  keyHint     String
+  demo        Boolean   @default(false)
+  /// Permissions the exchange reported when the key was verified, e.g. ["read_only"].
+  permissions String[]
+  /// `v<keyVersion>.<iv>.<tag>.<ciphertext>` (base64url). Bound to `userId:id` as additional data.
+  sealed      String
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, exchange, keyHint])
+  @@index([userId])
+  @@map("exchange_connection")
+}

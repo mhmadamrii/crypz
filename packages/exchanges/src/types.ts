@@ -34,6 +34,7 @@ export type AccountSnapshot = {
 export type ExchangeStatus = {
   id: ExchangeId
   name: string
+  /** The user has at least one key connected for it. */
   configured: boolean
 }
 
@@ -93,12 +94,21 @@ export type Ticker = {
   volume24h: number
 }
 
+/** A user's API key for one exchange, decrypted only for the duration of a request. */
+export type Credentials = { apiKey: string; secret: string; passphrase?: string; demo?: boolean }
+
+/** What the exchange says a key may do. */
+export type KeyCheck = { permissions: string[]; readOnly: boolean; account?: string }
+
 export interface ExchangeAdapter {
   id: ExchangeId
   name: string
-  isConfigured(): boolean
-  fetchClosedPositions(): Promise<Position[]>
-  fetchAccount(): Promise<AccountSnapshot>
+  /** Whether this build can talk to the exchange yet. */
+  available: boolean
+  needsPassphrase: boolean
+  verifyKey(c: Credentials): Promise<KeyCheck>
+  fetchClosedPositions(c: Credentials): Promise<Position[]>
+  fetchAccount(c: Credentials): Promise<AccountSnapshot>
   /** Public market data, oldest first. `before` (ms) pages back into history. */
   fetchCandles(symbol: string, bar: Bar, before?: number): Promise<Candle[]>
   fetchTicker(symbol: string): Promise<Ticker>

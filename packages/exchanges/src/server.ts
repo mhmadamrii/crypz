@@ -1,6 +1,6 @@
 import { binance } from './binance'
 import { okx } from './okx'
-import type { AccountSnapshot, ExchangeAdapter, ExchangeId, ExchangeStatus, Position } from './types'
+import type { AccountSnapshot, Credentials, ExchangeAdapter, ExchangeId, ExchangeStatus, Position } from './types'
 
 export const adapters: ExchangeAdapter[] = [okx, binance]
 
@@ -18,17 +18,18 @@ export type Portfolio = {
   fetchedAt: number
 }
 
-/** Fetch every configured exchange; one failing exchange never blanks the others. */
-export async function loadPortfolio(): Promise<Portfolio> {
-  const configured = adapters.filter((a) => a.isConfigured())
+/** Fetch every connected exchange; one failing exchange never blanks the others. */
+export async function loadPortfolio(
+  connections: { exchange: ExchangeId; credentials: Credentials }[],
+): Promise<Portfolio> {
   const errors: Portfolio['errors'] = []
   const positions: Position[] = []
   const accounts: AccountSnapshot[] = []
-  console.log('adapters?', JSON.stringify(adapters, null, 2))
 
   await Promise.all(
-    configured.map(async (a) => {
-      const [pos, acc] = await Promise.allSettled([a.fetchClosedPositions(), a.fetchAccount()])
+    connections.map(async ({ exchange, credentials }) => {
+      const a = getAdapter(exchange)
+      const [pos, acc] = await Promise.allSettled([a.fetchClosedPositions(credentials), a.fetchAccount(credentials)])
       if (pos.status === 'fulfilled') positions.push(...pos.value)
       else errors.push({ exchange: a.name, message: String(pos.reason?.message ?? pos.reason) })
       if (acc.status === 'fulfilled') accounts.push(acc.value)
@@ -37,8 +38,9 @@ export async function loadPortfolio(): Promise<Portfolio> {
   )
 
   positions.sort((a, b) => b.closedAt - a.closedAt)
+  const connected = new Set(connections.map((c) => c.exchange))
   return {
-    exchanges: adapters.map((a) => ({ id: a.id, name: a.name, configured: a.isConfigured() })),
+    exchanges: adapters.map((a) => ({ id: a.id, name: a.name, configured: connected.has(a.id) })),
     positions,
     accounts,
     errors,

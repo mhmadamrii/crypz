@@ -8,6 +8,7 @@
     "start": "node .output/server/index.mjs"
   },
   "dependencies": {
+    "@crypz/api": "workspace:*",
     "@crypz/exchanges": "workspace:*",
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
@@ -16,8 +17,10 @@
     "@tanstack/react-router": "^1.170.44",
     "@tanstack/react-router-ssr-query": "^1.167.3",
     "@tanstack/react-start": "^1.169.1",
+    "better-auth": "1.7.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "hono": "4.13.13",
     "lightweight-charts": "5.2.1",
     "lucide-react": "^1.56.0",
     "nitro": "3.0.260903-beta",

@@ -16,6 +16,7 @@ import { Route as mainPositionsRouteImport } from './routes/(main)/positions'
 import { Route as mainTradeRouteImport } from './routes/(main)/trade'
 import { Route as publicIndexRouteImport } from './routes/(public)/index'
 import { Route as publicLoginRouteImport } from './routes/(public)/login'
+import { Route as mainSettingsExchangesRouteImport } from './routes/(main)/settings/exchanges'
 import { Route as mainTradeReplayRouteImport } from './routes/(main)/trade_.replay'
 import { Route as publicToolsPositionSizeRouteImport } from './routes/(public)/tools/position-size'
 
@@ -52,6 +53,11 @@ const publicLoginRoute = publicLoginRouteImport.update({
   path: '/login',
   getParentRoute: () => publicRouteRoute,
 } as any)
+const mainSettingsExchangesRoute = mainSettingsExchangesRouteImport.update({
+  id: '/settings/exchanges',
+  path: '/settings/exchanges',
+  getParentRoute: () => mainRouteRoute,
+} as any)
 const mainTradeReplayRoute = mainTradeReplayRouteImport.update({
   id: '/trade_/replay',
   path: '/trade/replay',
@@ -69,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/trade': typeof mainTradeRoute
   '/login': typeof publicLoginRoute
   '/': typeof publicIndexRoute
+  '/settings/exchanges': typeof mainSettingsExchangesRoute
   '/trade/replay': typeof mainTradeReplayRoute
   '/tools/position-size': typeof publicToolsPositionSizeRoute
 }
@@ -78,6 +85,7 @@ export interface FileRoutesByTo {
   '/trade': typeof mainTradeRoute
   '/login': typeof publicLoginRoute
   '/': typeof publicIndexRoute
+  '/settings/exchanges': typeof mainSettingsExchangesRoute
   '/trade/replay': typeof mainTradeReplayRoute
   '/tools/position-size': typeof publicToolsPositionSizeRoute
 }
@@ -90,6 +98,7 @@ export interface FileRoutesById {
   '/(main)/trade': typeof mainTradeRoute
   '/(public)/login': typeof publicLoginRoute
   '/(public)/': typeof publicIndexRoute
+  '/(main)/settings/exchanges': typeof mainSettingsExchangesRoute
   '/(main)/trade_/replay': typeof mainTradeReplayRoute
   '/(public)/tools/position-size': typeof publicToolsPositionSizeRoute
 }
@@ -101,6 +110,7 @@ export interface FileRouteTypes {
     | '/trade'
     | '/login'
     | '/'
+    | '/settings/exchanges'
     | '/trade/replay'
     | '/tools/position-size'
   fileRoutesByTo: FileRoutesByTo
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/trade'
     | '/login'
     | '/'
+    | '/settings/exchanges'
     | '/trade/replay'
     | '/tools/position-size'
   id:
@@ -121,6 +132,7 @@ export interface FileRouteTypes {
     | '/(main)/trade'
     | '/(public)/login'
     | '/(public)/'
+    | '/(main)/settings/exchanges'
     | '/(main)/trade_/replay'
     | '/(public)/tools/position-size'
   fileRoutesById: FileRoutesById
@@ -181,6 +193,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof publicLoginRouteImport
       parentRoute: typeof publicRouteRoute
     }
+    '/(main)/settings/exchanges': {
+      id: '/(main)/settings/exchanges'
+      path: '/settings/exchanges'
+      fullPath: '/settings/exchanges'
+      preLoaderRoute: typeof mainSettingsExchangesRouteImport
+      parentRoute: typeof mainRouteRoute
+    }
     '/(main)/trade_/replay': {
       id: '/(main)/trade_/replay'
       path: '/trade/replay'
@@ -202,6 +221,7 @@ interface mainRouteRouteChildren {
   mainDashboardRoute: typeof mainDashboardRoute
   mainPositionsRoute: typeof mainPositionsRoute
   mainTradeRoute: typeof mainTradeRoute
+  mainSettingsExchangesRoute: typeof mainSettingsExchangesRoute
   mainTradeReplayRoute: typeof mainTradeReplayRoute
 }
 
@@ -209,6 +229,7 @@ const mainRouteRouteChildren: mainRouteRouteChildren = {
   mainDashboardRoute: mainDashboardRoute,
   mainPositionsRoute: mainPositionsRoute,
   mainTradeRoute: mainTradeRoute,
+  mainSettingsExchangesRoute: mainSettingsExchangesRoute,
   mainTradeReplayRoute: mainTradeReplayRoute,
 }
 
