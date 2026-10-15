@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite dev --port 3000",
     "build": "vite build",
-    "start": "vite preview --port 3000"
+    "start": "node .output/server/index.mjs"
   },
   "dependencies": {
     "@crypz/exchanges": "workspace:*",
@@ -18,6 +18,7 @@
     "clsx": "^2.1.1",
     "lightweight-charts": "5.2.1",
     "lucide-react": "^1.56.0",
+    "nitro": "3.0.260903-beta",
     "radix-ui": "^1.8.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
