@@ -7,6 +7,7 @@ dist
 .env.local
 *.log
 .DS_Store
+.user
 
 # prisma client (regenerated on install)
 packages/db/src/generated
