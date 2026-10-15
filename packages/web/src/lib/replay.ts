@@ -32,19 +32,25 @@ export type ReplayTrade = OpenPosition & {
 }
 
 export type ReplayState = {
-  /** Bars revealed after the start bar. */
-  step: number
+  /**
+   * The replay clock (ms): every candle that has closed by this moment is visible, nothing later is. A time, not a
+   * bar count, so switching interval keeps your place instead of starting over.
+   */
+  now: number
+  /** Where the clock started, for "time elapsed" readouts. */
+  start: number
   position: OpenPosition | null
   trades: ReplayTrade[]
 }
 
 export type ReplayAction =
-  | { type: 'step'; candle: Candle }
+  /** Reveal `candle`, which closes at `closesAt`. */
+  | { type: 'step'; candle: Candle; closesAt: number }
   | { type: 'open'; side: Side; candle: Candle; stop: number | null; target: number | null; leverage: number }
   | { type: 'levels'; stop: number | null; target: number | null }
   | { type: 'close'; candle: Candle }
 
-export const initialReplay: ReplayState = { step: 0, position: null, trades: [] }
+export const initialReplay = (now: number): ReplayState => ({ now, start: now, position: null, trades: [] })
 
 const dir = (side: Side) => (side === 'long' ? 1 : -1)
 
@@ -93,7 +99,7 @@ export function exitOn(p: OpenPosition, k: Candle): { price: number; reason: Exi
 export function replayReducer(state: ReplayState, a: ReplayAction): ReplayState {
   switch (a.type) {
     case 'step': {
-      const next = { ...state, step: state.step + 1 }
+      const next = { ...state, now: Math.max(state.now, a.closesAt) }
       const hit = state.position && exitOn(state.position, a.candle)
       return hit ? settle(next, hit.price, a.candle.time, hit.reason) : next
     }

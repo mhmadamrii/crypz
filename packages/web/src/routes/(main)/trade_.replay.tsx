@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  LoaderCircle,
   Minus,
   Pause,
   Play,
@@ -38,7 +39,7 @@ import {
   sessionStats,
   type Side,
 } from '@/lib/replay'
-import { fmtNum, fmtPct, fmtPrice, fmtSigned, tone } from '@/lib/format'
+import { fmtDuration, fmtNum, fmtPct, fmtPrice, fmtSigned, tone } from '@/lib/format'
 import { searchText } from '@/lib/search'
 import { cn } from '@/lib/utils'
 
@@ -151,9 +152,9 @@ function Replay() {
         </div>
       </div>
 
-      {/* a new instrument, timeframe or start date is a fresh session */}
+      {/* a new instrument or start date is a fresh session; a new interval keeps the clock and your trades */}
       <ReplaySession
-        key={`${exchange}:${symbol}:${bar}:${from}`}
+        key={`${exchange}:${symbol}:${from}`}
         exchange={exchange}
         symbol={symbol}
         bar={bar}
@@ -198,22 +199,30 @@ function ReplaySession({
   panel: boolean
   onPanel: (open: boolean) => void
 }) {
-  const q = useInfiniteQuery(replayCandlesQuery(exchange, symbol, bar, from))
+  // The clock, position and trades outlive interval switches; only the candle window follows the interval.
+  const [state, dispatch] = useReducer(replayReducer, from + BAR_MS[bar], initialReplay)
+  // Each interval loads its window around where the clock stood when you switched to it.
+  const [view, setView] = useState({ bar, anchor: state.now })
+  if (view.bar !== bar) setView({ bar, anchor: state.now })
+  const q = useInfiniteQuery(replayCandlesQuery(exchange, symbol, bar, view.anchor - BAR_MS[bar]))
+  // First load and interval switches show a spinner over the (blurred) chart; stepping and orders wait for it.
+  const loading = q.isPending || q.isPlaceholderData
   const candles = useMemo(() => {
     const byTime = new Map<number, Candle>()
     for (const page of q.data?.pages ?? []) for (const k of page) byTime.set(k.time, k)
     return [...byTime.values()].sort((a, b) => a.time - b.time)
   }, [q.data])
-  const startIdx = useMemo(() => {
+  // A candle closes when the next one opens (or one bar length later at the edge of what is loaded).
+  const closesAt = (i: number) => candles[i + 1]?.time ?? candles[i].time + BAR_MS[bar]
+  // The last candle that has fully closed by the clock. A higher interval's forming candle stays hidden: its
+  // high and low would leak the future.
+  const cursor = useMemo(() => {
     let i = -1
-    while (i + 1 < candles.length && candles[i + 1].time <= from) i++
+    while (i + 1 < candles.length && (candles[i + 2]?.time ?? candles[i + 1].time + BAR_MS[bar]) <= state.now) i++
     return i
-  }, [candles, from])
-
-  const [state, dispatch] = useReducer(replayReducer, initialReplay)
-  const cursor = startIdx + state.step
-  const revealed = useMemo(() => (startIdx < 0 ? [] : candles.slice(0, cursor + 1)), [candles, cursor, startIdx])
-  const current = startIdx < 0 ? undefined : candles[cursor]
+  }, [candles, state.now, bar])
+  const revealed = useMemo(() => (cursor < 0 ? [] : candles.slice(0, cursor + 1)), [candles, cursor])
+  const current = cursor < 0 ? undefined : candles[cursor]
   const ended = !candles[cursor + 1] && !q.hasNextPage && q.isSuccess
 
   const [playing, setPlaying] = useState(false)
@@ -233,6 +242,7 @@ function ReplaySession({
   const num = (v: string) => (v.trim() && Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null)
 
   const advance = () => {
+    if (loading) return
     const next = candles[cursor + 1]
     const more = q.hasNextPage && !q.isFetchingNextPage
     if (!next) {
@@ -240,12 +250,12 @@ function ReplaySession({
       else if (!q.hasNextPage) setPlaying(false)
       return
     }
-    dispatch({ type: 'step', candle: next })
+    dispatch({ type: 'step', candle: next, closesAt: closesAt(cursor + 1) })
     if (candles.length - cursor < 60 && more) void q.fetchNextPage()
   }
 
   const open = (side: Side) => {
-    if (!current || state.position) return
+    if (loading || !current || state.position) return
     const s = num(stop)
     const t = num(target)
     const err = levelError(side, current.close, s, t)
@@ -316,11 +326,11 @@ function ReplaySession({
   const growth = start ? (balance / start - 1) * 100 : 0
   const Trend = growth > 0 ? TrendingUp : growth < 0 ? TrendingDown : Minus
 
-  const blocker = q.isPending
-    ? 'Loading candles…'
+  const blocker = loading
+    ? null
     : q.isError
       ? `Could not load candles: ${q.error.message}`
-      : startIdx < 0
+      : cursor < 0 && q.isSuccess
         ? 'No candles before this start date. Pick a later one.'
         : null
 
@@ -339,6 +349,15 @@ function ReplaySession({
               trades={state.trades}
               className="absolute inset-0"
             />
+            {loading && (
+              <div
+                role="status"
+                className="absolute inset-0 z-20 grid place-items-center bg-background/30 backdrop-blur-[3px]"
+              >
+                <LoaderCircle className="size-5 text-muted-foreground motion-safe:animate-spin" strokeWidth={1.5} />
+                <span className="sr-only">Loading candles</span>
+              </div>
+            )}
             {blocker && (
               <div className="absolute inset-0 z-20 grid place-items-center bg-background/80 p-6 text-center text-sm text-muted-foreground">
                 {blocker}
@@ -385,7 +404,7 @@ function ReplaySession({
           <div className="flex min-w-0 flex-col leading-tight">
             <span className="num text-sm">{current ? fmtWhen(current.time) : '–'}</span>
             <span className="num text-[11px] text-muted-foreground">
-              {ended ? 'End of history' : `Bar +${state.step} · ${bar}`}
+              {ended ? 'End of history' : `+${fmtDuration(state.now - state.start)} · ${bar}`}
               {q.isFetchingNextPage && ' · loading ahead'}
             </span>
           </div>

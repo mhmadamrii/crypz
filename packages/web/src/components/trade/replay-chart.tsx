@@ -23,6 +23,7 @@ type Props = {
 }
 
 type Handles = {
+  timeVisible: (on: boolean) => void
   candles: ISeriesApi<'Candlestick'>
   markers: ISeriesMarkersPluginApi<Time>
   setView: (n: number) => void
@@ -37,8 +38,8 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
   const [ready, setReady] = useState(false)
   const [hover, setHover] = useState<Candle | null>(null)
   const [theme, setTheme] = useState(0)
-  const live = useRef(candles)
-  live.current = candles
+  const live = useRef({ candles, barMs })
+  live.current = { candles, barMs }
 
   // 1. Lifecycle: create the chart once, tear it down on unmount.
   useEffect(() => {
@@ -57,15 +58,20 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
         series: made.candles,
         el: box.current,
         symbol,
-        mapper: createMapper(made.chart, made.candles, () => live.current, barMs),
+        mapper: createMapper(
+          made.chart,
+          made.candles,
+          () => live.current.candles,
+          () => live.current.barMs,
+        ),
         palette: palette(),
       })
       dispose = () => {
         layer.dispose()
         made.dispose()
       }
-      made.chart.applyOptions({ timeScale: { timeVisible: intraday } })
       ref.current = {
+        timeVisible: (on) => made.chart.applyOptions({ timeScale: { timeVisible: on } }),
         candles: made.candles,
         markers: lw.createSeriesMarkers(made.candles, []),
         setView: (n) => made.chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - 120), to: n + 8 }),
@@ -74,7 +80,7 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
         dashed: lw.LineStyle.Dashed,
       }
       made.chart.subscribeCrosshairMove((param) => {
-        const k = param.time ? live.current.find((c) => toChart(c.time) === param.time) : undefined
+        const k = param.time ? live.current.candles.find((c) => toChart(c.time) === param.time) : undefined
         setHover(k ?? null)
       })
       setReady(true)
@@ -86,11 +92,12 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
     }
   }, [])
 
-  // 2. Candles: a step appends one bar; anything else (new session, first load) resets the series.
+  // 2. Candles: a step appends one bar; anything else (first load, a new interval) resets the series.
   const shown = useRef({ first: 0, length: 0 })
   useEffect(() => {
     const c = ref.current
     if (!c || !candles.length) return
+    c.timeVisible(intraday)
     const prev = shown.current
     const first = candles[0].time
     if (prev.first === first && candles.length === prev.length + 1) c.candles.update(toBar(candles[candles.length - 1]))
@@ -100,17 +107,29 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
       if (prev.first !== first) c.setView(candles.length)
     }
     shown.current = { first, length: candles.length }
-  }, [ready, candles])
+  }, [ready, candles, intraday])
 
   // 3. Orders: entry/exit markers and the open position's entry, stop and target lines.
   useEffect(() => {
     const c = ref.current
     if (!c) return
     const p = c.palette
+    // orders placed on another interval land on the candle that contains them
+    const snap = (ms: number) => {
+      let lo = 0
+      let hi = candles.length - 1
+      if (hi < 0) return toChart(ms)
+      while (lo < hi) {
+        const mid = (lo + hi + 1) >> 1
+        if (candles[mid].time <= ms) lo = mid
+        else hi = mid - 1
+      }
+      return toChart(candles[lo].time)
+    }
     const marks: SeriesMarker<Time>[] = []
     for (const t of trades) {
-      marks.push(entryMark(t, p), {
-        time: toChart(t.exitTime),
+      marks.push(entryMark(t, p, snap), {
+        time: snap(t.exitTime),
         position: t.side === 'long' ? 'aboveBar' : 'belowBar',
         shape: 'square',
         color: t.pct > 0 ? p.up : p.down,
@@ -118,7 +137,7 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
         size: 1,
       })
     }
-    if (position) marks.push(entryMark(position, p))
+    if (position) marks.push(entryMark(position, p, snap))
     c.markers.setMarkers(marks.sort((a, b) => (a.time as number) - (b.time as number)))
 
     for (const l of c.lines) c.candles.removePriceLine(l)
@@ -133,7 +152,7 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
       if (position.target !== null) line(position.target, 'Target', p.up)
       line(position.liq, 'Liq', p.muted)
     }
-  }, [ready, theme, trades, position])
+  }, [ready, theme, trades, position, candles])
 
   const k = hover ?? candles[candles.length - 1]
   return (
@@ -160,8 +179,8 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
   )
 }
 
-const entryMark = (t: OpenPosition, p: Palette): SeriesMarker<Time> => ({
-  time: toChart(t.entryTime),
+const entryMark = (t: OpenPosition, p: Palette, snap: (ms: number) => Time): SeriesMarker<Time> => ({
+  time: snap(t.entryTime),
   position: t.side === 'long' ? 'belowBar' : 'aboveBar',
   shape: t.side === 'long' ? 'arrowUp' : 'arrowDown',
   color: p.fg,

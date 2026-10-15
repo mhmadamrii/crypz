@@ -24,14 +24,15 @@ export function createMapper(
   chart: IChartApi,
   series: ISeriesApi<'Candlestick'>,
   candles: () => Candle[],
-  barMs: number,
+  /** Read on every conversion, so the chart can change interval without rebuilding the layer. */
+  barMsOf: () => number,
 ) {
   const toLogical = (t: number) => {
     const c = candles()
     const n = c.length
     if (!n) return null
-    if (t <= c[0].time) return (t - c[0].time) / barMs
-    if (t >= c[n - 1].time) return n - 1 + (t - c[n - 1].time) / barMs
+    if (t <= c[0].time) return (t - c[0].time) / barMsOf()
+    if (t >= c[n - 1].time) return n - 1 + (t - c[n - 1].time) / barMsOf()
     let lo = 0
     let hi = n - 1
     while (hi - lo > 1) {
@@ -45,8 +46,8 @@ export function createMapper(
     const c = candles()
     const n = c.length
     if (!n) return null
-    if (l <= 0) return c[0].time + l * barMs
-    if (l >= n - 1) return c[n - 1].time + (l - (n - 1)) * barMs
+    if (l <= 0) return c[0].time + l * barMsOf()
+    if (l >= n - 1) return c[n - 1].time + (l - (n - 1)) * barMsOf()
     const i = Math.floor(l)
     return c[i].time + (l - i) * (c[i + 1].time - c[i].time)
   }
@@ -66,7 +67,7 @@ export function createMapper(
     /** `time` moved by `bars` bar widths. */
     shiftBars: (time: number, bars: number) => {
       const l = toLogical(time)
-      return l === null ? time + bars * barMs : (fromLogical(l + bars) ?? time + bars * barMs)
+      return l === null ? time + bars * barMsOf() : (fromLogical(l + bars) ?? time + bars * barMsOf())
     },
   } satisfies Mapper & { shiftBars: (time: number, bars: number) => number }
 }

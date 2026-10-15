@@ -1,4 +1,4 @@
-import { infiniteQueryOptions, queryOptions, useSuspenseQuery } from '@tanstack/react-query'
+import { infiniteQueryOptions, keepPreviousData, queryOptions, useSuspenseQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { BAR_MS, type Bar, type Candle, type ExchangeId } from '@crypz/exchanges'
 
@@ -64,7 +64,9 @@ export const replayCandlesQuery = (exchange: ExchangeId, symbol: string, bar: Ba
       const recent = await get(from + 1)
       const [older, ahead] = await Promise.all([
         recent.length ? get(recent[0].time) : [],
-        get(from + (REPLAY_CHUNK + 1) * BAR_MS[bar]),
+        // step from the last candle's open, not from `from`: `from` sits mid-bar, and the exchange returns the
+        // 100 bars before the cut, so an unaligned cut would skip the first bar after the context
+        get((recent.at(-1)?.time ?? from) + (REPLAY_CHUNK + 1) * BAR_MS[bar]),
       ])
       return [...older, ...recent, ...ahead.filter((k) => k.time > from)]
     },
@@ -76,6 +78,8 @@ export const replayCandlesQuery = (exchange: ExchangeId, symbol: string, bar: Ba
     },
     staleTime: Infinity,
     gcTime: 10 * 60_000,
+    // switching interval keeps the old candles on screen (blurred) until the new ones land
+    placeholderData: keepPreviousData,
   })
 
 export const connectionsQuery = () =>
