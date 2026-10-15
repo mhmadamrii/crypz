@@ -1,0 +1,173 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
+
+@custom-variant dark (&:is(.dark *));
+
+/* Light: bone paper, ink type. */
+:root {
+  --background: oklch(0.975 0.002 95);
+  --foreground: oklch(0.16 0 0);
+  --card: oklch(0.975 0.002 95);
+  --card-foreground: oklch(0.16 0 0);
+  --popover: oklch(0.99 0.002 95);
+  --popover-foreground: oklch(0.16 0 0);
+  --primary: oklch(0.16 0 0);
+  --primary-foreground: oklch(0.975 0.002 95);
+  --secondary: oklch(0.93 0.003 95);
+  --secondary-foreground: oklch(0.16 0 0);
+  --muted: oklch(0.935 0.003 95);
+  --muted-foreground: oklch(0.45 0.004 95);
+  --accent: oklch(0.92 0.003 95);
+  --accent-foreground: oklch(0.16 0 0);
+  --destructive: oklch(0.55 0.2 22);
+  --border: oklch(0.86 0.003 95);
+  --input: oklch(0.82 0.003 95);
+  --ring: oklch(0.16 0 0);
+  --hairline: oklch(0.9 0.003 95);
+  --up: oklch(0.56 0.13 160);
+  --down: oklch(0.56 0.2 20);
+}
+
+/* Dark: ink ground, bone type. Default theme. */
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.96 0.003 95);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.96 0.003 95);
+  --popover: oklch(0.19 0 0);
+  --popover-foreground: oklch(0.96 0.003 95);
+  --primary: oklch(0.96 0.003 95);
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.21 0 0);
+  --secondary-foreground: oklch(0.96 0.003 95);
+  --muted: oklch(0.2 0 0);
+  --muted-foreground: oklch(0.66 0.004 95);
+  --accent: oklch(0.23 0 0);
+  --accent-foreground: oklch(0.96 0.003 95);
+  --destructive: oklch(0.66 0.2 20);
+  --border: oklch(0.27 0 0);
+  --input: oklch(0.32 0 0);
+  --ring: oklch(0.96 0.003 95);
+  --hairline: oklch(0.215 0 0);
+  --up: oklch(0.74 0.15 162);
+  --down: oklch(0.67 0.2 18);
+}
+
+@theme inline {
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-hairline: var(--hairline);
+  --color-up: var(--up);
+  --color-down: var(--down);
+
+  /* The world has no curves. */
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    color-scheme: light;
+    scrollbar-color: var(--input) transparent;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+    font-feature-settings: 'ss01';
+  }
+  ::selection {
+    background: var(--foreground);
+    color: var(--background);
+  }
+  :focus-visible {
+    outline: 1px solid var(--ring);
+    outline-offset: 2px;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--input);
+    border: 3px solid var(--background);
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  a {
+    text-underline-offset: 3px;
+  }
+}
+
+@utility num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  letter-spacing: -0.01em;
+}
+
+@utility label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+/* Signature motion: fixed-cell digits roll in on value change. */
+@keyframes digit-roll {
+  from {
+    transform: translateY(55%);
+    opacity: 0;
+    filter: blur(2px);
+  }
+  to {
+    transform: none;
+    opacity: 1;
+    filter: none;
+  }
+}
+@keyframes cell-in {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .digit-roll {
+    animation: digit-roll 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .cell-in {
+    animation: cell-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "title": "Choose the visual world for crypz",
+  "question": "The roll assigned Trade Mosaic. Keep it, take an alternate, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Trade Mosaic",
+      "kicker": "THE ROLL",
+      "lineage": "on-chain pixel art: CryptoPunks' 24×24 grid",
+      "thesis": "Every closed position is one square pixel; your history becomes your own punk.",
+      "palette": ["#0a0a0a", "#f4f4f2", "#7a7a76", "#2ebd85", "#f6465d"],
+      "materials": ["hard square pixels", "1px hairlines, zero radius", "tabular mono numerals"],
+      "viewport": "Shell with left rail; equity strip on top; the 333-cell mosaic beside the edge readout; chart slot below.",
+      "risk": "Mosaic turns decorative if cells stop linking to real trades.",
+      "raised": [
+        {"from": "split-flap concourse", "raise": "Fixed-cell numerals: every figure set in fixed tabular cells; digits roll per-character on period change."},
+        {"from": "centre-rail reference setting", "raise": "Hairline state marks: focus is a bracket, pressed is filled, no radius anywhere."},
+        {"from": "midnight transit diagram", "raise": "Corridor focus: picking an instrument lights it across mosaic, breakdown and table; everything else dims."},
+        {"from": "orienteering map", "raise": "One reserved colour per job: green/red only for PnL sign, white only for the active selection."}
+      ],
+      "html": ".impeccable/mocks/decision/assigned.html"
+    },
+    {
+      "id": "model-pick",
+      "label": "Block Explorer Ledger",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "Etherscan / mempool.space block explorers",
+      "thesis": "Your trades read like confirmed blocks: heights, hashes, a ledger you can audit.",
+      "palette": ["#000000", "#ededed", "#5c5c5c", "#2ebd85", "#f6465d"],
+      "materials": ["monospace hex", "stacked block tiles", "hairline ledger rows"],
+      "viewport": "Top bar; a row of recent 'blocks' (days) as stacked tiles; ledger stats; chart; table as tx list.",
+      "risk": "Familiar: most crypto dashboards borrow the explorer look.",
+      "html": ".impeccable/mocks/decision/model-pick.html"
+    },
+    {
+      "id": "challenger-catalog-sleeve",
+      "label": "Catalog Sleeve",
+      "verdict": "competitive",
+      "lineage": "Factory Records / Saville sleeves, Unknown Pleasures",
+      "thesis": "Daily PnL drawn as a stacked white pulse plot on matte black; every trade carries a catalog number.",
+      "palette": ["#0b0b0b", "#f2f2f2", "#3a3a3a"],
+      "materials": ["white hairline ridgeline plot", "engraved small caps", "vast unprinted black"],
+      "viewport": "Ridgeline of daily PnL owns the top; catalog numbers index trades; stats in small caps beneath.",
+      "case": "Wins audience identification (the mysterious crypto guy); loses on clarity because coded labels slow reading.",
+      "risk": "Coded labels fight a review tool; must decode everything on screen.",
+      "hero": "https://impeccable.style/worlds/cards/brand-identity-canon-saville-catalog-sleeve-hero.webp",
+      "html": ".impeccable/mocks/decision/challenger-catalog-sleeve.html"
+    },
+    {
+      "id": "challenger-split-flap",
+      "label": "Split-flap Concourse",
+      "verdict": "declined",
+      "lineage": "rail departure boards",
+      "thesis": "Positions as departures on a clacking board.",
+      "palette": ["#111111", "#f5f5f5", "#e0a030"],
+      "materials": ["matte flaps", "brushed steel"],
+      "viewport": "Board of rows ranked by close time.",
+      "case": "Loses both: not the crypto trader's world, and a board hides the edge breakdown.",
+      "kept": "Fixed-cell numerals that roll per digit.",
+      "risk": "Transit costume.",
+      "hero": "https://impeccable.style/worlds/cards/signals-instruments-split-flap-concourse-hero.webp"
+    },
+    {
+      "id": "challenger-centre-rail",
+      "label": "Centre-rail Reference",
+      "verdict": "declined",
+      "lineage": "scholarly reference setting",
+      "thesis": "Twin columns around a keyed rail.",
+      "palette": ["#1a1a1a", "#c8381e", "#efe8da"],
+      "materials": ["ruling-engine hairlines", "bone paper"],
+      "viewport": "Two text columns, rail of keys.",
+      "case": "Loses both: a reading form on a working screen; bone and vermilion break the black/white brief.",
+      "kept": "Hairline state marks, no radius.",
+      "risk": "Reads as a book.",
+      "hero": "https://impeccable.style/worlds/cards/rw-centre-rail-reference-setting-hero.webp"
+    },
+    {
+      "id": "challenger-transit",
+      "label": "Midnight Transit Diagram",
+      "verdict": "declined",
+      "lineage": "metro enamel maps",
+      "thesis": "Instruments as coloured lines.",
+      "palette": ["#14204a", "#d8322b", "#2a5bd7", "#f0b429", "#2e9a52"],
+      "materials": ["enamel", "45° lines"],
+      "viewport": "Network map of instruments.",
+      "case": "Loses both: four-line rainbow breaks the monochrome brief, and the map metaphor is a stretch.",
+      "kept": "Corridor focus across panels.",
+      "risk": "Rainbow.",
+      "hero": "https://impeccable.style/worlds/cards/wayfinding-cartography-signage-midnight-transit-diagram-hero.webp"
+    },
+    {
+      "id": "challenger-orienteering",
+      "label": "Orienteering Map",
+      "verdict": "declined",
+      "lineage": "ISOM orienteering maps",
+      "thesis": "Course in purple over terrain.",
+      "palette": ["#ffffff", "#8a3fa0", "#a0662a", "#3b7dd8"],
+      "materials": ["contours", "ISO inks"],
+      "viewport": "Terrain with course overlay.",
+      "case": "Loses both: no tie to the audience, light terrain fights the scene.",
+      "kept": "One reserved colour per job.",
+      "risk": "Off-world.",
+      "hero": "https://impeccable.style/worlds/cards/notation-diagram-systems-orienteering-map-hero.webp"
+    },
+    {
+      "id": "challenger-streaming",
+      "label": "Streaming Title Wall",
+      "verdict": "declined",
+      "lineage": "streaming catalog rows",
+      "thesis": "Instruments as poster rows.",
+      "palette": ["#141414", "#e50914"],
+      "materials": ["poster tiles"],
+      "viewport": "Horizontal rows of instrument tiles.",
+      "case": "Loses both: browse-and-pick model hides numbers behind focus.",
+      "kept": "Active row lifts, rest dims (folded into corridor focus).",
+      "risk": "Entertainment register.",
+      "hero": "https://impeccable.style/worlds/cards/pop-culture-shelf-streaming-title-card-wall-hero.webp"
+    }
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "An exchange-style dark dashboard (OKX/Binance account pages) on shadcn, executed cleanly.",
+    "palette": ["#0b0e11", "#eaecef", "#f0b90b", "#0ecb81", "#f6465d"],
+    "materials": ["rounded cards", "KPI tiles", "dense tables"],
+    "viewport": "Sidebar, KPI card row, chart card, positions table.",
+    "risk": "Indistinguishable from the exchanges you already use.",
+    "html": ".impeccable/mocks/decision/canon.html"
+  },
+  "steer": true
+}

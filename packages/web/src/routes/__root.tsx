@@ -1,14 +1,19 @@
 /// <reference types="vite/client" />
 import type { ReactNode } from 'react'
 import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { themeScript } from '@/components/theme-toggle'
+import appCss from '@/styles.css?url'
 
 export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'crypz' },
+      { title: 'crypz — your trades, one square at a time' },
+      { name: 'description', content: 'Trading journal and edge report built straight from your exchange history.' },
     ],
+    links: [{ rel: 'stylesheet', href: appCss }],
   }),
   component: () => (
     <RootDocument>
@@ -19,21 +24,13 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <HeadContent />
-        <style>{`
-          body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 0; padding: 24px; background: #0b0d10; color: #e6e6e6; }
-          table { border-collapse: collapse; width: 100%; font-size: 13px; }
-          th, td { padding: 8px 10px; border-bottom: 1px solid #222; text-align: right; white-space: nowrap; }
-          th:first-child, td:first-child { text-align: left; }
-          th { color: #8a8f98; font-weight: 500; }
-          .pos { color: #2ebd85; } .neg { color: #f6465d; }
-          .wrap { overflow-x: auto; }
-        `}</style>
       </head>
       <body>
-        {children}
+        <TooltipProvider delayDuration={150}>{children}</TooltipProvider>
         <Scripts />
       </body>
     </html>
