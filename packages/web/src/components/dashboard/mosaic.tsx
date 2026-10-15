@@ -30,7 +30,7 @@ export function Mosaic({ positions, focus, onFocus, className }: Props) {
       <div
         role="group"
         aria-label={`${positions.length} closed positions, oldest first`}
-        className="grid grid-cols-[repeat(16,minmax(0,1fr))] gap-[3px] sm:grid-cols-[repeat(24,minmax(0,1fr))]"
+        className="grid grid-cols-[repeat(16,minmax(0,1fr))] gap-[3px] sm:grid-cols-[repeat(24,minmax(0,1fr))] 2xl:grid-cols-[repeat(32,minmax(0,1fr))]"
         onMouseLeave={() => setHover(null)}
       >
         {positions.map((p, i) => {

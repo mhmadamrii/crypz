@@ -1,0 +1,30 @@
+import { createFileRoute } from '@tanstack/react-router'
+import { PositionSizeCalculator } from '@/components/tools/position-size-calculator'
+
+export const Route = createFileRoute('/(public)/tools/position-size')({
+  head: () => ({
+    meta: [
+      { title: 'Position size calculator · crypz' },
+      {
+        name: 'description',
+        content: 'Size a crypto trade from your equity, risk %, entry and stop loss. Free, no account needed.',
+      },
+    ],
+  }),
+  component: PositionSizePage,
+})
+
+function PositionSizePage() {
+  return (
+    <main className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 px-4 py-10 sm:px-8 sm:py-14">
+      <div className="flex max-w-2xl flex-col gap-3">
+        <h1 className="text-4xl font-semibold tracking-[-0.04em] text-balance sm:text-5xl">Position size calculator</h1>
+        <p className="text-pretty text-muted-foreground">
+          Size the trade from the loss you accept at the stop, not from a hunch. Pick your risk, entry and stop; the
+          calculator returns units, notional, leverage needed and the target from your risk : reward.
+        </p>
+      </div>
+      <PositionSizeCalculator />
+    </main>
+  )
+}

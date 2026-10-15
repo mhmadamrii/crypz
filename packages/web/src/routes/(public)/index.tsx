@@ -2,16 +2,14 @@ import { useMemo, useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
 import { computeStats, deriveInsights } from '@crypz/exchanges'
-import { Wordmark } from '@/components/brand/pixel-logo'
 import { CellStrip } from '@/components/dashboard/cell-strip'
 import { EdgeBars } from '@/components/dashboard/edge-bars'
 import { Mosaic, MosaicLegend } from '@/components/dashboard/mosaic'
-import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { samplePositions } from '@/lib/sample'
 import { cn } from '@/lib/utils'
 
-export const Route = createFileRoute('/')({ component: Landing })
+export const Route = createFileRoute('/(public)/')({ component: Landing })
 
 const ROADMAP = [
   { name: 'OKX', what: 'Closed swap positions, account equity', state: 'Live' },
@@ -27,19 +25,9 @@ function Landing() {
   const [focus, setFocus] = useState<string | null>(null)
 
   return (
-    <div className="min-h-dvh">
-      <header className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-4 sm:px-8">
-        <Wordmark className="text-lg" />
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <Button asChild size="sm" variant="outline">
-            <Link to="/login">Log in</Link>
-          </Button>
-        </div>
-      </header>
-
+    <div>
       <main>
-        <section className="mx-auto grid max-w-[1400px] items-center gap-12 px-4 pt-10 pb-20 sm:px-8 lg:min-h-[calc(100dvh-4rem)] lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:pt-0">
+        <section className="mx-auto grid max-w-[1400px] items-center gap-12 px-4 pt-10 pb-20 sm:px-8 lg:min-h-[calc(100dvh-4rem-1px)] lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:pt-0">
           <div className="flex flex-col gap-7">
             <h1 className="text-5xl leading-[0.95] font-semibold tracking-[-0.04em] text-balance sm:text-7xl">
               Every trade you closed. One square each.
@@ -150,13 +138,6 @@ function Landing() {
           </div>
         </section>
       </main>
-
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-[1400px] justify-between px-4 py-6 text-xs text-muted-foreground sm:px-8">
-          <Wordmark />
-          <span>API keys stay on your server.</span>
-        </div>
-      </footer>
     </div>
   )
 }

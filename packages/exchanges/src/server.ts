@@ -24,6 +24,7 @@ export async function loadPortfolio(): Promise<Portfolio> {
   const errors: Portfolio['errors'] = []
   const positions: Position[] = []
   const accounts: AccountSnapshot[] = []
+  console.log('adapters?', JSON.stringify(adapters, null, 2))
 
   await Promise.all(
     configured.map(async (a) => {

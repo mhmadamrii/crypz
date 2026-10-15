@@ -213,7 +213,7 @@ A strictly neutral ramp with a faint warm cast in the light end, plus one green 
 
 ## Layout
 
-Every app page (`/_app` layout) sits in the shadcn sidebar shell: a 16rem sidebar that collapses to a 3rem icon rail (off-canvas sheet on phones), and a 64px sticky page header (sidebar trigger, title, page controls, theme toggle), over a scrolling column capped at 1600px wide. Gutters are 16px on phones and 32px from sm up. The page is a stack of sections, not a single-screen cockpit, with 56px between sections and 32px between panels inside a section.
+Every app page (`(main)` route group) sits in the shadcn sidebar shell: a 16rem sidebar that collapses to a 3rem icon rail (off-canvas sheet on phones), and a 64px sticky page header (sidebar trigger, title, page controls, theme toggle), over a scrolling column that stretches to the full width beside the sidebar (no max width, no centering). Gutters are 16px on phones and 32px from sm up. The page is a stack of sections, not a single-screen cockpit, with 56px between sections and 32px between panels inside a section.
 
 The story order is fixed: the stat strip (equity first, then realized PnL, win rate, profit factor, fees and funding), then the mosaic beside edge-by-asset (1.15fr : 1fr at xl), then the chart slot beside insights (1.6fr : 1fr), then timing and sizing, then the cumulative curve beside streaks, then position history.
 
@@ -283,6 +283,10 @@ Charts use the shadcn chart primitive (Recharts) so they are interactive, never 
 ### Candlestick Chart
 
 Price charts use TradingView lightweight-charts, lazy-loaded on the client. Candles are hollow in the world's two inks: filled bone when close is above open, hollow with a bone outline when below. Price direction is not PnL, so it never takes green or red. Volume is a muted histogram in the bottom fifth. Grid is Hairline, axes are 11px mono Muted Text, and the crosshair is dotted with Foreground labels. A mono OHLC readout sits top-left. The user's own trades are overlaid: an arrow with L or S at entry (up for long, down for short), and a square at exit labelled with realized PnL and toned up or down, which is the one place colour enters the chart. Colours resolve from the theme tokens at runtime and re-apply on theme toggle. Scrolling left pages older history in, and the newest bars refresh every 10s.
+
+### Public Shell and Tools
+
+Pages reachable without login (`(public)` route group: landing, login, `/tools/*`) share one public header (wordmark, a Tools nav with unbuilt tools marked SOON, theme toggle, Log in) and footer. The app (`(main)` route group) keeps the sidebar shell, whose Tools group links to the same public tool pages. A tool page is a form panel beside one result panel, both 1px bordered, never a grid of cards. Results read as a ledger: mono labels over mono figures, sections split by hairlines, with green and red only on signed money outcomes (loss at stop, profit at target, max risk). Price levels are drawn to scale on a vertical rule: the entry is a filled square, the target and stop are hollow squares. The formula explanation lives in a dialog that substitutes the user's live numbers into every step.
 
 ### Tables
 

@@ -3,8 +3,8 @@ import { AppSidebar } from '@/components/app/app-sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { getPortfolio } from '@/server/portfolio'
 
-// Shared shell for every signed-in page. Portfolio loads once here; pages read it via useLoaderData({ from: '/_app' }).
-export const Route = createFileRoute('/_app')({
+// Shared shell for every signed-in page. Portfolio loads once here; pages read it via useLoaderData({ from: '/(main)' }).
+export const Route = createFileRoute('/(main)')({
   loader: () => getPortfolio(),
   staleTime: 60_000,
   component: AppLayout,
@@ -21,6 +21,7 @@ export const Route = createFileRoute('/_app')({
 
 function AppLayout() {
   const { exchanges } = Route.useLoaderData()
+  console.log('exchanges', exchanges)
   return (
     <SidebarProvider>
       <AppSidebar exchanges={exchanges} />

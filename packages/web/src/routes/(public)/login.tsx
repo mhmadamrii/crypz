@@ -1,12 +1,10 @@
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
-import { PixelLogo } from '@/components/brand/pixel-logo'
-import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-export const Route = createFileRoute('/login')({
+export const Route = createFileRoute('/(public)/login')({
   head: () => ({ meta: [{ title: 'Log in · crypz' }] }),
   component: Login,
 })
@@ -15,14 +13,8 @@ export const Route = createFileRoute('/login')({
 function Login() {
   const navigate = useNavigate()
   return (
-    <div className="grid min-h-dvh grid-rows-[auto_1fr]">
-      <header className="flex h-16 items-center justify-between px-4 sm:px-8">
-        <Link to="/" aria-label="crypz home">
-          <PixelLogo className="size-5" />
-        </Link>
-        <ThemeToggle />
-      </header>
-      <main className="grid place-items-center px-4 pb-16">
+    <div className="grid flex-1">
+      <main className="grid place-items-center px-4 py-16">
         <form
           className="flex w-full max-w-sm flex-col gap-6"
           onSubmit={(e) => {

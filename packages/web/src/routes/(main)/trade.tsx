@@ -15,7 +15,7 @@ type Search = { symbol?: string; bar?: Bar; trade?: string }
 
 const DEFAULT_SYMBOL = 'BTC-USDT-SWAP'
 
-export const Route = createFileRoute('/_app/trade')({
+export const Route = createFileRoute('/(main)/trade')({
   validateSearch: (s: Record<string, unknown>): Search => ({
     symbol: typeof s.symbol === 'string' ? s.symbol.toUpperCase() : undefined,
     bar: typeof s.bar === 'string' && (BARS as readonly string[]).includes(s.bar) ? (s.bar as Bar) : undefined,
@@ -45,7 +45,7 @@ function useTicker(symbol: string) {
 }
 
 function Trade() {
-  const data = useLoaderData({ from: '/_app' })
+  const data = useLoaderData({ from: '/(main)' })
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
   const set = (patch: Search) => navigate({ search: (s) => ({ ...s, ...patch }), replace: true })
@@ -102,7 +102,7 @@ function Trade() {
         </ToggleGroup>
       </PageHeader>
 
-      <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-6 sm:px-8">
+      <main className="flex w-full flex-col gap-6 px-4 py-6 sm:px-8">
         <TickerStrip symbol={symbol} ticker={ticker} tradeUrl={tradeUrl} />
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">

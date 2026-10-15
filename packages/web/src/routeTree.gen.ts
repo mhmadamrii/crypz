@@ -9,152 +9,211 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AppRouteImport } from './routes/_app'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
-import { Route as AppPositionsRouteImport } from './routes/_app/positions'
-import { Route as AppTradeRouteImport } from './routes/_app/trade'
+import { Route as mainRouteRouteImport } from './routes/(main)/route'
+import { Route as publicRouteRouteImport } from './routes/(public)/route'
+import { Route as mainDashboardRouteImport } from './routes/(main)/dashboard'
+import { Route as mainPositionsRouteImport } from './routes/(main)/positions'
+import { Route as mainTradeRouteImport } from './routes/(main)/trade'
+import { Route as publicIndexRouteImport } from './routes/(public)/index'
+import { Route as publicLoginRouteImport } from './routes/(public)/login'
+import { Route as publicToolsPositionSizeRouteImport } from './routes/(public)/tools/position-size'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const mainRouteRoute = mainRouteRouteImport.update({
+  id: '/(main)',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRoute = AppRouteImport.update({
-  id: '/_app',
+const publicRouteRoute = publicRouteRouteImport.update({
+  id: '/(public)',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppDashboardRoute = AppDashboardRouteImport.update({
+const mainDashboardRoute = mainDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => mainRouteRoute,
 } as any)
-const AppPositionsRoute = AppPositionsRouteImport.update({
+const mainPositionsRoute = mainPositionsRouteImport.update({
   id: '/positions',
   path: '/positions',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => mainRouteRoute,
 } as any)
-const AppTradeRoute = AppTradeRouteImport.update({
+const mainTradeRoute = mainTradeRouteImport.update({
   id: '/trade',
   path: '/trade',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => mainRouteRoute,
+} as any)
+const publicIndexRoute = publicIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => publicRouteRoute,
+} as any)
+const publicLoginRoute = publicLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => publicRouteRoute,
+} as any)
+const publicToolsPositionSizeRoute = publicToolsPositionSizeRouteImport.update({
+  id: '/tools/position-size',
+  path: '/tools/position-size',
+  getParentRoute: () => publicRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/login': typeof LoginRoute
-  '/dashboard': typeof AppDashboardRoute
-  '/positions': typeof AppPositionsRoute
-  '/trade': typeof AppTradeRoute
+  '/dashboard': typeof mainDashboardRoute
+  '/positions': typeof mainPositionsRoute
+  '/trade': typeof mainTradeRoute
+  '/login': typeof publicLoginRoute
+  '/': typeof publicIndexRoute
+  '/tools/position-size': typeof publicToolsPositionSizeRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/login': typeof LoginRoute
-  '/dashboard': typeof AppDashboardRoute
-  '/positions': typeof AppPositionsRoute
-  '/trade': typeof AppTradeRoute
+  '/dashboard': typeof mainDashboardRoute
+  '/positions': typeof mainPositionsRoute
+  '/trade': typeof mainTradeRoute
+  '/login': typeof publicLoginRoute
+  '/': typeof publicIndexRoute
+  '/tools/position-size': typeof publicToolsPositionSizeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/_app': typeof AppRouteWithChildren
-  '/login': typeof LoginRoute
-  '/_app/dashboard': typeof AppDashboardRoute
-  '/_app/positions': typeof AppPositionsRoute
-  '/_app/trade': typeof AppTradeRoute
+  '/(main)': typeof mainRouteRouteWithChildren
+  '/(public)': typeof publicRouteRouteWithChildren
+  '/(main)/dashboard': typeof mainDashboardRoute
+  '/(main)/positions': typeof mainPositionsRoute
+  '/(main)/trade': typeof mainTradeRoute
+  '/(public)/login': typeof publicLoginRoute
+  '/(public)/': typeof publicIndexRoute
+  '/(public)/tools/position-size': typeof publicToolsPositionSizeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/dashboard' | '/positions' | '/trade'
+  fullPaths:
+    | '/dashboard'
+    | '/positions'
+    | '/trade'
+    | '/login'
+    | '/'
+    | '/tools/position-size'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/dashboard' | '/positions' | '/trade'
+  to:
+    | '/dashboard'
+    | '/positions'
+    | '/trade'
+    | '/login'
+    | '/'
+    | '/tools/position-size'
   id:
     | '__root__'
-    | '/'
-    | '/_app'
-    | '/login'
-    | '/_app/dashboard'
-    | '/_app/positions'
-    | '/_app/trade'
+    | '/(main)'
+    | '/(public)'
+    | '/(main)/dashboard'
+    | '/(main)/positions'
+    | '/(main)/trade'
+    | '/(public)/login'
+    | '/(public)/'
+    | '/(public)/tools/position-size'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AppRoute: typeof AppRouteWithChildren
-  LoginRoute: typeof LoginRoute
+  mainRouteRoute: typeof mainRouteRouteWithChildren
+  publicRouteRoute: typeof publicRouteRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_app': {
-      id: '/_app'
+    '/(main)': {
+      id: '/(main)'
       path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AppRouteImport
+      fullPath: ''
+      preLoaderRoute: typeof mainRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
+    '/(public)': {
+      id: '/(public)'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof publicRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/dashboard': {
-      id: '/_app/dashboard'
+    '/(main)/dashboard': {
+      id: '/(main)/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
-      preLoaderRoute: typeof AppDashboardRouteImport
-      parentRoute: typeof AppRoute
+      preLoaderRoute: typeof mainDashboardRouteImport
+      parentRoute: typeof mainRouteRoute
     }
-    '/_app/positions': {
-      id: '/_app/positions'
+    '/(main)/positions': {
+      id: '/(main)/positions'
       path: '/positions'
       fullPath: '/positions'
-      preLoaderRoute: typeof AppPositionsRouteImport
-      parentRoute: typeof AppRoute
+      preLoaderRoute: typeof mainPositionsRouteImport
+      parentRoute: typeof mainRouteRoute
     }
-    '/_app/trade': {
-      id: '/_app/trade'
+    '/(main)/trade': {
+      id: '/(main)/trade'
       path: '/trade'
       fullPath: '/trade'
-      preLoaderRoute: typeof AppTradeRouteImport
-      parentRoute: typeof AppRoute
+      preLoaderRoute: typeof mainTradeRouteImport
+      parentRoute: typeof mainRouteRoute
+    }
+    '/(public)/': {
+      id: '/(public)/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof publicIndexRouteImport
+      parentRoute: typeof publicRouteRoute
+    }
+    '/(public)/login': {
+      id: '/(public)/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof publicLoginRouteImport
+      parentRoute: typeof publicRouteRoute
+    }
+    '/(public)/tools/position-size': {
+      id: '/(public)/tools/position-size'
+      path: '/tools/position-size'
+      fullPath: '/tools/position-size'
+      preLoaderRoute: typeof publicToolsPositionSizeRouteImport
+      parentRoute: typeof publicRouteRoute
     }
   }
 }
 
-interface AppRouteChildren {
-  AppDashboardRoute: typeof AppDashboardRoute
-  AppPositionsRoute: typeof AppPositionsRoute
-  AppTradeRoute: typeof AppTradeRoute
+interface mainRouteRouteChildren {
+  mainDashboardRoute: typeof mainDashboardRoute
+  mainPositionsRoute: typeof mainPositionsRoute
+  mainTradeRoute: typeof mainTradeRoute
 }
 
-const AppRouteChildren: AppRouteChildren = {
-  AppDashboardRoute: AppDashboardRoute,
-  AppPositionsRoute: AppPositionsRoute,
-  AppTradeRoute: AppTradeRoute,
+const mainRouteRouteChildren: mainRouteRouteChildren = {
+  mainDashboardRoute: mainDashboardRoute,
+  mainPositionsRoute: mainPositionsRoute,
+  mainTradeRoute: mainTradeRoute,
 }
 
-const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+const mainRouteRouteWithChildren = mainRouteRoute._addFileChildren(
+  mainRouteRouteChildren,
+)
+
+interface publicRouteRouteChildren {
+  publicLoginRoute: typeof publicLoginRoute
+  publicIndexRoute: typeof publicIndexRoute
+  publicToolsPositionSizeRoute: typeof publicToolsPositionSizeRoute
+}
+
+const publicRouteRouteChildren: publicRouteRouteChildren = {
+  publicLoginRoute: publicLoginRoute,
+  publicIndexRoute: publicIndexRoute,
+  publicToolsPositionSizeRoute: publicToolsPositionSizeRoute,
+}
+
+const publicRouteRouteWithChildren = publicRouteRoute._addFileChildren(
+  publicRouteRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AppRoute: AppRouteWithChildren,
-  LoginRoute: LoginRoute,
+  mainRouteRoute: mainRouteRouteWithChildren,
+  publicRouteRoute: publicRouteRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

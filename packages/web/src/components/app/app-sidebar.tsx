@@ -1,4 +1,9 @@
+import type { ExchangeStatus } from '@crypz/exchanges'
+
 import { Link, useRouterState } from '@tanstack/react-router'
+import { cn } from '@/lib/utils'
+import { PixelLogo } from '@/components/brand/pixel-logo'
+
 import {
   CandlestickChart,
   ChartColumn,
@@ -7,11 +12,12 @@ import {
   LogOut,
   Newspaper,
   Rows3,
+  Calculator,
+  ShieldAlert,
   ScanSearch,
   type LucideIcon,
 } from 'lucide-react'
-import type { ExchangeStatus } from '@crypz/exchanges'
-import { PixelLogo } from '@/components/brand/pixel-logo'
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+
 import {
   Sidebar,
   SidebarContent,
@@ -34,7 +41,6 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '@/components/ui/sidebar'
-import { cn } from '@/lib/utils'
 
 type NavItem = { label: string; icon: LucideIcon } & ({ to: '/dashboard' | '/trade' | '/positions' } | { soon: true })
 
@@ -112,6 +118,29 @@ export function AppSidebar({ exchanges }: { exchanges: ExchangeStatus[] }) {
                   </SidebarMenuItem>
                 )
               })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="label">Tools</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Position size calculator">
+                  <Link to="/tools/position-size">
+                    <Calculator strokeWidth={1.5} />
+                    <span>Position size</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton disabled aria-disabled tooltip="Risk calculator · coming soon">
+                  <ShieldAlert strokeWidth={1.5} />
+                  <span>Risk</span>
+                </SidebarMenuButton>
+                <SidebarMenuBadge className="label">Soon</SidebarMenuBadge>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

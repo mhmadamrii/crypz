@@ -22,7 +22,7 @@ type Range = keyof typeof RANGES
 
 type Search = { range?: Range; asset?: string }
 
-export const Route = createFileRoute('/_app/dashboard')({
+export const Route = createFileRoute('/(main)/dashboard')({
   validateSearch: (s: Record<string, unknown>): Search => ({
     range: typeof s.range === 'string' && s.range in RANGES ? (s.range as Range) : undefined,
     asset: typeof s.asset === 'string' ? s.asset : undefined,
@@ -56,7 +56,7 @@ function Section({
 }
 
 function Dashboard() {
-  const data = useLoaderData({ from: '/_app' })
+  const data = useLoaderData({ from: '/(main)' })
   const { range = 'all', asset = null } = Route.useSearch()
   const navigate = Route.useNavigate()
   const setSearch = (patch: Search) =>
@@ -111,7 +111,7 @@ function Dashboard() {
         </ToggleGroup>
       </PageHeader>
 
-      <main className="mx-auto flex max-w-[1600px] flex-col gap-14 px-4 py-8 sm:px-8">
+      <main className="flex w-full flex-col gap-14 px-4 py-8 sm:px-8">
         {!anyConfigured && (
           <div className="border border-border p-6 text-sm">
             <p className="font-medium">No exchange connected</p>
