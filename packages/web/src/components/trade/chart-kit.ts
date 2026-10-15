@@ -110,10 +110,56 @@ export function createMosaicChart(lw: LW, el: HTMLElement, onTheme?: (p: Palette
   })
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
 
+  // Mouse wheel over the price axis zooms the price range around the price under the cursor (the library only
+  // offers drag-to-scale there). Double-clicking the axis still snaps back to auto scale.
+  const onWheel = (e: WheelEvent) => {
+    const r = el.getBoundingClientRect()
+    const x = e.clientX - r.left
+    const y = e.clientY - r.top
+    const paneW = chart.timeScale().width()
+    const scale = chart.priceScale('right')
+    if (x < paneW || x > paneW + scale.width() || y > chart.paneSize(0).height) return
+    const range = scale.getVisibleRange()
+    const at = candles.coordinateToPrice(y)
+    if (!range || at === null) return
+    e.preventDefault()
+    e.stopPropagation()
+    // trackpads send many small deltas, wheels a few large ones; exp keeps both smooth and symmetric
+    const f = Math.exp(Math.max(-1, Math.min(1, e.deltaY * 0.0015)))
+    scale.setAutoScale(false)
+    scale.setVisibleRange({ from: at - (at - range.from) * f, to: at + (range.to - at) * f })
+  }
+  el.addEventListener('wheel', onWheel, { capture: true, passive: false })
+
+  // Dragging the candles up or down frees the price axis from auto scale, like TradingView: the library only pans
+  // price when auto scale is off, so a vertical drag would otherwise do nothing. Sideways drags keep auto scale.
+  let press: { y: number } | null = null
+  const onDown = (e: PointerEvent) => {
+    const r = el.getBoundingClientRect()
+    const inPane = e.clientX - r.left < chart.timeScale().width() && e.clientY - r.top < chart.paneSize(0).height
+    press = e.button === 0 && inPane ? { y: e.clientY } : null
+  }
+  const onMove = (e: PointerEvent) => {
+    if (!press || !(e.buttons & 1)) return
+    const scroll = chart.options().handleScroll
+    const panning = typeof scroll === 'boolean' ? scroll : scroll.pressedMouseMove
+    const scale = chart.priceScale('right')
+    // a drawing being dragged turns chart panning off; leave the axis alone then
+    if (panning && scale.options().autoScale && Math.abs(e.clientY - press.y) > 4) scale.setAutoScale(false)
+  }
+  const onUp = () => (press = null)
+  el.addEventListener('pointerdown', onDown, { capture: true })
+  window.addEventListener('pointermove', onMove)
+  window.addEventListener('pointerup', onUp)
+
   return {
     chart,
     candles,
     dispose: () => {
+      el.removeEventListener('wheel', onWheel, { capture: true })
+      el.removeEventListener('pointerdown', onDown, { capture: true })
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
       observer.disconnect()
       chart.remove()
     },
