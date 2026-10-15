@@ -3,7 +3,10 @@ import type { Candle } from '@crypz/exchanges'
 // Manual bar replay: the session only ever sees candles up to the cursor. Pure state, no chart or fetching here.
 
 export type Side = 'long' | 'short'
-export type ExitReason = 'stop' | 'target' | 'manual'
+export type ExitReason = 'stop' | 'target' | 'manual' | 'liquidated'
+
+export const LEVERAGES = [2, 5, 10, 15, 20, 100] as const
+export const DEFAULT_LEVERAGE = 10
 
 export type OpenPosition = {
   side: Side
@@ -12,6 +15,9 @@ export type OpenPosition = {
   entryTime: number
   stop: number | null
   target: number | null
+  leverage: number
+  /** Price where the margin is gone (isolated margin, fees and maintenance margin ignored). */
+  liq: number
 }
 
 export type ReplayTrade = OpenPosition & {
@@ -19,7 +25,7 @@ export type ReplayTrade = OpenPosition & {
   exit: number
   exitTime: number
   reason: ExitReason
-  /** Price move in % of entry, signed by direction. */
+  /** Return on margin in %: the price move times leverage, never below −100. */
   pct: number
   /** Result in multiples of the initial stop distance; null when no stop was set. */
   r: number | null
@@ -34,13 +40,20 @@ export type ReplayState = {
 
 export type ReplayAction =
   | { type: 'step'; candle: Candle }
-  | { type: 'open'; side: Side; candle: Candle; stop: number | null; target: number | null }
+  | { type: 'open'; side: Side; candle: Candle; stop: number | null; target: number | null; leverage: number }
   | { type: 'levels'; stop: number | null; target: number | null }
   | { type: 'close'; candle: Candle }
 
 export const initialReplay: ReplayState = { step: 0, position: null, trades: [] }
 
 const dir = (side: Side) => (side === 'long' ? 1 : -1)
+
+/** Where a position at `entry` with this leverage loses its whole margin. */
+export const liqPrice = (side: Side, entry: number, leverage: number) => entry * (1 - dir(side) / leverage)
+
+/** Return on margin in % if the position closed at `price`. */
+export const roe = (p: Pick<OpenPosition, 'side' | 'entry' | 'leverage'>, price: number) =>
+  Math.max(-100, ((dir(p.side) * (price - p.entry)) / p.entry) * 100 * p.leverage)
 
 function settle(state: ReplayState, exit: number, exitTime: number, reason: ExitReason): ReplayState {
   const p = state.position!
@@ -51,24 +64,29 @@ function settle(state: ReplayState, exit: number, exitTime: number, reason: Exit
     exit,
     exitTime,
     reason,
-    pct: (move / p.entry) * 100,
+    pct: reason === 'liquidated' ? -100 : roe(p, exit),
     r: p.stop !== null ? move / Math.abs(p.entry - p.stop) : null,
   }
   return { ...state, position: null, trades: [...state.trades, trade] }
 }
 
 /**
- * Did the new bar take out the stop or target? A bar that spans both is scored as the stop: the candle alone
- * cannot say which came first, so assume the worse. A gap through a level fills at the bar's open.
+ * Did the new bar take out the stop, the liquidation price or the target? Price travels from entry, so whichever
+ * adverse level sits closer to entry (stop or liquidation) goes first. A bar that spans an adverse level and the
+ * target is scored as the adverse one: the candle alone cannot say which came first, so assume the worse.
+ * A gap through the stop fills at the bar's open; liquidation always costs exactly the margin.
  */
 export function exitOn(p: OpenPosition, k: Candle): { price: number; reason: ExitReason } | null {
-  if (p.side === 'long') {
-    if (p.stop !== null && k.low <= p.stop) return { price: Math.min(p.stop, k.open), reason: 'stop' }
-    if (p.target !== null && k.high >= p.target) return { price: Math.max(p.target, k.open), reason: 'target' }
-  } else {
-    if (p.stop !== null && k.high >= p.stop) return { price: Math.max(p.stop, k.open), reason: 'stop' }
-    if (p.target !== null && k.low <= p.target) return { price: Math.min(p.target, k.open), reason: 'target' }
-  }
+  const d = dir(p.side)
+  const stopFirst = p.stop !== null && d * (p.stop - p.liq) > 0
+  const adverse = stopFirst ? p.stop! : p.liq
+  const reached = (level: number) => (d > 0 ? k.low <= level : k.high >= level)
+  if (reached(adverse))
+    return stopFirst
+      ? { price: d > 0 ? Math.min(adverse, k.open) : Math.max(adverse, k.open), reason: 'stop' }
+      : { price: p.liq, reason: 'liquidated' }
+  if (p.target !== null && (d > 0 ? k.high >= p.target : k.low <= p.target))
+    return { price: d > 0 ? Math.max(p.target, k.open) : Math.min(p.target, k.open), reason: 'target' }
   return null
 }
 
@@ -83,7 +101,15 @@ export function replayReducer(state: ReplayState, a: ReplayAction): ReplayState 
       if (state.position) return state
       return {
         ...state,
-        position: { side: a.side, entry: a.candle.close, entryTime: a.candle.time, stop: a.stop, target: a.target },
+        position: {
+          side: a.side,
+          entry: a.candle.close,
+          entryTime: a.candle.time,
+          stop: a.stop,
+          target: a.target,
+          leverage: a.leverage,
+          liq: liqPrice(a.side, a.candle.close, a.leverage),
+        },
       }
     case 'levels':
       return state.position ? { ...state, position: { ...state.position, stop: a.stop, target: a.target } } : state

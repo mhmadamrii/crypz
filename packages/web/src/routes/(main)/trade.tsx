@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { tickerQuery, usePortfolio } from '@/lib/queries'
+import { tickerQuery, useInstruments, usePortfolio } from '@/lib/queries'
 import { ArrowUpRight, Rewind } from 'lucide-react'
 import { BARS, type Bar, type Position, type Ticker } from '@crypz/exchanges'
 import { PageHeader } from '@/components/app/page-header'
@@ -33,11 +33,7 @@ function Trade() {
   const set = (patch: Search) => navigate({ search: (s) => ({ ...s, ...patch }), replace: true })
   useIntervalHotkeys((b) => set({ bar: b }))
 
-  const symbols = useMemo(() => {
-    const n = new Map<string, number>()
-    for (const p of data.positions) n.set(p.symbol, (n.get(p.symbol) ?? 0) + 1)
-    return [...n.entries()].sort((a, b) => b[1] - a[1]).map(([s]) => s)
-  }, [data.positions])
+  const symbols = useInstruments()
 
   const symbol = search.symbol ?? data.positions[0]?.symbol ?? DEFAULT_SYMBOL
   const bar = search.bar ?? '1H'

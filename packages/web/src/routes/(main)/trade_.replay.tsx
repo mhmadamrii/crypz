@@ -26,13 +26,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { replayCandlesQuery, usePortfolio, useTradedSymbols } from '@/lib/queries'
-import { initialReplay, levelError, replayReducer, sessionStats, type Side } from '@/lib/replay'
+import { replayCandlesQuery, usePortfolio, useInstruments } from '@/lib/queries'
+import {
+  DEFAULT_LEVERAGE,
+  LEVERAGES,
+  initialReplay,
+  levelError,
+  liqPrice,
+  replayReducer,
+  roe,
+  sessionStats,
+  type Side,
+} from '@/lib/replay'
 import { fmtNum, fmtPct, fmtPrice, fmtSigned, tone } from '@/lib/format'
 import { searchText } from '@/lib/search'
 import { cn } from '@/lib/utils'
 
-type Search = { symbol?: string; bar?: Bar; from?: string; equity?: string }
+type Search = { symbol?: string; bar?: Bar; from?: string; equity?: string; lev?: string }
 
 const DEFAULT_SYMBOL = 'BTC-USDT-SWAP'
 const LOCAL_MINUTE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/
@@ -64,6 +74,7 @@ export const Route = createFileRoute('/(main)/trade_/replay')({
     bar: typeof s.bar === 'string' && (BARS as readonly string[]).includes(s.bar) ? (s.bar as Bar) : undefined,
     from: typeof s.from === 'string' && LOCAL_MINUTE.test(s.from) ? s.from : undefined,
     equity: /^\d*\.?\d*$/.test(searchText(s.equity) ?? 'x') ? searchText(s.equity) : undefined,
+    lev: LEVERAGES.map(String).includes(searchText(s.lev) ?? '') ? searchText(s.lev) : undefined,
   }),
   head: () => ({ meta: [{ title: 'Replay · crypz' }] }),
   component: Replay,
@@ -71,7 +82,7 @@ export const Route = createFileRoute('/(main)/trade_/replay')({
 
 function Replay() {
   const { positions } = usePortfolio()
-  const symbols = useTradedSymbols()
+  const symbols = useInstruments()
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
   const set = (patch: Search) => navigate({ search: (s) => ({ ...s, ...patch }), replace: true })
@@ -150,6 +161,8 @@ function Replay() {
         onBar={(b) => set({ bar: b })}
         equity={search.equity ?? ''}
         onEquity={(v) => set({ equity: v || undefined })}
+        leverage={Number(search.lev ?? DEFAULT_LEVERAGE)}
+        onLeverage={(n) => set({ lev: n === DEFAULT_LEVERAGE ? undefined : String(n) })}
         panel={panel}
         onPanel={setPanel}
       />
@@ -165,6 +178,8 @@ function ReplaySession({
   onBar,
   equity,
   onEquity,
+  leverage,
+  onLeverage,
   panel,
   onPanel,
 }: {
@@ -173,9 +188,12 @@ function ReplaySession({
   bar: Bar
   from: number
   onBar: (bar: Bar) => void
-  /** Optional starting equity (raw field text); every trade compounds the whole balance at 1×. */
+  /** Optional starting equity (raw field text); every trade puts the whole balance up as margin. */
   equity: string
   onEquity: (v: string) => void
+  /** Leverage for the next order; an open position keeps the leverage it was opened with. */
+  leverage: number
+  onLeverage: (n: number) => void
   /** Ticket + log column shown, or folded to a rail. */
   panel: boolean
   onPanel: (open: boolean) => void
@@ -232,7 +250,7 @@ function ReplaySession({
     const t = num(target)
     const err = levelError(side, current.close, s, t)
     setError(err)
-    if (!err) dispatch({ type: 'open', side, candle: current, stop: s, target: t })
+    if (!err) dispatch({ type: 'open', side, candle: current, stop: s, target: t, leverage })
   }
 
   const close = () => current && dispatch({ type: 'close', candle: current })
@@ -281,13 +299,13 @@ function ReplaySession({
 
   const stats = sessionStats(state.trades)
   const p = state.position
-  const openPct = p && current ? ((p.side === 'long' ? 1 : -1) * (current.close - p.entry) * 100) / p.entry : 0
+  const openPct = p && current ? roe(p, current.close) : 0
   const openR =
     p && current && p.stop !== null
       ? ((p.side === 'long' ? 1 : -1) * (current.close - p.entry)) / Math.abs(p.entry - p.stop)
       : null
 
-  // Compounding: each trade moves the full balance by its % result.
+  // Compounding: the whole balance is the margin, so each trade moves it by its return on margin.
   const start = num(equity)
   const balances = state.trades.reduce<number[]>(
     (acc, t) => [...acc, acc[acc.length - 1] * (1 + t.pct / 100)],
@@ -443,7 +461,10 @@ function ReplaySession({
                 <div className="flex flex-col gap-0.5">
                   <span className="flex items-baseline gap-2">
                     <span className="label text-foreground">{p.side}</span>
-                    <span className="num text-xs text-muted-foreground">@ {fmtPrice(p.entry)}</span>
+                    <span className="num text-xs text-foreground">{p.leverage}×</span>
+                  </span>
+                  <span className="num text-xs whitespace-nowrap text-muted-foreground">
+                    @ {fmtPrice(p.entry)} · liq {fmtPrice(p.liq)}
                   </span>
                   <span className={cn('num text-lg font-medium', tone(openPct))}>
                     {fmtSigned(openPct)}%{openR !== null && <span className="ml-2 text-xs">{fmtSigned(openR)}R</span>}
@@ -454,14 +475,46 @@ function ReplaySession({
                 </Button>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" onClick={() => open('long')} disabled={!current || ended}>
-                  Long <Kbd>B</Kbd>
-                </Button>
-                <Button variant="outline" onClick={() => open('short')} disabled={!current || ended}>
-                  Short <Kbd>S</Kbd>
-                </Button>
-              </div>
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <span className="flex justify-between label">
+                    Leverage
+                    {current && (
+                      <span className="normal-case">
+                        liq {fmtPrice(liqPrice('long', current.close, leverage))} /{' '}
+                        {fmtPrice(liqPrice('short', current.close, leverage))}
+                      </span>
+                    )}
+                  </span>
+                  <ToggleGroup
+                    type="single"
+                    variant="outline"
+                    size="sm"
+                    value={String(leverage)}
+                    onValueChange={(v) => v && onLeverage(Number(v))}
+                    aria-label="Leverage"
+                    className="w-full"
+                  >
+                    {LEVERAGES.map((n) => (
+                      <ToggleGroupItem
+                        key={n}
+                        value={String(n)}
+                        className="flex-1 num text-xs data-[state=on]:bg-foreground data-[state=on]:text-background"
+                      >
+                        {n}×
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" onClick={() => open('long')} disabled={!current || ended}>
+                    Long <Kbd>B</Kbd>
+                  </Button>
+                  <Button variant="outline" onClick={() => open('short')} disabled={!current || ended}>
+                    Short <Kbd>S</Kbd>
+                  </Button>
+                </div>
+              </>
             )}
             <div className="grid grid-cols-2 gap-2">
               <label className="flex flex-col gap-1">
@@ -489,8 +542,9 @@ function ReplaySession({
               <p className="text-xs text-down">{error}</p>
             ) : (
               <p className="text-xs text-pretty text-muted-foreground">
-                Orders fill at the last close{current ? ` (${fmtPrice(current.close)})` : ''}. A bar that touches both
-                stop and target counts as the stop.
+                Orders fill at the last close{current ? ` (${fmtPrice(current.close)})` : ''}, with your whole equity as
+                margin: a {fmtNum(100 / (p?.leverage ?? leverage), 1)}% move against you liquidates. A bar that touches
+                both stop and target counts as the stop.
               </p>
             )}
           </div>
@@ -505,7 +559,8 @@ function ReplaySession({
                   <span className="flex items-center gap-2">
                     <span className="num text-xs text-muted-foreground">#{t.id}</span>
                     <span className="label text-foreground">{t.side}</span>
-                    <span className="label">{t.reason}</span>
+                    <span className="num text-xs text-muted-foreground">{t.leverage}×</span>
+                    <span className={cn('label', t.reason === 'liquidated' && 'text-down')}>{t.reason}</span>
                   </span>
                   <span className={cn('text-right num font-medium', tone(t.pct))}>{fmtSigned(t.pct)}%</span>
                   <span className="num text-xs text-muted-foreground">

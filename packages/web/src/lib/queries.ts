@@ -87,12 +87,33 @@ export const connectionsQuery = () =>
 /** Portfolio for pages under the (main) layout, whose loader has already filled the cache. */
 export const usePortfolio = () => useSuspenseQuery(portfolioQuery()).data
 
-/** Instruments you have traded, most-traded first. */
-export function useTradedSymbols() {
+// Liquid OKX perpetuals, so someone without trade history (or a key) still has a market to pick.
+const POPULAR = [
+  'BTC',
+  'ETH',
+  'SOL',
+  'XRP',
+  'DOGE',
+  'BNB',
+  'ADA',
+  'AVAX',
+  'LINK',
+  'SUI',
+  'LTC',
+  'DOT',
+  'TRX',
+  'HYPE',
+  'PEPE',
+  'ZEC',
+].map((b) => `${b}-USDT-SWAP`)
+
+/** Instruments for the pickers: the ones you traded (most-traded first), then popular perpetuals. */
+export function useInstruments() {
   const { positions } = usePortfolio()
   return useMemo(() => {
     const n = new Map<string, number>()
     for (const p of positions) n.set(p.symbol, (n.get(p.symbol) ?? 0) + 1)
-    return [...n.entries()].sort((a, b) => b[1] - a[1]).map(([s]) => s)
+    const traded = [...n.entries()].sort((a, b) => b[1] - a[1]).map(([s]) => s)
+    return [...traded, ...POPULAR.filter((s) => !n.has(s))]
   }, [positions])
 }

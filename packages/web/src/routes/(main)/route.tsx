@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, Outlet, createFileRoute, redirect, useRouterState } from '@tanstack/react-router'
-import { ArrowRight, KeyRound } from 'lucide-react'
+import { ArrowRight, KeyRound, Rewind } from 'lucide-react'
 import { AppSidebar } from '@/components/app/app-sidebar'
 import { Button } from '@/components/ui/button'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
@@ -44,14 +44,14 @@ function AppLayout() {
   const replay = pathname.startsWith('/trade/replay')
   const [open, setOpen] = useState(true)
   const [replayOpen, setReplayOpen] = useState(false)
-  // Until a key is connected there is nothing to show except the place to connect one.
+  // Without a key, the history pages have nothing to show. Trade and Replay run on public market data, so they
+  // stay open: anyone signed in can practise on the chart.
   const connected = exchanges.some((e) => e.configured)
+  const unlocked = connected || pathname.startsWith('/settings') || pathname.startsWith('/trade')
   return (
     <SidebarProvider open={replay ? replayOpen : open} onOpenChange={replay ? setReplayOpen : setOpen}>
       <AppSidebar exchanges={exchanges} user={user} />
-      <SidebarInset className="min-w-0">
-        {connected || pathname.startsWith('/settings') ? <Outlet /> : <ConnectFirst />}
-      </SidebarInset>
+      <SidebarInset className="min-w-0">{unlocked ? <Outlet /> : <ConnectFirst />}</SidebarInset>
     </SidebarProvider>
   )
 }
@@ -68,11 +68,18 @@ function ConnectFirst() {
             in.
           </p>
         </div>
-        <Button asChild>
-          <Link to="/settings/exchanges">
-            Connect OKX <ArrowRight />
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild>
+            <Link to="/settings/exchanges">
+              Connect OKX <ArrowRight />
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/trade/replay">
+              <Rewind /> Try Replay, no key needed
+            </Link>
+          </Button>
+        </div>
       </div>
     </main>
   )

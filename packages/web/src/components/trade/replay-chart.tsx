@@ -131,6 +131,7 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
       line(position.entry, position.side === 'long' ? 'Long' : 'Short', p.fg)
       if (position.stop !== null) line(position.stop, 'Stop', p.down)
       if (position.target !== null) line(position.target, 'Target', p.up)
+      line(position.liq, 'Liq', p.muted)
     }
   }, [ready, theme, trades, position])
 
