@@ -1,7 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { PositionSizeCalculator } from '@/components/tools/position-size-calculator'
+import { DEFAULT_DRAFT, PositionSizeCalculator, parseDraft } from '@/components/tools/position-size-calculator'
 
 export const Route = createFileRoute('/(public)/tools/position-size')({
+  validateSearch: parseDraft,
   head: () => ({
     meta: [
       { title: 'Position size calculator · crypz' },
@@ -15,6 +16,8 @@ export const Route = createFileRoute('/(public)/tools/position-size')({
 })
 
 function PositionSizePage() {
+  const search = Route.useSearch()
+  const navigate = Route.useNavigate()
   return (
     <main className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 px-4 py-10 sm:px-8 sm:py-14">
       <div className="flex max-w-2xl flex-col gap-3">
@@ -24,7 +27,11 @@ function PositionSizePage() {
           calculator returns units, notional, leverage needed and the target from your risk : reward.
         </p>
       </div>
-      <PositionSizeCalculator />
+      <PositionSizeCalculator
+        draft={{ ...DEFAULT_DRAFT, ...search }}
+        onChange={(patch) => navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true, resetScroll: false })}
+        onReset={() => navigate({ search: {}, replace: true, resetScroll: false })}
+      />
     </main>
   )
 }

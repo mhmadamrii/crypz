@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { ArrowRight, X } from 'lucide-react'
-import { Link, createFileRoute, useLoaderData } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import { computeStats, deriveInsights } from '@crypz/exchanges'
 import { PageHeader } from '@/components/app/page-header'
 import { BreakdownTable } from '@/components/dashboard/breakdown-table'
@@ -14,6 +14,7 @@ import { PositionsTable } from '@/components/dashboard/positions-table'
 import { StatStrip } from '@/components/dashboard/stat-strip'
 import { Button } from '@/components/ui/button'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { usePortfolio } from '@/lib/queries'
 import { cn } from '@/lib/utils'
 import { fmtDate, fmtDuration, fmtSigned, tone } from '@/lib/format'
 
@@ -56,7 +57,7 @@ function Section({
 }
 
 function Dashboard() {
-  const data = useLoaderData({ from: '/(main)' })
+  const data = usePortfolio()
   const { range = 'all', asset = null } = Route.useSearch()
   const navigate = Route.useNavigate()
   const setSearch = (patch: Search) =>

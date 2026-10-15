@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
-import { createFileRoute, useLoaderData } from '@tanstack/react-router'
+import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { createFileRoute } from '@tanstack/react-router'
+import { tickerQuery, usePortfolio } from '@/lib/queries'
 import { ArrowUpRight } from 'lucide-react'
 import { BARS, type Bar, type Position, type Ticker } from '@crypz/exchanges'
 import { PageHeader } from '@/components/app/page-header'
@@ -7,7 +9,6 @@ import { CandleChart } from '@/components/trade/candle-chart'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { getTicker } from '@/server/market'
 import { cn } from '@/lib/utils'
 import { fmtDate, fmtDuration, fmtNum, fmtPct, fmtPrice, fmtSigned, tone } from '@/lib/format'
 
@@ -25,27 +26,8 @@ export const Route = createFileRoute('/(main)/trade')({
   component: Trade,
 })
 
-function useTicker(symbol: string) {
-  const [ticker, setTicker] = useState<Ticker | null>(null)
-  useEffect(() => {
-    let alive = true
-    setTicker(null)
-    const pull = () =>
-      getTicker({ data: { exchange: 'okx', symbol } })
-        .then((t) => alive && setTicker(t))
-        .catch(() => {})
-    void pull()
-    const id = setInterval(pull, 10_000)
-    return () => {
-      alive = false
-      clearInterval(id)
-    }
-  }, [symbol])
-  return ticker
-}
-
 function Trade() {
-  const data = useLoaderData({ from: '/(main)' })
+  const data = usePortfolio()
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
   const set = (patch: Search) => navigate({ search: (s) => ({ ...s, ...patch }), replace: true })
@@ -62,8 +44,8 @@ function Trade() {
   const mine = useMemo(() => data.positions.filter((p) => p.symbol === symbol), [data.positions, symbol])
   const selected = mine.find((p) => p.id === search.trade) ?? null
   const focus = useMemo(() => (selected ? { from: selected.openedAt, to: selected.closedAt } : null), [selected])
-  const ticker = useTicker(symbol)
   const exchange = mine[0]?.exchange ?? 'okx'
+  const { data: ticker = null } = useQuery(tickerQuery(exchange, symbol))
   const tradeUrl = mine[0]?.tradeUrl ?? `https://www.okx.com/trade-swap/${symbol.toLowerCase()}`
 
   return (

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { RotateCcw, Sigma } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,9 +23,7 @@ import {
 import { cn } from '@/lib/utils'
 import { tone } from '@/lib/format'
 
-const STORE_KEY = 'crypz-calc-position-size'
-
-type Draft = Record<Exclude<keyof PositionSizeInput, 'currency' | 'direction'>, string> &
+export type Draft = Record<Exclude<keyof PositionSizeInput, 'currency' | 'direction'>, string> &
   Pick<PositionSizeInput, 'currency' | 'direction'>
 
 const toDraft = (i: PositionSizeInput): Draft => ({
@@ -38,6 +36,20 @@ const toDraft = (i: PositionSizeInput): Draft => ({
   rr: String(i.rr),
   idrRate: i.idrRate ? String(i.idrRate) : '',
 })
+
+export const DEFAULT_DRAFT = toDraft(DEFAULT_INPUT)
+
+/** Turn untrusted URL search params into a partial draft (unknown keys and bad enums dropped). */
+export function parseDraft(search: Record<string, unknown>): Partial<Draft> {
+  const out: Partial<Draft> = {}
+  for (const k of ['equity', 'riskPct', 'entry', 'stop', 'rr', 'idrRate'] as const) {
+    const v = search[k]
+    if (typeof v === 'string' || typeof v === 'number') out[k] = String(v).slice(0, 32)
+  }
+  if (search.currency === 'USDT' || search.currency === 'USD') out.currency = search.currency
+  if (search.direction === 'long' || search.direction === 'short') out.direction = search.direction
+  return out
+}
 
 const parse = (s: string) => {
   const n = Number(s.replace(/,/g, '').trim())
@@ -132,23 +144,16 @@ function NumberInput({
   )
 }
 
-export function PositionSizeCalculator() {
-  const [draft, setDraft] = useState<Draft>(() => toDraft(DEFAULT_INPUT))
-  const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }))
-
-  // Remember the last setup on this device only.
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORE_KEY)
-      if (saved) setDraft((d) => ({ ...d, ...JSON.parse(saved) }))
-    } catch {}
-  }, [])
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORE_KEY, JSON.stringify(draft))
-    } catch {}
-  }, [draft])
-
+/** Controlled: the route owns the draft (kept in the URL, so a setup is shareable and survives reloads). */
+export function PositionSizeCalculator({
+  draft,
+  onChange: set,
+  onReset,
+}: {
+  draft: Draft
+  onChange: (patch: Partial<Draft>) => void
+  onReset: () => void
+}) {
   const input = useMemo(() => toInput(draft), [draft])
   const errors = useMemo(() => validate(input), [input])
   const result = useMemo(() => calculate(input), [input])
@@ -162,7 +167,7 @@ export function PositionSizeCalculator() {
           <h2 id="setup-title" className="text-lg font-medium tracking-tight">
             Trade setup
           </h2>
-          <Button variant="outline" size="sm" onClick={() => setDraft(toDraft(DEFAULT_INPUT))}>
+          <Button variant="outline" size="sm" onClick={onReset}>
             <RotateCcw /> Reset
           </Button>
         </div>

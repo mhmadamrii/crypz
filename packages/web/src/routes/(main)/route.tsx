@@ -1,12 +1,11 @@
 import { Outlet, createFileRoute } from '@tanstack/react-router'
 import { AppSidebar } from '@/components/app/app-sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
-import { getPortfolio } from '@/server/portfolio'
+import { portfolioQuery, usePortfolio } from '@/lib/queries'
 
-// Shared shell for every signed-in page. Portfolio loads once here; pages read it via useLoaderData({ from: '/(main)' }).
+// Shared shell for every signed-in page. The loader fills the query cache once; pages read it with usePortfolio().
 export const Route = createFileRoute('/(main)')({
-  loader: () => getPortfolio(),
-  staleTime: 60_000,
+  loader: ({ context }) => context.queryClient.ensureQueryData(portfolioQuery()),
   component: AppLayout,
   errorComponent: ({ error }) => (
     <main className="grid min-h-dvh place-items-center p-6">
@@ -20,7 +19,7 @@ export const Route = createFileRoute('/(main)')({
 })
 
 function AppLayout() {
-  const { exchanges } = Route.useLoaderData()
+  const { exchanges } = usePortfolio()
   console.log('exchanges', exchanges)
   return (
     <SidebarProvider>

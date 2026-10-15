@@ -1,4 +1,5 @@
-import { createFileRoute, useLoaderData } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
+import { usePortfolio } from '@/lib/queries'
 import { PageHeader } from '@/components/app/page-header'
 import { PositionsTable } from '@/components/dashboard/positions-table'
 
@@ -8,7 +9,7 @@ export const Route = createFileRoute('/(main)/positions')({
 })
 
 function Positions() {
-  const { positions, fetchedAt } = useLoaderData({ from: '/(main)' })
+  const { positions, fetchedAt } = usePortfolio()
   return (
     <>
       <PageHeader title="Positions" />

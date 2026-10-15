@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import type { Bar, Candle, ExchangeId, Position } from '@crypz/exchanges'
+
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { latestCandlesQuery, olderCandlesQuery } from '@/lib/queries'
+import { cn } from '@/lib/utils'
+import { fmtPrice, fmtSigned } from '@/lib/format'
+
 import type {
   IChartApi,
   ISeriesApi,
@@ -7,10 +14,6 @@ import type {
   Time,
   UTCTimestamp,
 } from 'lightweight-charts'
-import type { Bar, Candle, ExchangeId, Position } from '@crypz/exchanges'
-import { getCandles } from '@/server/market'
-import { cn } from '@/lib/utils'
-import { fmtPrice, fmtSigned } from '@/lib/format'
 
 type Props = {
   exchange: ExchangeId
@@ -24,7 +27,6 @@ type Props = {
 }
 
 const BAR_MS: Record<Bar, number> = { '15m': 9e5, '1H': 36e5, '4H': 144e5, '1D': 864e5 }
-const LIVE_POLL_MS = 10_000
 
 // lightweight-charts plots UTC; shift to the viewer's zone so axis labels read local time.
 const tz = () => -new Date().getTimezoneOffset() * 60
@@ -57,70 +59,46 @@ function palette() {
   }
 }
 
+type Chart = {
+  chart: IChartApi
+  candles: ISeriesApi<'Candlestick'>
+  volume: ISeriesApi<'Histogram'>
+  markers: ISeriesMarkersPluginApi<Time>
+}
+
 type Readout = Candle & { change: number }
 
 export function CandleChart({ exchange, symbol, bar, positions = [], focus, className }: Props) {
+  // Data: Query owns fetching, the 10s live poll, caching and history paging.
+  const latest = useQuery(latestCandlesQuery(exchange, symbol, bar))
+  const older = useInfiniteQuery(olderCandlesQuery(exchange, symbol, bar, latest.data?.[0]?.time))
+  const candles = useMemo(() => {
+    const byTime = new Map<number, Candle>()
+    for (const page of older.data?.pages ?? []) for (const k of page) byTime.set(k.time, k)
+    for (const k of latest.data ?? []) byTime.set(k.time, k)
+    return [...byTime.values()].sort((a, b) => a.time - b.time)
+  }, [older.data, latest.data])
+
   const box = useRef<HTMLDivElement>(null)
-  const api = useRef<{
-    chart: IChartApi
-    candles: ISeriesApi<'Candlestick'>
-    volume: ISeriesApi<'Histogram'>
-    markers: ISeriesMarkersPluginApi<Time>
-  } | null>(null)
-  const data = useRef<Candle[]>([])
-  const state = useRef({ loading: false, exhausted: false })
+  const chartRef = useRef<Chart | null>(null)
+  const [ready, setReady] = useState(false)
   const [readout, setReadout] = useState<Readout | null>(null)
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
-  const [error, setError] = useState('')
-  const positionsRef = useRef(positions)
-  positionsRef.current = positions
 
-  const paint = () => {
-    const a = api.current
-    if (!a) return
-    const c = data.current
-    const ref = c[c.length - 1]?.close ?? 1
-    const precision = ref >= 1000 ? 1 : ref >= 10 ? 2 : ref >= 1 ? 4 : 6
-    a.candles.applyOptions({ priceFormat: { type: 'price', precision, minMove: 10 ** -precision } })
-    a.candles.setData(c.map((k) => ({ time: toChart(k.time), open: k.open, high: k.high, low: k.low, close: k.close })))
-    a.volume.setData(c.map((k) => ({ time: toChart(k.time), value: k.volume })))
-    a.markers.setMarkers(buildMarkers(c, positionsRef.current, bar, palette()))
+  // What the chart's own event handlers read; refreshed every render so they never go stale.
+  const live = useRef({ candles, positions, bar, loadOlder: () => {} })
+  live.current = {
+    candles,
+    positions,
+    bar,
+    loadOlder: () => {
+      if (older.hasNextPage && !older.isFetchingNextPage) void older.fetchNextPage()
+    },
   }
 
-  const loadOlder = async () => {
-    const s = state.current
-    if (s.loading || s.exhausted || !data.current.length) return false
-    s.loading = true
-    try {
-      const older = await getCandles({ data: { exchange, symbol, bar, before: data.current[0].time } })
-      const fresh = older.filter((k) => k.time < data.current[0].time)
-      if (!fresh.length) s.exhausted = true
-      else {
-        const range = api.current?.chart.timeScale().getVisibleLogicalRange()
-        data.current = [...fresh, ...data.current]
-        paint()
-        // keep the viewport where it was after prepending
-        if (range)
-          api.current?.chart
-            .timeScale()
-            .setVisibleLogicalRange({ from: range.from + fresh.length, to: range.to + fresh.length })
-      }
-      return fresh.length > 0
-    } finally {
-      s.loading = false
-    }
-  }
-
-  // create chart once per symbol/bar
+  // 1. Lifecycle: create the imperative chart once, tear it down on unmount.
   useEffect(() => {
     let disposed = false
-    let poll: ReturnType<typeof setInterval> | undefined
     let observer: MutationObserver | undefined
-    data.current = []
-    state.current = { loading: false, exhausted: false }
-    setStatus('loading')
-    setReadout(null)
-
     ;(async () => {
       const lw = await import('lightweight-charts')
       if (disposed || !box.current) return
@@ -137,7 +115,7 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
         },
         grid: { vertLines: { color: p.hairline }, horzLines: { color: p.hairline } },
         rightPriceScale: { borderColor: p.border },
-        timeScale: { borderColor: p.border, timeVisible: bar !== '1D', secondsVisible: false, rightOffset: 6 },
+        timeScale: { borderColor: p.border, secondsVisible: false, rightOffset: 6 },
         crosshair: {
           mode: lw.CrosshairMode.Normal,
           vertLine: { color: p.muted, style: lw.LineStyle.Dotted, labelBackgroundColor: p.fg },
@@ -145,7 +123,7 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
         },
       })
       // Hollow candles in the world's two inks: filled = close above open, hollow = below.
-      const candles = chart.addSeries(lw.CandlestickSeries, {
+      const candleSeries = chart.addSeries(lw.CandlestickSeries, {
         upColor: p.fg,
         downColor: p.bg,
         borderUpColor: p.fg,
@@ -161,18 +139,18 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
         priceScaleId: '',
       })
       volume.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } })
-      candles.priceScale().applyOptions({ scaleMargins: { top: 0.08, bottom: 0.22 } })
-      const markers = lw.createSeriesMarkers(candles, [])
-      api.current = { chart, candles, volume, markers }
+      candleSeries.priceScale().applyOptions({ scaleMargins: { top: 0.08, bottom: 0.22 } })
+      const markers = lw.createSeriesMarkers(candleSeries, [])
+      chartRef.current = { chart, candles: candleSeries, volume, markers }
 
       chart.subscribeCrosshairMove((param) => {
-        const k = param.time ? data.current.find((c) => toChart(c.time) === param.time) : undefined
-        const last = data.current[data.current.length - 1]
-        const show = k ?? last
-        if (show) setReadout({ ...show, change: (show.close - show.open) / show.open })
+        const data = live.current.candles
+        const k = (param.time && data.find((c) => toChart(c.time) === param.time)) || data[data.length - 1]
+        if (k) setReadout({ ...k, change: (k.close - k.open) / k.open })
       })
+      // scrolling near the left edge pages in older history
       chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
-        if (range && range.from < 15) void loadOlder()
+        if (range && range.from < 15) live.current.loadOlder()
       })
 
       // follow the theme toggle
@@ -192,7 +170,7 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
             horzLine: { color: q.muted, labelBackgroundColor: q.fg },
           },
         })
-        candles.applyOptions({
+        candleSeries.applyOptions({
           upColor: q.fg,
           downColor: q.bg,
           borderUpColor: q.fg,
@@ -201,79 +179,78 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
           wickDownColor: q.fg,
         })
         volume.applyOptions({ color: q.volume })
-        markers.setMarkers(buildMarkers(data.current, positionsRef.current, bar, q))
+        markers.setMarkers(buildMarkers(live.current.candles, live.current.positions, live.current.bar, q))
       })
       observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-
-      try {
-        data.current = await getCandles({ data: { exchange, symbol, bar } })
-        if (disposed) return
-        paint()
-        const n = data.current.length
-        chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - 140), to: n + 4 })
-        const last = data.current[n - 1]
-        if (last) setReadout({ ...last, change: (last.close - last.open) / last.open })
-        setStatus('ready')
-      } catch (e) {
-        if (!disposed) {
-          setError(e instanceof Error ? e.message : String(e))
-          setStatus('error')
-        }
-        return
-      }
-
-      // live: refresh the newest bars
-      poll = setInterval(async () => {
-        try {
-          const latest = await getCandles({ data: { exchange, symbol, bar } })
-          if (disposed || !latest.length) return
-          const lastKnown = data.current[data.current.length - 1]?.time ?? 0
-          for (const k of latest.filter((x) => x.time >= lastKnown)) {
-            const i = data.current.findIndex((c) => c.time === k.time)
-            if (i >= 0) data.current[i] = k
-            else data.current.push(k)
-            candles.update({ time: toChart(k.time), open: k.open, high: k.high, low: k.low, close: k.close })
-            volume.update({ time: toChart(k.time), value: k.volume })
-          }
-        } catch {
-          // transient network errors: next tick retries
-        }
-      }, LIVE_POLL_MS)
+      setReady(true)
     })()
-
     return () => {
       disposed = true
-      if (poll) clearInterval(poll)
       observer?.disconnect()
-      api.current?.chart.remove()
-      api.current = null
+      chartRef.current?.chart.remove()
+      chartRef.current = null
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exchange, symbol, bar])
+  }, [])
 
-  // positions change (e.g. range filter) -> redraw markers only
+  // 2. Sync: push candles and markers into the chart whenever they change.
+  const shown = useRef({ key: '', first: 0, length: 0 })
   useEffect(() => {
-    if (api.current && data.current.length)
-      api.current.markers.setMarkers(buildMarkers(data.current, positions, bar, palette()))
-  }, [positions, bar])
+    const c = chartRef.current
+    if (!c || !candles.length) return
+    const key = `${exchange}:${symbol}:${bar}`
+    const prev = shown.current
+    const first = candles[0].time
+    const ts = c.chart.timeScale()
 
-  // jump to a trade, paging older history until it is loaded
-  useEffect(() => {
-    if (!focus || status !== 'ready') return
-    let cancelled = false
-    ;(async () => {
-      for (let i = 0; i < 40 && data.current[0] && data.current[0].time > focus.from - BAR_MS[bar] * 20; i++) {
-        if (cancelled || !(await loadOlder())) break
+    if (
+      prev.key === key &&
+      prev.first === first &&
+      candles.length >= prev.length &&
+      candles.length - prev.length <= 2
+    ) {
+      // live poll: only the newest bars moved
+      for (const k of candles.slice(Math.max(0, prev.length - 1))) {
+        c.candles.update({ time: toChart(k.time), open: k.open, high: k.high, low: k.low, close: k.close })
+        c.volume.update({ time: toChart(k.time), value: k.volume })
       }
-      if (cancelled || !api.current) return
-      const pad = Math.max(BAR_MS[bar] * 30, (focus.to - focus.from) * 0.6)
-      api.current.chart.timeScale().setVisibleRange({ from: toChart(focus.from - pad), to: toChart(focus.to + pad) })
-    })()
-    return () => {
-      cancelled = true
+    } else {
+      const ref = candles[candles.length - 1].close
+      const precision = ref >= 1000 ? 1 : ref >= 10 ? 2 : ref >= 1 ? 4 : 6
+      c.candles.applyOptions({ priceFormat: { type: 'price', precision, minMove: 10 ** -precision } })
+      const range = ts.getVisibleLogicalRange()
+      c.candles.setData(
+        candles.map((k) => ({ time: toChart(k.time), open: k.open, high: k.high, low: k.low, close: k.close })),
+      )
+      c.volume.setData(candles.map((k) => ({ time: toChart(k.time), value: k.volume })))
+      if (prev.key !== key) {
+        c.chart.applyOptions({ timeScale: { timeVisible: bar !== '1D' } })
+        ts.setVisibleLogicalRange({ from: Math.max(0, candles.length - 140), to: candles.length + 4 })
+        const last = candles[candles.length - 1]
+        setReadout({ ...last, change: (last.close - last.open) / last.open })
+      } else if (range && first < prev.first) {
+        // older history prepended: keep the viewport where it was
+        const added = candles.findIndex((k) => k.time === prev.first)
+        ts.setVisibleLogicalRange({ from: range.from + added, to: range.to + added })
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focus, status])
+    c.markers.setMarkers(buildMarkers(candles, positions, bar, palette()))
+    shown.current = { key, first, length: candles.length }
+  }, [ready, candles, positions, exchange, symbol, bar])
+
+  // 3. Focus: page in history until the trade is covered, then frame it once.
+  const framed = useRef<Props['focus']>(null)
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = older
+  useEffect(() => {
+    const c = chartRef.current
+    if (!c || !focus || !candles.length || framed.current === focus) return
+    if (candles[0].time > focus.from - BAR_MS[bar] * 20 && hasNextPage) {
+      if (!isFetchingNextPage) void fetchNextPage()
+      return
+    }
+    const pad = Math.max(BAR_MS[bar] * 30, (focus.to - focus.from) * 0.6)
+    c.chart.timeScale().setVisibleRange({ from: toChart(focus.from - pad), to: toChart(focus.to + pad) })
+    framed.current = focus
+  }, [ready, focus, candles, bar, hasNextPage, isFetchingNextPage, fetchNextPage])
 
   return (
     <div className={cn('relative flex min-h-80 flex-col', className)}>
@@ -297,9 +274,9 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
         )}
       </div>
       <div ref={box} className="min-h-0 flex-1" />
-      {status !== 'ready' && (
+      {!latest.isSuccess && (
         <div className="absolute inset-0 grid place-items-center bg-background/80 text-sm text-muted-foreground">
-          {status === 'loading' ? 'Loading candles…' : `Could not load candles: ${error}`}
+          {latest.isError ? `Could not load candles: ${latest.error.message}` : 'Loading candles…'}
         </div>
       )}
     </div>
