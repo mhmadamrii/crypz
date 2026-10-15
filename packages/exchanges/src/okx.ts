@@ -152,7 +152,6 @@ export const okx: ExchangeAdapter = {
         high: num(r[2]),
         low: num(r[3]),
         close: num(r[4]),
-        volume: num(r[5]),
       }))
       .reverse()
   },

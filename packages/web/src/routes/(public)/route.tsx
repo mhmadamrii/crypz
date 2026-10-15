@@ -12,7 +12,7 @@ function PublicLayout() {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-20 border-b border-border bg-background">
-        <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-6 px-4 sm:px-8">
+        <div className="flex h-16 items-center gap-6 px-4 sm:px-8">
           <Link to="/" aria-label="crypz home">
             <Wordmark className="text-lg" />
           </Link>
@@ -56,7 +56,7 @@ function PublicLayout() {
         <Outlet />
       </div>
       <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-[1400px] justify-between px-4 py-6 text-xs text-muted-foreground sm:px-8">
+        <div className="flex justify-between px-4 py-6 text-xs text-muted-foreground sm:px-8">
           <Wordmark />
           <span>API keys stay on your server.</span>
         </div>

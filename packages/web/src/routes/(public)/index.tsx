@@ -27,7 +27,7 @@ function Landing() {
   return (
     <div>
       <main>
-        <section className="mx-auto grid max-w-[1400px] items-center gap-12 px-4 pt-10 pb-20 sm:px-8 lg:min-h-[calc(100dvh-4rem-1px)] lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:pt-0">
+        <section className="grid items-center gap-12 px-4 pt-10 pb-20 sm:px-8 lg:min-h-[calc(100dvh-4rem-1px)] lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:pt-0">
           <div className="flex flex-col gap-7">
             <h1 className="text-5xl leading-[0.95] font-semibold tracking-[-0.04em] text-balance sm:text-7xl">
               Every trade you closed. One square each.
@@ -58,7 +58,7 @@ function Landing() {
         </section>
 
         <section className="border-y border-border">
-          <div className="mx-auto grid max-w-[1400px] gap-px bg-border lg:grid-cols-3 [&>*]:bg-background">
+          <div className="grid gap-px bg-border lg:grid-cols-3 [&>*]:bg-background">
             <div className="flex flex-col gap-5 p-6 sm:p-8">
               <h2 className="text-xl font-medium tracking-tight">Edge by asset</h2>
               <p className="text-sm text-muted-foreground">
@@ -98,12 +98,10 @@ function Landing() {
               </ol>
             </div>
           </div>
-          <p className="mx-auto max-w-[1400px] px-4 py-3 label sm:px-8">
-            All figures on this page are synthetic sample data
-          </p>
+          <p className="px-4 py-3 label sm:px-8">All figures on this page are synthetic sample data</p>
         </section>
 
-        <section className="mx-auto grid max-w-[1400px] gap-10 px-4 py-24 sm:px-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        <section className="grid gap-10 px-4 py-24 sm:px-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
           <h2 className="text-3xl font-semibold tracking-[-0.03em] text-balance sm:text-4xl">
             The exchange is the source of truth.
           </h2>
@@ -126,7 +124,7 @@ function Landing() {
         </section>
 
         <section className="border-t border-border">
-          <div className="mx-auto flex max-w-[1400px] flex-col items-start justify-between gap-8 px-4 py-20 sm:px-8 md:flex-row md:items-end">
+          <div className="flex flex-col items-start justify-between gap-8 px-4 py-20 sm:px-8 md:flex-row md:items-end">
             <h2 className="text-5xl leading-[0.95] font-semibold tracking-[-0.04em] sm:text-7xl">
               Read your own mosaic.
             </h2>

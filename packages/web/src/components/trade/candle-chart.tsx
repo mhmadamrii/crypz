@@ -53,7 +53,6 @@ function palette() {
     muted: resolveColor('var(--muted-foreground)'),
     hairline: resolveColor('var(--hairline)'),
     border: resolveColor('var(--border)'),
-    volume: resolveColor('var(--muted-foreground)', 0.28),
     up: resolveColor('var(--up)'),
     down: resolveColor('var(--down)'),
   }
@@ -62,7 +61,6 @@ function palette() {
 type Chart = {
   chart: IChartApi
   candles: ISeriesApi<'Candlestick'>
-  volume: ISeriesApi<'Histogram'>
   markers: ISeriesMarkersPluginApi<Time>
 }
 
@@ -133,15 +131,9 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
         priceLineColor: p.muted,
         priceLineStyle: lw.LineStyle.Dashed,
       })
-      const volume = chart.addSeries(lw.HistogramSeries, {
-        color: p.volume,
-        priceFormat: { type: 'volume' },
-        priceScaleId: '',
-      })
-      volume.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } })
-      candleSeries.priceScale().applyOptions({ scaleMargins: { top: 0.08, bottom: 0.22 } })
+      candleSeries.priceScale().applyOptions({ scaleMargins: { top: 0.08, bottom: 0.08 } })
       const markers = lw.createSeriesMarkers(candleSeries, [])
-      chartRef.current = { chart, candles: candleSeries, volume, markers }
+      chartRef.current = { chart, candles: candleSeries, markers }
 
       chart.subscribeCrosshairMove((param) => {
         const data = live.current.candles
@@ -178,7 +170,6 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
           wickUpColor: q.fg,
           wickDownColor: q.fg,
         })
-        volume.applyOptions({ color: q.volume })
         markers.setMarkers(buildMarkers(live.current.candles, live.current.positions, live.current.bar, q))
       })
       observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
@@ -211,7 +202,6 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
       // live poll: only the newest bars moved
       for (const k of candles.slice(Math.max(0, prev.length - 1))) {
         c.candles.update({ time: toChart(k.time), open: k.open, high: k.high, low: k.low, close: k.close })
-        c.volume.update({ time: toChart(k.time), value: k.volume })
       }
     } else {
       const ref = candles[candles.length - 1].close
@@ -221,7 +211,6 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
       c.candles.setData(
         candles.map((k) => ({ time: toChart(k.time), open: k.open, high: k.high, low: k.low, close: k.close })),
       )
-      c.volume.setData(candles.map((k) => ({ time: toChart(k.time), value: k.volume })))
       if (prev.key !== key) {
         c.chart.applyOptions({ timeScale: { timeVisible: bar !== '1D' } })
         ts.setVisibleLogicalRange({ from: Math.max(0, candles.length - 140), to: candles.length + 4 })

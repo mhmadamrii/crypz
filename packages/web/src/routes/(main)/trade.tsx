@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { tickerQuery, usePortfolio } from '@/lib/queries'
@@ -46,6 +46,7 @@ function Trade() {
   const focus = useMemo(() => (selected ? { from: selected.openedAt, to: selected.closedAt } : null), [selected])
   const exchange = mine[0]?.exchange ?? 'okx'
   const { data: ticker = null } = useQuery(tickerQuery(exchange, symbol))
+  const chartRef = useRef<HTMLDivElement>(null)
   const tradeUrl = mine[0]?.tradeUrl ?? `https://www.okx.com/trade-swap/${symbol.toLowerCase()}`
 
   return (
@@ -87,8 +88,8 @@ function Trade() {
       <main className="flex w-full flex-col gap-6 px-4 py-6 sm:px-8">
         <TickerStrip symbol={symbol} ticker={ticker} tradeUrl={tradeUrl} />
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">
-          <div className="flex flex-col border border-border">
+        <div className="flex flex-col gap-6">
+          <div ref={chartRef} className="flex scroll-mt-20 flex-col border border-border">
             <ToggleGroup
               type="single"
               variant="outline"
@@ -131,7 +132,10 @@ function Trade() {
             symbol={symbol}
             positions={mine}
             selected={selected?.id ?? null}
-            onSelect={(id) => set({ trade: id === search.trade ? undefined : id })}
+            onSelect={(id) => {
+              set({ trade: id === search.trade ? undefined : id })
+              chartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+            }}
           />
         </div>
       </main>
@@ -170,6 +174,10 @@ function TickerStrip({ symbol, ticker, tradeUrl }: { symbol: string; ticker: Tic
   )
 }
 
+/** Two lines on phones, one aligned row per trade from sm up. */
+const ROW =
+  'grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-0.5 px-4 sm:grid-cols-[4.5rem_3rem_9rem_5rem_minmax(10rem,1fr)_7rem] sm:items-center sm:gap-x-4'
+
 function YourTrades({
   symbol,
   positions,
@@ -184,10 +192,10 @@ function YourTrades({
   const net = positions.reduce((s, p) => s + p.realizedPnl, 0)
   const wins = positions.filter((p) => p.realizedPnl > 0).length
   return (
-    <aside className="flex max-h-[min(80dvh,760px)] flex-col border border-border">
-      <div className="border-b border-border px-4 py-3">
+    <section className="flex flex-col border border-border">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 border-b border-border px-4 py-3">
         <h2 className="text-sm font-medium">Your trades on {symbol.split('-')[0]}</h2>
-        <dl className="mt-2 flex gap-5 text-xs text-muted-foreground [&>div]:flex [&>div]:gap-1.5">
+        <dl className="flex gap-5 text-xs text-muted-foreground [&>div]:flex [&>div]:gap-1.5">
           <div>
             <dt>Trades</dt>
             <dd className="num text-foreground">{positions.length}</dd>
@@ -203,45 +211,63 @@ function YourTrades({
         </dl>
       </div>
       {positions.length ? (
-        <ol className="flex-1 overflow-y-auto">
-          {positions.map((p) => {
-            const on = p.id === selected
-            return (
-              <li key={p.id}>
-                <button
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => onSelect(p.id)}
-                  className={cn(
-                    'grid w-full grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-0.5 border-b border-hairline px-4 py-2.5 text-left text-[13px] transition-colors hover:bg-accent/60',
-                    on && 'bg-accent',
-                  )}
-                >
-                  <span className="flex items-center gap-2">
-                    <i className={cn('size-1.5 shrink-0', on ? 'bg-foreground' : 'bg-transparent')} />
-                    <span className="label text-foreground">{p.side}</span>
-                    <span className="num text-muted-foreground">{p.leverage}x</span>
-                  </span>
-                  <span className={cn('text-right num font-medium', tone(p.realizedPnl))}>
-                    {fmtSigned(p.realizedPnl, 4)}
-                  </span>
-                  <span className="num text-xs text-muted-foreground">
-                    {fmtDate(p.closedAt)} · {fmtDuration(p.closedAt - p.openedAt)}
-                  </span>
-                  <span className="text-right num text-xs text-muted-foreground">
-                    {fmtPrice(p.entryPrice)} → {fmtPrice(p.exitPrice)}
-                  </span>
-                </button>
-              </li>
-            )
-          })}
-        </ol>
+        <>
+          <div
+            aria-hidden
+            className={cn(ROW, 'hidden border-b border-border py-2 label sm:grid [&>span:nth-child(n+5)]:text-right')}
+          >
+            <span className="pl-3.5">Side</span>
+            <span>Lev</span>
+            <span>Closed</span>
+            <span>Held</span>
+            <span>Entry → Exit</span>
+            <span>Realized</span>
+          </div>
+          <ol className="max-h-[min(60dvh,520px)] overflow-y-auto">
+            {positions.map((p) => {
+              const on = p.id === selected
+              return (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => onSelect(p.id)}
+                    className={cn(
+                      ROW,
+                      'w-full border-b border-hairline py-2.5 text-left text-[13px] transition-colors hover:bg-accent/60',
+                      on && 'bg-accent',
+                    )}
+                  >
+                    <span className="flex items-center gap-2 sm:contents">
+                      <span className="flex items-center gap-2">
+                        <i className={cn('size-1.5 shrink-0', on ? 'bg-foreground' : 'bg-transparent')} />
+                        <span className="label text-foreground">{p.side}</span>
+                      </span>
+                      <span className="num text-muted-foreground">{p.leverage}x</span>
+                    </span>
+                    <span className={cn('text-right num font-medium sm:order-last', tone(p.realizedPnl))}>
+                      {fmtSigned(p.realizedPnl, 4)}
+                    </span>
+                    <span className="num text-xs text-muted-foreground sm:contents">
+                      <span>{fmtDate(p.closedAt)}</span>
+                      <span className="sm:hidden"> · </span>
+                      <span>{fmtDuration(p.closedAt - p.openedAt)}</span>
+                    </span>
+                    <span className="text-right num text-xs text-muted-foreground">
+                      {fmtPrice(p.entryPrice)} → {fmtPrice(p.exitPrice)}
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ol>
+        </>
       ) : (
         <p className="p-6 text-sm text-muted-foreground">No closed positions on this instrument yet.</p>
       )}
       <p className="border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
         Select a trade to jump the chart to it.
       </p>
-    </aside>
+    </section>
   )
 }

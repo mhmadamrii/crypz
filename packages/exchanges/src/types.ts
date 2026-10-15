@@ -40,7 +40,7 @@ export type ExchangeStatus = {
 export const BARS = ['15m', '1H', '4H', '1D'] as const
 export type Bar = (typeof BARS)[number]
 
-export type Candle = { time: number; open: number; high: number; low: number; close: number; volume: number }
+export type Candle = { time: number; open: number; high: number; low: number; close: number }
 
 export type Ticker = {
   symbol: string

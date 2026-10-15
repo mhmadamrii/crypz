@@ -221,7 +221,7 @@ The story order is fixed: the stat strip (equity first, then realized PnL, win r
 
 **Responsive.** The mosaic is 16 columns on phones and 24 from sm up. The stat strip is two columns with equity spanning both, and becomes one row of five at lg. On phones, edge-bar rows put the label and figures on one line and the bar on its own full-width line beneath. The position table becomes a two-line list: symbol and realized PnL on the first line, side, leverage, date and ROE on the second, so the result is never off-screen.
 
-The landing page uses a 1400px container with 5 : 7 splits and the same hairline rules.
+The landing page runs full width (no centered container, same 16px/32px gutters as the app) with 5 : 7 splits and the same hairline rules.
 
 ## Elevation & Depth
 

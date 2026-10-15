@@ -19,7 +19,7 @@ function PositionSizePage() {
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
   return (
-    <main className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 px-4 py-10 sm:px-8 sm:py-14">
+    <main className="flex w-full flex-col gap-8 px-4 py-10 sm:px-8 sm:py-14">
       <div className="flex max-w-2xl flex-col gap-3">
         <h1 className="text-4xl font-semibold tracking-[-0.04em] text-balance sm:text-5xl">Position size calculator</h1>
         <p className="text-pretty text-muted-foreground">
