@@ -288,6 +288,10 @@ Price charts use TradingView lightweight-charts, lazy-loaded on the client. Cand
 
 `/trade/replay` is the one app page without a page header: a 48px toolbar (instrument, timeframe, start, random, exit), the chart filling the rest of a non-scrolling `h-svh` frame, a playback bar under it and a 320px ticket + log column. The sidebar starts collapsed there. Only revealed candles reach the chart; entry, stop and target are dashed price lines (ink, down, up). Keyboard first: Space, →, B, S, X shown as square hairline `kbd` chips.
 
+### Drawing Tools (replay)
+
+A 40px tool rail left of the replay chart: cursor, trend, rectangle, fib, long, short, path, then hide and remove all. The armed tool is solid ink, like every pressed toggle. Drawings are ink only: 1.5px strokes, rectangles at 7% ink fill with a 75% ink border, fib edges (0, 1) muted with the retracement levels in full ink and extensions dotted. Long/short is the one exception, and only because it shows profit and loss: target zone up at 14%, stop zone down at 14%, labels outside each zone. Selected drawings show 7px square handles (background fill, ink border), never round ones.
+
 ### Public Shell and Tools
 
 Pages reachable without login (`(public)` route group: landing, login, `/tools/*`) share one public header (wordmark, a Tools nav with unbuilt tools marked SOON, theme toggle, Log in) and footer. The app (`(main)` route group) keeps the sidebar shell, whose Tools group links to the same public tool pages. A tool page is a form panel beside one result panel, both 1px bordered, never a grid of cards. Results read as a ledger: mono labels over mono figures, sections split by hairlines, with green and red only on signed money outcomes (loss at stop, profit at target, max risk). Price levels are drawn to scale on a vertical rule: the entry is a filled square, the target and stop are hollow squares. The formula explanation lives in a dialog that substitutes the user's live numbers into every step.

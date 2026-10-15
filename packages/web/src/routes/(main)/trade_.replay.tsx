@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react'
 import { BAR_MS, BARS, type Bar, type Candle, type ExchangeId } from '@crypz/exchanges'
+import { DrawingToolbar } from '@/components/drawings/toolbar'
 import { IntervalBar, useIntervalHotkeys } from '@/components/trade/interval-bar'
 import { ReplayChart } from '@/components/trade/replay-chart'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -308,19 +309,24 @@ function ReplaySession({
   return (
     <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_auto] lg:grid-rows-1">
       <section className="flex min-h-0 flex-col">
-        <div className="relative min-h-0 flex-1">
-          <ReplayChart
-            intraday={BAR_MS[bar] < BAR_MS['1D']}
-            candles={revealed}
-            position={p}
-            trades={state.trades}
-            className="absolute inset-0"
-          />
-          {blocker && (
-            <div className="absolute inset-0 z-20 grid place-items-center bg-background/80 p-6 text-center text-sm text-muted-foreground">
-              {blocker}
-            </div>
-          )}
+        <div className="flex min-h-0 flex-1">
+          <DrawingToolbar symbol={symbol} className="shrink-0 border-r border-border" />
+          <div className="relative min-h-0 flex-1">
+            <ReplayChart
+              intraday={BAR_MS[bar] < BAR_MS['1D']}
+              barMs={BAR_MS[bar]}
+              symbol={symbol}
+              candles={revealed}
+              position={p}
+              trades={state.trades}
+              className="absolute inset-0"
+            />
+            {blocker && (
+              <div className="absolute inset-0 z-20 grid place-items-center bg-background/80 p-6 text-center text-sm text-muted-foreground">
+                {blocker}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-t border-border px-3 py-2 sm:px-4">

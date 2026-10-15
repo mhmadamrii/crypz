@@ -5,6 +5,7 @@ import type { OpenPosition, ReplayTrade } from '@/lib/replay'
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { fmtPrice, fmtSigned } from '@/lib/format'
+import { attachDrawingLayer, createMapper } from '@/components/drawings/layer'
 import { createMosaicChart, palette, precisionFor, toBar, toChart, type Palette } from './chart-kit'
 
 type Props = {
@@ -12,6 +13,10 @@ type Props = {
   candles: Candle[]
   /** Show clock times on the axis (bars shorter than a day). */
   intraday: boolean
+  /** Bar length in ms, so drawings can extend past the last candle. */
+  barMs: number
+  /** Drawings are kept per instrument. */
+  symbol: string
   position: OpenPosition | null
   trades: ReplayTrade[]
   className?: string
@@ -26,7 +31,7 @@ type Handles = {
   dashed: number
 }
 
-export function ReplayChart({ candles, intraday, position, trades, className }: Props) {
+export function ReplayChart({ candles, intraday, barMs, symbol, position, trades, className }: Props) {
   const box = useRef<HTMLDivElement>(null)
   const ref = useRef<Handles | null>(null)
   const [ready, setReady] = useState(false)
@@ -44,9 +49,21 @@ export function ReplayChart({ candles, intraday, position, trades, className }: 
       if (disposed || !box.current) return
       const made = createMosaicChart(lw, box.current, (q) => {
         if (ref.current) ref.current.palette = q
+        layer.setPalette(q)
         setTheme((n) => n + 1)
       })
-      dispose = made.dispose
+      const layer = attachDrawingLayer({
+        chart: made.chart,
+        series: made.candles,
+        el: box.current,
+        symbol,
+        mapper: createMapper(made.chart, made.candles, () => live.current, barMs),
+        palette: palette(),
+      })
+      dispose = () => {
+        layer.dispose()
+        made.dispose()
+      }
       made.chart.applyOptions({ timeScale: { timeVisible: intraday } })
       ref.current = {
         candles: made.candles,
@@ -137,7 +154,7 @@ export function ReplayChart({ candles, intraday, position, trades, className }: 
           <span className="text-foreground">{fmtSigned(((k.close - k.open) / k.open) * 100)}%</span>
         </div>
       )}
-      <div ref={box} className="absolute inset-0" />
+      <div ref={box} className="absolute inset-0 [&[data-cursor]_*]:cursor-[inherit]!" />
     </div>
   )
 }
