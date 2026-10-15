@@ -37,8 +37,50 @@ export type ExchangeStatus = {
   configured: boolean
 }
 
-export const BARS = ['15m', '1H', '4H', '1D'] as const
+/** Every candle interval the app can draw, shortest first. */
+export const BARS = [
+  '1m',
+  '3m',
+  '5m',
+  '15m',
+  '30m',
+  '1H',
+  '2H',
+  '4H',
+  '6H',
+  '12H',
+  '1D',
+  '2D',
+  '3D',
+  '1W',
+  '1M',
+  '3M',
+] as const
 export type Bar = (typeof BARS)[number]
+
+const MIN = 6e4
+const HOUR = 60 * MIN
+const DAY = 24 * HOUR
+
+/** Length of one bar in ms (months approximated as 30 days). */
+export const BAR_MS: Record<Bar, number> = {
+  '1m': MIN,
+  '3m': 3 * MIN,
+  '5m': 5 * MIN,
+  '15m': 15 * MIN,
+  '30m': 30 * MIN,
+  '1H': HOUR,
+  '2H': 2 * HOUR,
+  '4H': 4 * HOUR,
+  '6H': 6 * HOUR,
+  '12H': 12 * HOUR,
+  '1D': DAY,
+  '2D': 2 * DAY,
+  '3D': 3 * DAY,
+  '1W': 7 * DAY,
+  '1M': 30 * DAY,
+  '3M': 91 * DAY,
+}
 
 export type Candle = { time: number; open: number; high: number; low: number; close: number }
 

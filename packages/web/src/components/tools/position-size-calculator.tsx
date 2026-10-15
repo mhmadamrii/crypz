@@ -20,6 +20,7 @@ import {
   type PositionSizeInput,
   type PositionSizeResult,
 } from '@/lib/calc/position-size'
+import { searchText } from '@/lib/search'
 import { cn } from '@/lib/utils'
 import { tone } from '@/lib/format'
 
@@ -43,8 +44,8 @@ export const DEFAULT_DRAFT = toDraft(DEFAULT_INPUT)
 export function parseDraft(search: Record<string, unknown>): Partial<Draft> {
   const out: Partial<Draft> = {}
   for (const k of ['equity', 'riskPct', 'entry', 'stop', 'rr', 'idrRate'] as const) {
-    const v = search[k]
-    if (typeof v === 'string' || typeof v === 'number') out[k] = String(v).slice(0, 32)
+    const v = searchText(search[k])
+    if (v !== undefined) out[k] = v.slice(0, 32)
   }
   if (search.currency === 'USDT' || search.currency === 'USD') out.currency = search.currency
   if (search.direction === 'long' || search.direction === 'short') out.direction = search.direction

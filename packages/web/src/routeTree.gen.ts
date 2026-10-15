@@ -16,6 +16,7 @@ import { Route as mainPositionsRouteImport } from './routes/(main)/positions'
 import { Route as mainTradeRouteImport } from './routes/(main)/trade'
 import { Route as publicIndexRouteImport } from './routes/(public)/index'
 import { Route as publicLoginRouteImport } from './routes/(public)/login'
+import { Route as mainTradeReplayRouteImport } from './routes/(main)/trade_.replay'
 import { Route as publicToolsPositionSizeRouteImport } from './routes/(public)/tools/position-size'
 
 const mainRouteRoute = mainRouteRouteImport.update({
@@ -51,6 +52,11 @@ const publicLoginRoute = publicLoginRouteImport.update({
   path: '/login',
   getParentRoute: () => publicRouteRoute,
 } as any)
+const mainTradeReplayRoute = mainTradeReplayRouteImport.update({
+  id: '/trade_/replay',
+  path: '/trade/replay',
+  getParentRoute: () => mainRouteRoute,
+} as any)
 const publicToolsPositionSizeRoute = publicToolsPositionSizeRouteImport.update({
   id: '/tools/position-size',
   path: '/tools/position-size',
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/trade': typeof mainTradeRoute
   '/login': typeof publicLoginRoute
   '/': typeof publicIndexRoute
+  '/trade/replay': typeof mainTradeReplayRoute
   '/tools/position-size': typeof publicToolsPositionSizeRoute
 }
 export interface FileRoutesByTo {
@@ -71,6 +78,7 @@ export interface FileRoutesByTo {
   '/trade': typeof mainTradeRoute
   '/login': typeof publicLoginRoute
   '/': typeof publicIndexRoute
+  '/trade/replay': typeof mainTradeReplayRoute
   '/tools/position-size': typeof publicToolsPositionSizeRoute
 }
 export interface FileRoutesById {
@@ -82,6 +90,7 @@ export interface FileRoutesById {
   '/(main)/trade': typeof mainTradeRoute
   '/(public)/login': typeof publicLoginRoute
   '/(public)/': typeof publicIndexRoute
+  '/(main)/trade_/replay': typeof mainTradeReplayRoute
   '/(public)/tools/position-size': typeof publicToolsPositionSizeRoute
 }
 export interface FileRouteTypes {
@@ -92,6 +101,7 @@ export interface FileRouteTypes {
     | '/trade'
     | '/login'
     | '/'
+    | '/trade/replay'
     | '/tools/position-size'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
     | '/trade'
     | '/login'
     | '/'
+    | '/trade/replay'
     | '/tools/position-size'
   id:
     | '__root__'
@@ -110,6 +121,7 @@ export interface FileRouteTypes {
     | '/(main)/trade'
     | '/(public)/login'
     | '/(public)/'
+    | '/(main)/trade_/replay'
     | '/(public)/tools/position-size'
   fileRoutesById: FileRoutesById
 }
@@ -169,6 +181,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof publicLoginRouteImport
       parentRoute: typeof publicRouteRoute
     }
+    '/(main)/trade_/replay': {
+      id: '/(main)/trade_/replay'
+      path: '/trade/replay'
+      fullPath: '/trade/replay'
+      preLoaderRoute: typeof mainTradeReplayRouteImport
+      parentRoute: typeof mainRouteRoute
+    }
     '/(public)/tools/position-size': {
       id: '/(public)/tools/position-size'
       path: '/tools/position-size'
@@ -183,12 +202,14 @@ interface mainRouteRouteChildren {
   mainDashboardRoute: typeof mainDashboardRoute
   mainPositionsRoute: typeof mainPositionsRoute
   mainTradeRoute: typeof mainTradeRoute
+  mainTradeReplayRoute: typeof mainTradeReplayRoute
 }
 
 const mainRouteRouteChildren: mainRouteRouteChildren = {
   mainDashboardRoute: mainDashboardRoute,
   mainPositionsRoute: mainPositionsRoute,
   mainTradeRoute: mainTradeRoute,
+  mainTradeReplayRoute: mainTradeReplayRoute,
 }
 
 const mainRouteRouteWithChildren = mainRouteRoute._addFileChildren(

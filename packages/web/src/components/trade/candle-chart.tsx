@@ -1,10 +1,11 @@
-import type { Bar, Candle, ExchangeId, Position } from '@crypz/exchanges'
+import { BAR_MS, type Bar, type Candle, type ExchangeId, type Position } from '@crypz/exchanges'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { latestCandlesQuery, olderCandlesQuery } from '@/lib/queries'
 import { cn } from '@/lib/utils'
 import { fmtPrice, fmtSigned } from '@/lib/format'
+import { createMosaicChart, palette, precisionFor, toBar, toChart, type Palette } from './chart-kit'
 
 import type {
   IChartApi,
@@ -24,38 +25,6 @@ type Props = {
   /** Scroll the chart to this window (ms), loading older history if needed. */
   focus?: { from: number; to: number } | null
   className?: string
-}
-
-const BAR_MS: Record<Bar, number> = { '15m': 9e5, '1H': 36e5, '4H': 144e5, '1D': 864e5 }
-
-// lightweight-charts plots UTC; shift to the viewer's zone so axis labels read local time.
-const tz = () => -new Date().getTimezoneOffset() * 60
-const toChart = (ms: number) => (Math.floor(ms / 1000) + tz()) as UTCTimestamp
-
-/** Resolve a CSS colour (incl. oklch / var()) to rgba via canvas, since the chart parses only basic formats. */
-function resolveColor(expr: string, alpha = 1) {
-  const probe = document.createElement('i')
-  probe.style.color = expr
-  document.body.appendChild(probe)
-  const computed = getComputedStyle(probe).color
-  probe.remove()
-  const ctx = document.createElement('canvas').getContext('2d')!
-  ctx.fillStyle = computed
-  ctx.fillRect(0, 0, 1, 1)
-  const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data
-  return `rgba(${r},${g},${b},${alpha})`
-}
-
-function palette() {
-  return {
-    bg: resolveColor('var(--background)'),
-    fg: resolveColor('var(--foreground)'),
-    muted: resolveColor('var(--muted-foreground)'),
-    hairline: resolveColor('var(--hairline)'),
-    border: resolveColor('var(--border)'),
-    up: resolveColor('var(--up)'),
-    down: resolveColor('var(--down)'),
-  }
 }
 
 type Chart = {
@@ -96,44 +65,17 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
   // 1. Lifecycle: create the imperative chart once, tear it down on unmount.
   useEffect(() => {
     let disposed = false
-    let observer: MutationObserver | undefined
+    let dispose = () => {}
     ;(async () => {
       const lw = await import('lightweight-charts')
       if (disposed || !box.current) return
-      const p = palette()
-      const chart = lw.createChart(box.current, {
-        autoSize: true,
-        layout: {
-          background: { type: lw.ColorType.Solid, color: p.bg },
-          textColor: p.muted,
-          fontFamily: getComputedStyle(document.body).getPropertyValue('--font-mono') || 'monospace',
-          fontSize: 11,
-          attributionLogo: true,
-          panes: { separatorColor: p.border },
-        },
-        grid: { vertLines: { color: p.hairline }, horzLines: { color: p.hairline } },
-        rightPriceScale: { borderColor: p.border },
-        timeScale: { borderColor: p.border, secondsVisible: false, rightOffset: 6 },
-        crosshair: {
-          mode: lw.CrosshairMode.Normal,
-          vertLine: { color: p.muted, style: lw.LineStyle.Dotted, labelBackgroundColor: p.fg },
-          horzLine: { color: p.muted, style: lw.LineStyle.Dotted, labelBackgroundColor: p.fg },
-        },
-      })
-      // Hollow candles in the world's two inks: filled = close above open, hollow = below.
-      const candleSeries = chart.addSeries(lw.CandlestickSeries, {
-        upColor: p.fg,
-        downColor: p.bg,
-        borderUpColor: p.fg,
-        borderDownColor: p.fg,
-        wickUpColor: p.fg,
-        wickDownColor: p.fg,
-        priceLineColor: p.muted,
-        priceLineStyle: lw.LineStyle.Dashed,
-      })
-      candleSeries.priceScale().applyOptions({ scaleMargins: { top: 0.08, bottom: 0.08 } })
+      const made = createMosaicChart(lw, box.current, (q) =>
+        markers.setMarkers(buildMarkers(live.current.candles, live.current.positions, live.current.bar, q)),
+      )
+      const { chart, candles: candleSeries } = made
       const markers = lw.createSeriesMarkers(candleSeries, [])
       chartRef.current = { chart, candles: candleSeries, markers }
+      dispose = made.dispose
 
       chart.subscribeCrosshairMove((param) => {
         const data = live.current.candles
@@ -144,41 +86,11 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
       chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
         if (range && range.from < 15) live.current.loadOlder()
       })
-
-      // follow the theme toggle
-      observer = new MutationObserver(() => {
-        const q = palette()
-        chart.applyOptions({
-          layout: {
-            background: { type: lw.ColorType.Solid, color: q.bg },
-            textColor: q.muted,
-            panes: { separatorColor: q.border },
-          },
-          grid: { vertLines: { color: q.hairline }, horzLines: { color: q.hairline } },
-          rightPriceScale: { borderColor: q.border },
-          timeScale: { borderColor: q.border },
-          crosshair: {
-            vertLine: { color: q.muted, labelBackgroundColor: q.fg },
-            horzLine: { color: q.muted, labelBackgroundColor: q.fg },
-          },
-        })
-        candleSeries.applyOptions({
-          upColor: q.fg,
-          downColor: q.bg,
-          borderUpColor: q.fg,
-          borderDownColor: q.fg,
-          wickUpColor: q.fg,
-          wickDownColor: q.fg,
-        })
-        markers.setMarkers(buildMarkers(live.current.candles, live.current.positions, live.current.bar, q))
-      })
-      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
       setReady(true)
     })()
     return () => {
       disposed = true
-      observer?.disconnect()
-      chartRef.current?.chart.remove()
+      dispose()
       chartRef.current = null
     }
   }, [])
@@ -201,18 +113,14 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
     ) {
       // live poll: only the newest bars moved
       for (const k of candles.slice(Math.max(0, prev.length - 1))) {
-        c.candles.update({ time: toChart(k.time), open: k.open, high: k.high, low: k.low, close: k.close })
+        c.candles.update(toBar(k))
       }
     } else {
-      const ref = candles[candles.length - 1].close
-      const precision = ref >= 1000 ? 1 : ref >= 10 ? 2 : ref >= 1 ? 4 : 6
-      c.candles.applyOptions({ priceFormat: { type: 'price', precision, minMove: 10 ** -precision } })
+      c.candles.applyOptions({ priceFormat: precisionFor(candles[candles.length - 1].close) })
       const range = ts.getVisibleLogicalRange()
-      c.candles.setData(
-        candles.map((k) => ({ time: toChart(k.time), open: k.open, high: k.high, low: k.low, close: k.close })),
-      )
+      c.candles.setData(candles.map(toBar))
       if (prev.key !== key) {
-        c.chart.applyOptions({ timeScale: { timeVisible: bar !== '1D' } })
+        c.chart.applyOptions({ timeScale: { timeVisible: BAR_MS[bar] < BAR_MS['1D'] } })
         ts.setVisibleLogicalRange({ from: Math.max(0, candles.length - 140), to: candles.length + 4 })
         const last = candles[candles.length - 1]
         setReadout({ ...last, change: (last.close - last.open) / last.open })
@@ -273,7 +181,7 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
 }
 
 /** Entries as arrows (up = long, down = short), exits as squares toned by realized PnL. */
-function buildMarkers(candles: Candle[], positions: Position[], bar: Bar, p: ReturnType<typeof palette>) {
+function buildMarkers(candles: Candle[], positions: Position[], bar: Bar, p: Palette) {
   if (!candles.length) return []
   const first = candles[0].time
   const span = BAR_MS[bar]

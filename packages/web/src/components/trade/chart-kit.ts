@@ -1,0 +1,121 @@
+import type { Candle } from '@crypz/exchanges'
+import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts'
+
+// Shared setup for every lightweight-charts surface: colours from the world tokens, hollow candles, theme follow.
+
+type LW = typeof import('lightweight-charts')
+
+// lightweight-charts plots UTC; shift to the viewer's zone so axis labels read local time.
+const tz = () => -new Date().getTimezoneOffset() * 60
+export const toChart = (ms: number) => (Math.floor(ms / 1000) + tz()) as UTCTimestamp
+
+/** Resolve a CSS colour (incl. oklch / var()) to rgba via canvas, since the chart parses only basic formats. */
+function resolveColor(expr: string, alpha = 1) {
+  const probe = document.createElement('i')
+  probe.style.color = expr
+  document.body.appendChild(probe)
+  const computed = getComputedStyle(probe).color
+  probe.remove()
+  const ctx = document.createElement('canvas').getContext('2d')!
+  ctx.fillStyle = computed
+  ctx.fillRect(0, 0, 1, 1)
+  const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data
+  return `rgba(${r},${g},${b},${alpha})`
+}
+
+export function palette() {
+  return {
+    bg: resolveColor('var(--background)'),
+    fg: resolveColor('var(--foreground)'),
+    muted: resolveColor('var(--muted-foreground)'),
+    hairline: resolveColor('var(--hairline)'),
+    border: resolveColor('var(--border)'),
+    up: resolveColor('var(--up)'),
+    down: resolveColor('var(--down)'),
+  }
+}
+
+export type Palette = ReturnType<typeof palette>
+
+export const toBar = (k: Candle) => ({ time: toChart(k.time), open: k.open, high: k.high, low: k.low, close: k.close })
+
+/** Decimal places for the price scale, from the instrument's price level. */
+export function precisionFor(price: number) {
+  const precision = price >= 1000 ? 1 : price >= 10 ? 2 : price >= 1 ? 4 : 6
+  return { type: 'price' as const, precision, minMove: 10 ** -precision }
+}
+
+function themed(lw: LW, p: Palette) {
+  return {
+    chart: {
+      layout: {
+        background: { type: lw.ColorType.Solid, color: p.bg },
+        textColor: p.muted,
+        panes: { separatorColor: p.border },
+      },
+      grid: { vertLines: { color: p.hairline }, horzLines: { color: p.hairline } },
+      rightPriceScale: { borderColor: p.border },
+      timeScale: { borderColor: p.border },
+      crosshair: {
+        vertLine: { color: p.muted, labelBackgroundColor: p.fg },
+        horzLine: { color: p.muted, labelBackgroundColor: p.fg },
+      },
+    },
+    // Hollow candles in the world's two inks: filled = close above open, hollow = below.
+    candles: {
+      upColor: p.fg,
+      downColor: p.bg,
+      borderUpColor: p.fg,
+      borderDownColor: p.fg,
+      wickUpColor: p.fg,
+      wickDownColor: p.fg,
+    },
+  }
+}
+
+/** Create the chart + candle series, and keep both in step with the theme toggle. Call `dispose` on unmount. */
+export function createMosaicChart(lw: LW, el: HTMLElement, onTheme?: (p: Palette) => void) {
+  const p = palette()
+  const t = themed(lw, p)
+  const chart: IChartApi = lw.createChart(el, {
+    autoSize: true,
+    layout: {
+      ...t.chart.layout,
+      fontFamily: getComputedStyle(document.body).getPropertyValue('--font-mono') || 'monospace',
+      fontSize: 11,
+      attributionLogo: true,
+    },
+    grid: t.chart.grid,
+    rightPriceScale: t.chart.rightPriceScale,
+    timeScale: { ...t.chart.timeScale, secondsVisible: false, rightOffset: 6 },
+    crosshair: {
+      mode: lw.CrosshairMode.Normal,
+      vertLine: { ...t.chart.crosshair.vertLine, style: lw.LineStyle.Dotted },
+      horzLine: { ...t.chart.crosshair.horzLine, style: lw.LineStyle.Dotted },
+    },
+  })
+  const candles: ISeriesApi<'Candlestick'> = chart.addSeries(lw.CandlestickSeries, {
+    ...t.candles,
+    priceLineColor: p.muted,
+    priceLineStyle: lw.LineStyle.Dashed,
+  })
+  candles.priceScale().applyOptions({ scaleMargins: { top: 0.08, bottom: 0.08 } })
+
+  const observer = new MutationObserver(() => {
+    const q = palette()
+    const next = themed(lw, q)
+    chart.applyOptions(next.chart)
+    candles.applyOptions(next.candles)
+    onTheme?.(q)
+  })
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+
+  return {
+    chart,
+    candles,
+    dispose: () => {
+      observer.disconnect()
+      chart.remove()
+    },
+  }
+}

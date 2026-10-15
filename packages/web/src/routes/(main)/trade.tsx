@@ -1,14 +1,14 @@
 import { useMemo, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import { tickerQuery, usePortfolio } from '@/lib/queries'
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight, Rewind } from 'lucide-react'
 import { BARS, type Bar, type Position, type Ticker } from '@crypz/exchanges'
 import { PageHeader } from '@/components/app/page-header'
 import { CandleChart } from '@/components/trade/candle-chart'
+import { IntervalBar, useIntervalHotkeys } from '@/components/trade/interval-bar'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { cn } from '@/lib/utils'
 import { fmtDate, fmtDuration, fmtNum, fmtPct, fmtPrice, fmtSigned, tone } from '@/lib/format'
 
@@ -31,6 +31,7 @@ function Trade() {
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
   const set = (patch: Search) => navigate({ search: (s) => ({ ...s, ...patch }), replace: true })
+  useIntervalHotkeys((b) => set({ bar: b }))
 
   const symbols = useMemo(() => {
     const n = new Map<string, number>()
@@ -64,51 +65,15 @@ function Trade() {
             ))}
           </SelectContent>
         </Select>
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          size="sm"
-          value={bar}
-          onValueChange={(v) => v && set({ bar: v as Bar })}
-          aria-label="Timeframe"
-          className="hidden sm:flex"
-        >
-          {BARS.map((b) => (
-            <ToggleGroupItem
-              key={b}
-              value={b}
-              className="px-2.5 num text-xs data-[state=on]:bg-foreground data-[state=on]:text-background"
-            >
-              {b}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        <IntervalBar value={bar} onChange={(v) => set({ bar: v })} className="hidden sm:flex" />
       </PageHeader>
 
       <main className="flex w-full flex-col gap-6 px-4 py-6 sm:px-8">
-        <TickerStrip symbol={symbol} ticker={ticker} tradeUrl={tradeUrl} />
+        <TickerStrip symbol={symbol} bar={bar} ticker={ticker} tradeUrl={tradeUrl} />
 
         <div className="flex flex-col gap-6">
           <div ref={chartRef} className="flex scroll-mt-20 flex-col border border-border">
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              size="sm"
-              value={bar}
-              onValueChange={(v) => v && set({ bar: v as Bar })}
-              aria-label="Timeframe"
-              className="m-3 sm:hidden"
-            >
-              {BARS.map((b) => (
-                <ToggleGroupItem
-                  key={b}
-                  value={b}
-                  className="flex-1 num text-xs data-[state=on]:bg-foreground data-[state=on]:text-background"
-                >
-                  {b}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+            <IntervalBar value={bar} onChange={(v) => set({ bar: v })} fill className="m-3 sm:hidden" />
             <CandleChart
               exchange={exchange}
               symbol={symbol}
@@ -143,7 +108,17 @@ function Trade() {
   )
 }
 
-function TickerStrip({ symbol, ticker, tradeUrl }: { symbol: string; ticker: Ticker | null; tradeUrl: string }) {
+function TickerStrip({
+  symbol,
+  bar,
+  ticker,
+  tradeUrl,
+}: {
+  symbol: string
+  bar: Bar
+  ticker: Ticker | null
+  tradeUrl: string
+}) {
   const change = ticker ? (ticker.last - ticker.open24h) / ticker.open24h : 0
   const cells = [
     { label: '24h change', value: ticker ? `${fmtSigned(change * 100)}%` : '–' },
@@ -165,11 +140,18 @@ function TickerStrip({ symbol, ticker, tradeUrl }: { symbol: string; ticker: Tic
           </div>
         ))}
       </dl>
-      <Button variant="outline" size="sm" asChild className="ml-auto">
-        <a href={tradeUrl} target="_blank" rel="noreferrer">
-          Trade on OKX <ArrowUpRight />
-        </a>
-      </Button>
+      <div className="ml-auto flex gap-2">
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/trade/replay" search={{ symbol, bar }}>
+            <Rewind /> Replay
+          </Link>
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <a href={tradeUrl} target="_blank" rel="noreferrer">
+            Trade on OKX <ArrowUpRight />
+          </a>
+        </Button>
+      </div>
     </div>
   )
 }

@@ -1,0 +1,152 @@
+import type { Candle } from '@crypz/exchanges'
+import type { IPriceLine, ISeriesApi, ISeriesMarkersPluginApi, SeriesMarker, Time } from 'lightweight-charts'
+import type { OpenPosition, ReplayTrade } from '@/lib/replay'
+
+import { useEffect, useRef, useState } from 'react'
+import { cn } from '@/lib/utils'
+import { fmtPrice, fmtSigned } from '@/lib/format'
+import { createMosaicChart, palette, precisionFor, toBar, toChart, type Palette } from './chart-kit'
+
+type Props = {
+  /** Only the revealed candles; the chart never sees the future. */
+  candles: Candle[]
+  /** Show clock times on the axis (bars shorter than a day). */
+  intraday: boolean
+  position: OpenPosition | null
+  trades: ReplayTrade[]
+  className?: string
+}
+
+type Handles = {
+  candles: ISeriesApi<'Candlestick'>
+  markers: ISeriesMarkersPluginApi<Time>
+  setView: (n: number) => void
+  palette: Palette
+  lines: IPriceLine[]
+  dashed: number
+}
+
+export function ReplayChart({ candles, intraday, position, trades, className }: Props) {
+  const box = useRef<HTMLDivElement>(null)
+  const ref = useRef<Handles | null>(null)
+  const [ready, setReady] = useState(false)
+  const [hover, setHover] = useState<Candle | null>(null)
+  const [theme, setTheme] = useState(0)
+  const live = useRef(candles)
+  live.current = candles
+
+  // 1. Lifecycle: create the chart once, tear it down on unmount.
+  useEffect(() => {
+    let disposed = false
+    let dispose = () => {}
+    ;(async () => {
+      const lw = await import('lightweight-charts')
+      if (disposed || !box.current) return
+      const made = createMosaicChart(lw, box.current, (q) => {
+        if (ref.current) ref.current.palette = q
+        setTheme((n) => n + 1)
+      })
+      dispose = made.dispose
+      made.chart.applyOptions({ timeScale: { timeVisible: intraday } })
+      ref.current = {
+        candles: made.candles,
+        markers: lw.createSeriesMarkers(made.candles, []),
+        setView: (n) => made.chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - 120), to: n + 8 }),
+        palette: palette(),
+        lines: [],
+        dashed: lw.LineStyle.Dashed,
+      }
+      made.chart.subscribeCrosshairMove((param) => {
+        const k = param.time ? live.current.find((c) => toChart(c.time) === param.time) : undefined
+        setHover(k ?? null)
+      })
+      setReady(true)
+    })()
+    return () => {
+      disposed = true
+      dispose()
+      ref.current = null
+    }
+  }, [])
+
+  // 2. Candles: a step appends one bar; anything else (new session, first load) resets the series.
+  const shown = useRef({ first: 0, length: 0 })
+  useEffect(() => {
+    const c = ref.current
+    if (!c || !candles.length) return
+    const prev = shown.current
+    const first = candles[0].time
+    if (prev.first === first && candles.length === prev.length + 1) c.candles.update(toBar(candles[candles.length - 1]))
+    else if (prev.first !== first || candles.length !== prev.length) {
+      c.candles.applyOptions({ priceFormat: precisionFor(candles[candles.length - 1].close) })
+      c.candles.setData(candles.map(toBar))
+      if (prev.first !== first) c.setView(candles.length)
+    }
+    shown.current = { first, length: candles.length }
+  }, [ready, candles])
+
+  // 3. Orders: entry/exit markers and the open position's entry, stop and target lines.
+  useEffect(() => {
+    const c = ref.current
+    if (!c) return
+    const p = c.palette
+    const marks: SeriesMarker<Time>[] = []
+    for (const t of trades) {
+      marks.push(entryMark(t, p), {
+        time: toChart(t.exitTime),
+        position: t.side === 'long' ? 'aboveBar' : 'belowBar',
+        shape: 'square',
+        color: t.pct > 0 ? p.up : p.down,
+        text: `${fmtSigned(t.pct)}%`,
+        size: 1,
+      })
+    }
+    if (position) marks.push(entryMark(position, p))
+    c.markers.setMarkers(marks.sort((a, b) => (a.time as number) - (b.time as number)))
+
+    for (const l of c.lines) c.candles.removePriceLine(l)
+    c.lines = []
+    if (position) {
+      const line = (price: number, title: string, color: string) =>
+        c.lines.push(
+          c.candles.createPriceLine({ price, title, color, lineWidth: 1, lineStyle: c.dashed, axisLabelVisible: true }),
+        )
+      line(position.entry, position.side === 'long' ? 'Long' : 'Short', p.fg)
+      if (position.stop !== null) line(position.stop, 'Stop', p.down)
+      if (position.target !== null) line(position.target, 'Target', p.up)
+    }
+  }, [ready, theme, trades, position])
+
+  const k = hover ?? candles[candles.length - 1]
+  return (
+    <div className={cn('relative min-h-0', className)}>
+      {k && (
+        <div className="pointer-events-none absolute top-2 left-3 z-10 flex flex-wrap gap-x-3 gap-y-0.5 num text-[11px] text-muted-foreground">
+          <span>
+            O <span className="text-foreground">{fmtPrice(k.open)}</span>
+          </span>
+          <span>
+            H <span className="text-foreground">{fmtPrice(k.high)}</span>
+          </span>
+          <span>
+            L <span className="text-foreground">{fmtPrice(k.low)}</span>
+          </span>
+          <span>
+            C <span className="text-foreground">{fmtPrice(k.close)}</span>
+          </span>
+          <span className="text-foreground">{fmtSigned(((k.close - k.open) / k.open) * 100)}%</span>
+        </div>
+      )}
+      <div ref={box} className="absolute inset-0" />
+    </div>
+  )
+}
+
+const entryMark = (t: OpenPosition, p: Palette): SeriesMarker<Time> => ({
+  time: toChart(t.entryTime),
+  position: t.side === 'long' ? 'belowBar' : 'aboveBar',
+  shape: t.side === 'long' ? 'arrowUp' : 'arrowDown',
+  color: p.fg,
+  text: t.side === 'long' ? 'L' : 'S',
+  size: 1,
+})

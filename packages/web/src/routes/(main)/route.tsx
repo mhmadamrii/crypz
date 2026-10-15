@@ -1,4 +1,5 @@
-import { Outlet, createFileRoute } from '@tanstack/react-router'
+import { useState } from 'react'
+import { Outlet, createFileRoute, useRouterState } from '@tanstack/react-router'
 import { AppSidebar } from '@/components/app/app-sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { portfolioQuery, usePortfolio } from '@/lib/queries'
@@ -21,8 +22,12 @@ export const Route = createFileRoute('/(main)')({
 function AppLayout() {
   const { exchanges } = usePortfolio()
   console.log('exchanges', exchanges)
+  // Replay is a focus mode: the sidebar starts collapsed there and keeps its own open state.
+  const replay = useRouterState({ select: (s) => s.location.pathname.startsWith('/trade/replay') })
+  const [open, setOpen] = useState(true)
+  const [replayOpen, setReplayOpen] = useState(false)
   return (
-    <SidebarProvider>
+    <SidebarProvider open={replay ? replayOpen : open} onOpenChange={replay ? setReplayOpen : setOpen}>
       <AppSidebar exchanges={exchanges} />
       <SidebarInset className="min-w-0">
         <Outlet />

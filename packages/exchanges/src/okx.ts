@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto'
-import type { AccountSnapshot, Candle, ExchangeAdapter, Position } from './types'
+import { BAR_MS, type AccountSnapshot, type Bar, type Candle, type ExchangeAdapter, type Position } from './types'
 
 const BASE_URL = 'https://www.okx.com'
 
@@ -69,6 +69,9 @@ async function okxPublic<T>(path: string, params: Record<string, string>): Promi
 
 const instType = (symbol: string) => (symbol.endsWith('-SWAP') ? 'swap' : /-\d{6}$/.test(symbol) ? 'futures' : 'spot')
 const tradeUrl = (symbol: string) => `${BASE_URL}/trade-${instType(symbol)}/${symbol.toLowerCase()}`
+
+// OKX's 6H-and-up bars default to Hong Kong time; the -utc variants close on UTC boundaries like every other venue.
+const okxBar = (bar: Bar) => (BAR_MS[bar] >= BAR_MS['6H'] ? `${bar}utc` : bar)
 
 const num = (v: string) => (v === '' || v == null ? 0 : Number(v))
 
@@ -141,7 +144,7 @@ export const okx: ExchangeAdapter = {
   async fetchCandles(symbol, bar, before) {
     const rows = await okxPublic<string[][]>(before ? '/api/v5/market/history-candles' : '/api/v5/market/candles', {
       instId: symbol,
-      bar,
+      bar: okxBar(bar),
       limit: before ? '100' : '300',
       ...(before ? { after: String(before) } : {}),
     })
