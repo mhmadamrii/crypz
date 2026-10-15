@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import {
+  Delete,
   Eye,
   EyeOff,
   MousePointer2,
@@ -30,6 +31,8 @@ const TOOLS: { tool: Tool; label: string; keys?: string; icon: LucideIcon }[] = 
 export function DrawingToolbar({ symbol, className }: { symbol: string; className?: string }) {
   const s = useDrawings()
   const count = s.bySymbol[symbol]?.length ?? 0
+  // only a drawing on this instrument counts; a selection left over from another one does not
+  const selected = s.selected && s.bySymbol[symbol]?.some((d) => d.id === s.selected) ? s.selected : null
   return (
     <div
       role="toolbar"
@@ -56,6 +59,14 @@ export function DrawingToolbar({ symbol, className }: { symbol: string; classNam
         disabled={!count}
       >
         {s.hidden ? <EyeOff /> : <Eye />}
+      </RailButton>
+      <RailButton
+        label="Delete selected drawing"
+        keys="⌫"
+        onClick={() => selected && drawings.remove(symbol, selected)}
+        disabled={!selected}
+      >
+        <Delete />
       </RailButton>
       <RailButton label="Remove all drawings" onClick={() => drawings.clear(symbol)} disabled={!count}>
         <Trash />

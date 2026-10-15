@@ -9,6 +9,7 @@ import {
   LoaderCircle,
   Minus,
   Pause,
+  RotateCcw,
   Play,
   Shuffle,
   StepForward,
@@ -568,32 +569,35 @@ function ReplaySession({
             )}
           </div>
 
-          {state.trades.length ? (
-            <ol className="min-h-0 flex-1 overflow-y-auto">
-              {[...state.trades].reverse().map((t) => (
-                <li
-                  key={t.id}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-0.5 border-b border-hairline px-3 py-2 text-[13px]"
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="num text-xs text-muted-foreground">#{t.id}</span>
-                    <span className="label text-foreground">{t.side}</span>
-                    <span className="num text-xs text-muted-foreground">{t.leverage}×</span>
-                    <span className={cn('label', t.reason === 'liquidated' && 'text-down')}>{t.reason}</span>
-                  </span>
-                  <span className={cn('text-right num font-medium', tone(t.pct))}>{fmtSigned(t.pct)}%</span>
-                  <span className="num text-xs text-muted-foreground">
-                    {fmtPrice(t.entry)} → {fmtPrice(t.exit)}
-                  </span>
-                  <span className="text-right num text-xs text-muted-foreground">
-                    {start !== null && (
-                      <span className={tone(t.pct)}>{fmtSigned((balances[t.id - 1] * t.pct) / 100)} · </span>
-                    )}
-                    {t.r === null ? 'no stop' : `${fmtSigned(t.r)}R`}
-                  </span>
-                </li>
-              ))}
-            </ol>
+          {state.trades.length || p ? (
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <ol>
+                {[...state.trades].reverse().map((t) => (
+                  <li
+                    key={t.id}
+                    className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-0.5 border-b border-hairline px-3 py-2 text-[13px]"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="num text-xs text-muted-foreground">#{t.id}</span>
+                      <span className="label text-foreground">{t.side}</span>
+                      <span className="num text-xs text-muted-foreground">{t.leverage}×</span>
+                      <span className={cn('label', t.reason === 'liquidated' && 'text-down')}>{t.reason}</span>
+                    </span>
+                    <span className={cn('text-right num font-medium', tone(t.pct))}>{fmtSigned(t.pct)}%</span>
+                    <span className="num text-xs text-muted-foreground">
+                      {fmtPrice(t.entry)} → {fmtPrice(t.exit)}
+                    </span>
+                    <span className="text-right num text-xs text-muted-foreground">
+                      {start !== null && (
+                        <span className={tone(t.pct)}>{fmtSigned((balances[t.id - 1] * t.pct) / 100)} · </span>
+                      )}
+                      {t.r === null ? 'no stop' : `${fmtSigned(t.r)}R`}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              <StartOver trades={state.trades.length} open={!!p} onConfirm={() => dispatch({ type: 'reset' })} />
+            </div>
           ) : (
             <p className="flex-1 p-3 text-xs text-pretty text-muted-foreground">
               Read the chart, take a side, then step forward. Only bars up to the cursor exist here; what comes next
@@ -610,6 +614,40 @@ function ReplaySession({
         </aside>
       )}
     </div>
+  )
+}
+
+/** Clears the session's position and trades (so equity is back at the start), asking once before it does. */
+function StartOver({ trades, open, onConfirm }: { trades: number; open: boolean; onConfirm: () => void }) {
+  const [confirm, setConfirm] = useState(false)
+  const what = [trades && `${trades} trade${trades === 1 ? '' : 's'}`, open && 'the open position']
+    .filter(Boolean)
+    .join(' and ')
+  return confirm ? (
+    <div className="flex flex-col gap-2 p-3">
+      <p className="text-xs text-pretty text-muted-foreground">
+        Clear {what}? Equity goes back to where it started; the chart and your inputs stay.
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="outline" size="sm" onClick={() => setConfirm(false)}>
+          Keep
+        </Button>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => {
+            setConfirm(false)
+            onConfirm()
+          }}
+        >
+          Start over
+        </Button>
+      </div>
+    </div>
+  ) : (
+    <Button variant="ghost" onClick={() => setConfirm(true)} className="h-11 w-full border-b border-hairline">
+      <RotateCcw /> Start over
+    </Button>
   )
 }
 

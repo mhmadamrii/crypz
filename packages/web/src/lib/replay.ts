@@ -49,6 +49,8 @@ export type ReplayAction =
   | { type: 'open'; side: Side; candle: Candle; stop: number | null; target: number | null; leverage: number }
   | { type: 'levels'; stop: number | null; target: number | null }
   | { type: 'close'; candle: Candle }
+  /** Drop the open position and every trade; the clock stays where it is. */
+  | { type: 'reset' }
 
 export const initialReplay = (now: number): ReplayState => ({ now, start: now, position: null, trades: [] })
 
@@ -121,6 +123,8 @@ export function replayReducer(state: ReplayState, a: ReplayAction): ReplayState 
       return state.position ? { ...state, position: { ...state.position, stop: a.stop, target: a.target } } : state
     case 'close':
       return state.position ? settle(state, a.candle.close, a.candle.time, 'manual') : state
+    case 'reset':
+      return { ...state, position: null, trades: [] }
   }
 }
 
