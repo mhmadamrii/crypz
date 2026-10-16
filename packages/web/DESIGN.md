@@ -292,6 +292,10 @@ Price charts use TradingView lightweight-charts, lazy-loaded on the client. Cand
 
 A 40px tool rail left of the replay chart: cursor, trend, rectangle, fib, long, short, path, then hide and remove all. The armed tool is solid ink, like every pressed toggle. Drawings are ink only: 1.5px strokes, rectangles at 7% ink fill with a 75% ink border, fib edges (0, 1) muted with the retracement levels in full ink and extensions dotted. Long/short is the one exception, and only because it shows profit and loss: target zone up at 14%, stop zone down at 14%, labels outside each zone. Selected drawings show 7px square handles (background fill, ink border), never round ones.
 
+### Landing Replay Band (signature)
+
+The landing's second peak after the mosaic hero: a full-bleed SVG candle chart in the hollow-candle inks, cut by a 1.5px ink replay cursor. Past the cursor is a 45° hairline hatch at 35% background veil with a bordered "Next bar hidden →" tag; the only colour is a long position's target and stop zones (up/down at 13%) and the open R readout. The last 24 candles step in bar by bar via a scroll-driven `clip-path` (`steps(24)`), CSS only, complete by default when unsupported or under reduced motion. A narrower 40-candle crop replaces it below `md` so labels stay legible. Keycap legend underneath mirrors the replay shortcuts.
+
 ### Public Shell and Tools
 
 Pages reachable without login (`(public)` route group: landing, login, `/tools/*`) share one public header (wordmark, a Tools nav with unbuilt tools marked SOON, theme toggle, Log in) and footer. The app (`(main)` route group) keeps the sidebar shell, whose Tools group links to the same public tool pages. A tool page is a form panel beside one result panel, both 1px bordered, never a grid of cards. Results read as a ledger: mono labels over mono figures, sections split by hairlines, with green and red only on signed money outcomes (loss at stop, profit at target, max risk). Price levels are drawn to scale on a vertical rule: the entry is a filled square, the target and stop are hollow squares. The formula explanation lives in a dialog that substitutes the user's live numbers into every step.

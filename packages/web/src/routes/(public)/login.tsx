@@ -5,6 +5,7 @@ import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { LoginArt } from '@/components/landing/login-art'
 import { authClient } from '@/lib/auth-client'
 import { searchText } from '@/lib/search'
 
@@ -44,8 +45,21 @@ function Login() {
   }
 
   return (
-    <div className="grid flex-1">
-      <main className="grid place-items-center px-4 py-16">
+    <div className="grid flex-1 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      {/* the drawing side: decorative, so phones get straight to the form */}
+      <aside aria-hidden className="relative hidden flex-col border-r border-border lg:flex">
+        <div className="flex flex-col gap-2 px-8 pt-10">
+          <p className="text-3xl font-semibold tracking-[-0.03em] text-balance">Mark it up. Then step forward.</p>
+          <p className="max-w-[44ch] text-sm text-pretty text-muted-foreground">
+            Fib, trend lines and position zones on any day you replay, with the next bar still hidden.
+          </p>
+        </div>
+        <div className="relative min-h-0 flex-1 text-foreground">
+          <LoginArt className="absolute inset-0 h-full w-full" />
+        </div>
+        <p className="border-t border-border px-8 py-3 label">Illustration · synthetic candles</p>
+      </aside>
+      <main className="grid place-items-center px-4 py-16 lg:px-12">
         <form
           className="flex w-full max-w-sm flex-col gap-6"
           onSubmit={(e) => {

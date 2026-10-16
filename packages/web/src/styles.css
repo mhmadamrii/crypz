@@ -195,3 +195,27 @@
     animation: cell-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 }
+
+/* Landing Replay band: the last stretch of candles steps in bar by bar as the chart scrolls into view, the way
+   the replay reveals them. Scroll-driven, so it costs no script; without support (or with reduced motion) the
+   chart is simply complete. */
+@keyframes replay-reveal {
+  from {
+    clip-path: inset(0 calc(100% - var(--reveal-from)) 0 0) view-box;
+  }
+  to {
+    clip-path: inset(0 0 0 0) view-box;
+  }
+}
+.replay-timeline {
+  view-timeline-name: --replay;
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .replay-reveal {
+      animation: replay-reveal steps(24, end) both;
+      animation-timeline: --replay;
+      animation-range: entry 35% cover 55%;
+    }
+  }
+}
