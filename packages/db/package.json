@@ -9,8 +9,7 @@
     "generate": "prisma generate",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
-    "studio": "prisma studio",
-    "postinstall": "prisma generate"
+    "studio": "prisma studio"
   },
   "devDependencies": {
     "prisma": "7.10.0"
