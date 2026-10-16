@@ -13,12 +13,16 @@ import { Route as mainRouteRouteImport } from './routes/(main)/route'
 import { Route as publicRouteRouteImport } from './routes/(public)/route'
 import { Route as mainDashboardRouteImport } from './routes/(main)/dashboard'
 import { Route as mainPositionsRouteImport } from './routes/(main)/positions'
-import { Route as mainTradeRouteImport } from './routes/(main)/trade'
 import { Route as publicIndexRouteImport } from './routes/(public)/index'
 import { Route as publicLoginRouteImport } from './routes/(public)/login'
+import { Route as mainaccountExchangeRouteRouteImport } from './routes/(main)/(account)/$exchange/route'
+import { Route as mainmarketTradeRouteImport } from './routes/(main)/(market)/trade'
+import { Route as mainmarketWorkspaceRouteImport } from './routes/(main)/(market)/workspace'
 import { Route as mainSettingsExchangesRouteImport } from './routes/(main)/settings/exchanges'
-import { Route as mainTradeReplayRouteImport } from './routes/(main)/trade_.replay'
 import { Route as publicToolsPositionSizeRouteImport } from './routes/(public)/tools/position-size'
+import { Route as mainaccountExchangeOverviewRouteImport } from './routes/(main)/(account)/$exchange/overview'
+import { Route as mainaccountExchangePositionsRouteImport } from './routes/(main)/(account)/$exchange/positions'
+import { Route as mainmarketTradeReplayRouteImport } from './routes/(main)/(market)/trade_.replay'
 
 const mainRouteRoute = mainRouteRouteImport.update({
   id: '/(main)',
@@ -38,11 +42,6 @@ const mainPositionsRoute = mainPositionsRouteImport.update({
   path: '/positions',
   getParentRoute: () => mainRouteRoute,
 } as any)
-const mainTradeRoute = mainTradeRouteImport.update({
-  id: '/trade',
-  path: '/trade',
-  getParentRoute: () => mainRouteRoute,
-} as any)
 const publicIndexRoute = publicIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -53,14 +52,25 @@ const publicLoginRoute = publicLoginRouteImport.update({
   path: '/login',
   getParentRoute: () => publicRouteRoute,
 } as any)
+const mainaccountExchangeRouteRoute =
+  mainaccountExchangeRouteRouteImport.update({
+    id: '/(account)/$exchange',
+    path: '/$exchange',
+    getParentRoute: () => mainRouteRoute,
+  } as any)
+const mainmarketTradeRoute = mainmarketTradeRouteImport.update({
+  id: '/(market)/trade',
+  path: '/trade',
+  getParentRoute: () => mainRouteRoute,
+} as any)
+const mainmarketWorkspaceRoute = mainmarketWorkspaceRouteImport.update({
+  id: '/(market)/workspace',
+  path: '/workspace',
+  getParentRoute: () => mainRouteRoute,
+} as any)
 const mainSettingsExchangesRoute = mainSettingsExchangesRouteImport.update({
   id: '/settings/exchanges',
   path: '/settings/exchanges',
-  getParentRoute: () => mainRouteRoute,
-} as any)
-const mainTradeReplayRoute = mainTradeReplayRouteImport.update({
-  id: '/trade_/replay',
-  path: '/trade/replay',
   getParentRoute: () => mainRouteRoute,
 } as any)
 const publicToolsPositionSizeRoute = publicToolsPositionSizeRouteImport.update({
@@ -68,26 +78,51 @@ const publicToolsPositionSizeRoute = publicToolsPositionSizeRouteImport.update({
   path: '/tools/position-size',
   getParentRoute: () => publicRouteRoute,
 } as any)
+const mainaccountExchangeOverviewRoute =
+  mainaccountExchangeOverviewRouteImport.update({
+    id: '/overview',
+    path: '/overview',
+    getParentRoute: () => mainaccountExchangeRouteRoute,
+  } as any)
+const mainaccountExchangePositionsRoute =
+  mainaccountExchangePositionsRouteImport.update({
+    id: '/positions',
+    path: '/positions',
+    getParentRoute: () => mainaccountExchangeRouteRoute,
+  } as any)
+const mainmarketTradeReplayRoute = mainmarketTradeReplayRouteImport.update({
+  id: '/(market)/trade_/replay',
+  path: '/trade/replay',
+  getParentRoute: () => mainRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/dashboard': typeof mainDashboardRoute
   '/positions': typeof mainPositionsRoute
-  '/trade': typeof mainTradeRoute
   '/login': typeof publicLoginRoute
   '/': typeof publicIndexRoute
+  '/$exchange': typeof mainaccountExchangeRouteRouteWithChildren
+  '/trade': typeof mainmarketTradeRoute
+  '/workspace': typeof mainmarketWorkspaceRoute
   '/settings/exchanges': typeof mainSettingsExchangesRoute
-  '/trade/replay': typeof mainTradeReplayRoute
   '/tools/position-size': typeof publicToolsPositionSizeRoute
+  '/$exchange/overview': typeof mainaccountExchangeOverviewRoute
+  '/$exchange/positions': typeof mainaccountExchangePositionsRoute
+  '/trade/replay': typeof mainmarketTradeReplayRoute
 }
 export interface FileRoutesByTo {
   '/dashboard': typeof mainDashboardRoute
   '/positions': typeof mainPositionsRoute
-  '/trade': typeof mainTradeRoute
   '/login': typeof publicLoginRoute
   '/': typeof publicIndexRoute
+  '/$exchange': typeof mainaccountExchangeRouteRouteWithChildren
+  '/trade': typeof mainmarketTradeRoute
+  '/workspace': typeof mainmarketWorkspaceRoute
   '/settings/exchanges': typeof mainSettingsExchangesRoute
-  '/trade/replay': typeof mainTradeReplayRoute
   '/tools/position-size': typeof publicToolsPositionSizeRoute
+  '/$exchange/overview': typeof mainaccountExchangeOverviewRoute
+  '/$exchange/positions': typeof mainaccountExchangePositionsRoute
+  '/trade/replay': typeof mainmarketTradeReplayRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -95,46 +130,62 @@ export interface FileRoutesById {
   '/(public)': typeof publicRouteRouteWithChildren
   '/(main)/dashboard': typeof mainDashboardRoute
   '/(main)/positions': typeof mainPositionsRoute
-  '/(main)/trade': typeof mainTradeRoute
   '/(public)/login': typeof publicLoginRoute
   '/(public)/': typeof publicIndexRoute
+  '/(main)/(account)/$exchange': typeof mainaccountExchangeRouteRouteWithChildren
+  '/(main)/(market)/trade': typeof mainmarketTradeRoute
+  '/(main)/(market)/workspace': typeof mainmarketWorkspaceRoute
   '/(main)/settings/exchanges': typeof mainSettingsExchangesRoute
-  '/(main)/trade_/replay': typeof mainTradeReplayRoute
   '/(public)/tools/position-size': typeof publicToolsPositionSizeRoute
+  '/(main)/(account)/$exchange/overview': typeof mainaccountExchangeOverviewRoute
+  '/(main)/(account)/$exchange/positions': typeof mainaccountExchangePositionsRoute
+  '/(main)/(market)/trade_/replay': typeof mainmarketTradeReplayRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/dashboard'
     | '/positions'
-    | '/trade'
     | '/login'
     | '/'
+    | '/$exchange'
+    | '/trade'
+    | '/workspace'
     | '/settings/exchanges'
-    | '/trade/replay'
     | '/tools/position-size'
+    | '/$exchange/overview'
+    | '/$exchange/positions'
+    | '/trade/replay'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/dashboard'
     | '/positions'
-    | '/trade'
     | '/login'
     | '/'
+    | '/$exchange'
+    | '/trade'
+    | '/workspace'
     | '/settings/exchanges'
-    | '/trade/replay'
     | '/tools/position-size'
+    | '/$exchange/overview'
+    | '/$exchange/positions'
+    | '/trade/replay'
   id:
     | '__root__'
     | '/(main)'
     | '/(public)'
     | '/(main)/dashboard'
     | '/(main)/positions'
-    | '/(main)/trade'
     | '/(public)/login'
     | '/(public)/'
+    | '/(main)/(account)/$exchange'
+    | '/(main)/(market)/trade'
+    | '/(main)/(market)/workspace'
     | '/(main)/settings/exchanges'
-    | '/(main)/trade_/replay'
     | '/(public)/tools/position-size'
+    | '/(main)/(account)/$exchange/overview'
+    | '/(main)/(account)/$exchange/positions'
+    | '/(main)/(market)/trade_/replay'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -172,13 +223,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof mainPositionsRouteImport
       parentRoute: typeof mainRouteRoute
     }
-    '/(main)/trade': {
-      id: '/(main)/trade'
-      path: '/trade'
-      fullPath: '/trade'
-      preLoaderRoute: typeof mainTradeRouteImport
-      parentRoute: typeof mainRouteRoute
-    }
     '/(public)/': {
       id: '/(public)/'
       path: '/'
@@ -193,18 +237,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof publicLoginRouteImport
       parentRoute: typeof publicRouteRoute
     }
+    '/(main)/(account)/$exchange': {
+      id: '/(main)/(account)/$exchange'
+      path: '/$exchange'
+      fullPath: '/$exchange'
+      preLoaderRoute: typeof mainaccountExchangeRouteRouteImport
+      parentRoute: typeof mainRouteRoute
+    }
+    '/(main)/(market)/trade': {
+      id: '/(main)/(market)/trade'
+      path: '/trade'
+      fullPath: '/trade'
+      preLoaderRoute: typeof mainmarketTradeRouteImport
+      parentRoute: typeof mainRouteRoute
+    }
+    '/(main)/(market)/workspace': {
+      id: '/(main)/(market)/workspace'
+      path: '/workspace'
+      fullPath: '/workspace'
+      preLoaderRoute: typeof mainmarketWorkspaceRouteImport
+      parentRoute: typeof mainRouteRoute
+    }
     '/(main)/settings/exchanges': {
       id: '/(main)/settings/exchanges'
       path: '/settings/exchanges'
       fullPath: '/settings/exchanges'
       preLoaderRoute: typeof mainSettingsExchangesRouteImport
-      parentRoute: typeof mainRouteRoute
-    }
-    '/(main)/trade_/replay': {
-      id: '/(main)/trade_/replay'
-      path: '/trade/replay'
-      fullPath: '/trade/replay'
-      preLoaderRoute: typeof mainTradeReplayRouteImport
       parentRoute: typeof mainRouteRoute
     }
     '/(public)/tools/position-size': {
@@ -214,23 +272,64 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof publicToolsPositionSizeRouteImport
       parentRoute: typeof publicRouteRoute
     }
+    '/(main)/(account)/$exchange/overview': {
+      id: '/(main)/(account)/$exchange/overview'
+      path: '/overview'
+      fullPath: '/$exchange/overview'
+      preLoaderRoute: typeof mainaccountExchangeOverviewRouteImport
+      parentRoute: typeof mainaccountExchangeRouteRoute
+    }
+    '/(main)/(account)/$exchange/positions': {
+      id: '/(main)/(account)/$exchange/positions'
+      path: '/positions'
+      fullPath: '/$exchange/positions'
+      preLoaderRoute: typeof mainaccountExchangePositionsRouteImport
+      parentRoute: typeof mainaccountExchangeRouteRoute
+    }
+    '/(main)/(market)/trade_/replay': {
+      id: '/(main)/(market)/trade_/replay'
+      path: '/trade/replay'
+      fullPath: '/trade/replay'
+      preLoaderRoute: typeof mainmarketTradeReplayRouteImport
+      parentRoute: typeof mainRouteRoute
+    }
   }
 }
+
+interface mainaccountExchangeRouteRouteChildren {
+  mainaccountExchangeOverviewRoute: typeof mainaccountExchangeOverviewRoute
+  mainaccountExchangePositionsRoute: typeof mainaccountExchangePositionsRoute
+}
+
+const mainaccountExchangeRouteRouteChildren: mainaccountExchangeRouteRouteChildren =
+  {
+    mainaccountExchangeOverviewRoute: mainaccountExchangeOverviewRoute,
+    mainaccountExchangePositionsRoute: mainaccountExchangePositionsRoute,
+  }
+
+const mainaccountExchangeRouteRouteWithChildren =
+  mainaccountExchangeRouteRoute._addFileChildren(
+    mainaccountExchangeRouteRouteChildren,
+  )
 
 interface mainRouteRouteChildren {
   mainDashboardRoute: typeof mainDashboardRoute
   mainPositionsRoute: typeof mainPositionsRoute
-  mainTradeRoute: typeof mainTradeRoute
+  mainaccountExchangeRouteRoute: typeof mainaccountExchangeRouteRouteWithChildren
+  mainmarketTradeRoute: typeof mainmarketTradeRoute
+  mainmarketWorkspaceRoute: typeof mainmarketWorkspaceRoute
   mainSettingsExchangesRoute: typeof mainSettingsExchangesRoute
-  mainTradeReplayRoute: typeof mainTradeReplayRoute
+  mainmarketTradeReplayRoute: typeof mainmarketTradeReplayRoute
 }
 
 const mainRouteRouteChildren: mainRouteRouteChildren = {
   mainDashboardRoute: mainDashboardRoute,
   mainPositionsRoute: mainPositionsRoute,
-  mainTradeRoute: mainTradeRoute,
+  mainaccountExchangeRouteRoute: mainaccountExchangeRouteRouteWithChildren,
+  mainmarketTradeRoute: mainmarketTradeRoute,
+  mainmarketWorkspaceRoute: mainmarketWorkspaceRoute,
   mainSettingsExchangesRoute: mainSettingsExchangesRoute,
-  mainTradeReplayRoute: mainTradeReplayRoute,
+  mainmarketTradeReplayRoute: mainmarketTradeReplayRoute,
 }
 
 const mainRouteRouteWithChildren = mainRouteRoute._addFileChildren(

@@ -7,6 +7,7 @@ import { env } from './env'
 import { connections } from './routes/connections'
 import { market } from './routes/market'
 import { portfolio } from './routes/portfolio'
+import { workspaces } from './routes/workspaces'
 
 export const app = new Hono()
   .use(secureHeaders())
@@ -14,7 +15,7 @@ export const app = new Hono()
     cors({
       origin: env('WEB_ORIGIN'),
       credentials: true,
-      allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+      allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowHeaders: ['Content-Type'],
     }),
   )
@@ -23,12 +24,15 @@ export const app = new Hono()
   .route('/market', market)
   .route('/portfolio', portfolio)
   .route('/connections', connections)
+  .route('/workspaces', workspaces)
   .onError((err, c) => {
     if (err instanceof HTTPException) return err.getResponse()
     // log the failure, never the request body: it may carry credentials
     console.error(`[api] ${c.req.method} ${c.req.path}:`, err.message)
     return c.json({ error: 'Something went wrong on our side.' }, 500)
   })
+
+export type { WorkspaceStateT } from './routes/workspaces'
 
 /** Route types for the web app's typed `hc` client. */
 export type AppType = typeof app

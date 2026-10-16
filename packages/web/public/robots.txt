@@ -4,6 +4,8 @@ Disallow: /dashboard
 Disallow: /positions
 Disallow: /trade
 Disallow: /settings
+Disallow: /okx
+Disallow: /binance
 Disallow: /login
 
 Sitemap: https://crypz.space/sitemap.xml

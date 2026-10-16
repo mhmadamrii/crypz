@@ -296,6 +296,12 @@ A 40px tool rail left of the replay chart: cursor, trend, rectangle, fib, long, 
 
 The landing's second peak after the mosaic hero: a full-bleed SVG candle chart in the hollow-candle inks, cut by a 1.5px ink replay cursor. Past the cursor is a 45° hairline hatch at 35% background veil with a bordered "Next bar hidden →" tag; the only colour is a long position's target and stop zones (up/down at 13%) and the open R readout. The last 24 candles step in bar by bar via a scroll-driven `clip-path` (`steps(24)`), CSS only, complete by default when unsupported or under reduced motion. A narrower 40-candle crop replaces it below `md` so labels stay legible. Keycap legend underneath mirrors the replay shortcuts.
 
+### Workspace (widget terminal)
+
+`/workspace`: a 24-column grid (28px rows, 8px gaps) of widgets the user drags by their header grip, resizes from the right, bottom and corner, adds from a picker and removes with an inline Keep / Remove confirm. Each widget is a 1px-bordered panel with a 28px header: grip + title on the left, then its own controls, a short instrument picker (coin only), a numbered link group (1–3, `Link2` icon; numbers stand in for TradingView's link colours) and remove. The drag placeholder is ink at 8% with a dashed ink outline; nothing casts a shadow. Below `md` widgets stack in layout order and do not drag.
+
+Order flow is the one place up/down colour means direction rather than result: bids, buy prints and the bid side of the imbalance bar use `--up`, asks and sells `--down`, with depth bars at 12%. Funding is shown neutral, because its meaning depends on the side held. A status pill in the header (filled square = live) reports the OKX feed.
+
 ### Public Shell and Tools
 
 Pages reachable without login (`(public)` route group: landing, login, `/tools/*`) share one public header (wordmark, a Tools nav with unbuilt tools marked SOON, theme toggle, Log in) and footer. The app (`(main)` route group) keeps the sidebar shell, whose Tools group links to the same public tool pages. A tool page is a form panel beside one result panel, both 1px bordered, never a grid of cards. Results read as a ledger: mono labels over mono figures, sections split by hairlines, with green and red only on signed money outcomes (loss at stop, profit at target, max risk). Price levels are drawn to scale on a vertical rule: the entry is a filled square, the target and stop are hollow squares. The formula explanation lives in a dialog that substitutes the user's live numbers into every step.

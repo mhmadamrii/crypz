@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import {
   ChevronDown,
@@ -29,9 +29,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { replayCandlesQuery, usePortfolio, useInstruments } from '@/lib/queries'
+import { MARKET_EXCHANGE } from '@/lib/market'
+import { replayCandlesQuery, replayFineQuery, useInstruments } from '@/lib/queries'
 import {
   DEFAULT_LEVERAGE,
+  fineBar,
+  formingCandle,
   LEVERAGES,
   initialReplay,
   levelError,
@@ -71,7 +74,7 @@ const fmtWhen = (ms: number) =>
     minute: '2-digit',
   })
 
-export const Route = createFileRoute('/(main)/trade_/replay')({
+export const Route = createFileRoute('/(main)/(market)/trade_/replay')({
   validateSearch: (s: Record<string, unknown>): Search => ({
     symbol: typeof s.symbol === 'string' ? s.symbol.toUpperCase() : undefined,
     bar: typeof s.bar === 'string' && (BARS as readonly string[]).includes(s.bar) ? (s.bar as Bar) : undefined,
@@ -84,7 +87,6 @@ export const Route = createFileRoute('/(main)/trade_/replay')({
 })
 
 function Replay() {
-  const { positions } = usePortfolio()
   const symbols = useInstruments()
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
@@ -97,7 +99,7 @@ function Replay() {
   const bar = search.bar ?? '1H'
   const fromInput = search.from ?? toLocalInput(startOfDay(Date.now() - 30 * DAY))
   const from = new Date(fromInput).getTime()
-  const exchange = positions.find((p) => p.symbol === symbol)?.exchange ?? 'okx'
+  const exchange = MARKET_EXCHANGE
   const options = symbols.includes(symbol) ? symbols : [symbol, ...symbols]
 
   const shuffle = () => {
@@ -224,8 +226,24 @@ function ReplaySession({
     while (i + 1 < candles.length && (candles[i + 2]?.time ?? candles[i + 1].time + BAR_MS[bar]) <= state.now) i++
     return i
   }, [candles, state.now, bar])
-  const revealed = useMemo(() => (cursor < 0 ? [] : candles.slice(0, cursor + 1)), [candles, cursor])
-  const current = cursor < 0 ? undefined : candles[cursor]
+  // the bar the clock sits inside, when it has opened but not closed (higher timeframes between steps)
+  const formingBar =
+    cursor >= 0 && candles[cursor + 1] && candles[cursor + 1].time < state.now ? candles[cursor + 1] : null
+  const fine = formingBar ? fineBar(bar, formingBar.time, state.now) : null
+  const fq = useQuery({
+    ...replayFineQuery(exchange, symbol, fine ?? bar, formingBar?.time ?? 0, state.now),
+    enabled: !!fine,
+  })
+  const partial = useMemo(
+    () => (formingBar && fine && fq.data ? formingCandle(fq.data, BAR_MS[fine], formingBar.time, state.now) : null),
+    [formingBar, fine, fq.data, state.now],
+  )
+  const revealed = useMemo(() => {
+    const closed = cursor < 0 ? [] : candles.slice(0, cursor + 1)
+    return partial ? [...closed, partial] : closed
+  }, [candles, cursor, partial])
+  // the last price: the forming candle's when there is one, so every timeframe trades at the same price
+  const current = cursor < 0 ? undefined : (partial ?? candles[cursor])
   const ended = !candles[cursor + 1] && !q.hasNextPage && q.isSuccess
 
   const [playing, setPlaying] = useState(false)
@@ -258,7 +276,8 @@ function ReplaySession({
   }
 
   const open = (side: Side) => {
-    if (loading || !current || state.position) return
+    // wait for the forming candle, so the fill is the same last price every timeframe shows
+    if (loading || (fine && fq.isPending) || !current || state.position) return
     const s = num(stop)
     const t = num(target)
     const err = levelError(side, current.close, s, t)

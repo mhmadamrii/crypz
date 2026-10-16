@@ -21,6 +21,7 @@ model User {
   sessions    Session[]
   accounts    Account[]
   connections ExchangeConnection[]
+  workspaces  Workspace[]
 
   @@map("user")
 }
@@ -95,4 +96,21 @@ model ExchangeConnection {
   @@unique([userId, exchange, keyHint])
   @@index([userId])
   @@map("exchange_connection")
+}
+
+/// A user's widget terminal: which widgets, where they sit, and what each link group is watching.
+model Workspace {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  /// Display order among the user's workspaces.
+  position  Int      @default(0)
+  /// { v, widgets, layout, links }; validated by the api, opaque to the database.
+  state     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("workspace")
 }

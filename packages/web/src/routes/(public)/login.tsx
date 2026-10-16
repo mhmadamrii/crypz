@@ -48,7 +48,7 @@ function Login() {
     setBusy(false)
     if (res.error) return setError(res.error.message ?? 'Could not sign you in.')
     queryClient.clear() // nothing cached for a previous user survives a sign-in
-    router.history.push(redirect ?? '/dashboard')
+    router.history.push(redirect ?? '/okx/overview')
   }
 
   return (

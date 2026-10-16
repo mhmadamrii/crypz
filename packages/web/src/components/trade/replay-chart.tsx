@@ -100,7 +100,10 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
     c.timeVisible(intraday)
     const prev = shown.current
     const first = candles[0].time
-    if (prev.first === first && candles.length === prev.length + 1) c.candles.update(toBar(candles[candles.length - 1]))
+    const last = candles[candles.length - 1]
+    if (prev.first === first && candles.length === prev.length + 1) c.candles.update(toBar(last))
+    // the forming candle grew, or a step closed it: same count, the last bar changed in place
+    else if (prev.first === first && candles.length === prev.length) c.candles.update(toBar(last))
     else if (prev.first !== first || candles.length !== prev.length) {
       c.candles.applyOptions({ priceFormat: precisionFor(candles[candles.length - 1].close) })
       c.candles.setData(candles.map(toBar))

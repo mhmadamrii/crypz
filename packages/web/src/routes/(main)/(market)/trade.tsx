@@ -1,6 +1,8 @@
 import { useMemo, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, createFileRoute } from '@tanstack/react-router'
+import { MARKET_EXCHANGE, MARKET_EXCHANGE_NAME } from '@/lib/market'
+import { useTicker } from '@/lib/okx-ws'
 import { tickerQuery, useInstruments, usePortfolio } from '@/lib/queries'
 import { ArrowUpRight, Rewind } from 'lucide-react'
 import { BARS, type Bar, type Position, type Ticker } from '@crypz/exchanges'
@@ -16,7 +18,7 @@ type Search = { symbol?: string; bar?: Bar; trade?: string }
 
 const DEFAULT_SYMBOL = 'BTC-USDT-SWAP'
 
-export const Route = createFileRoute('/(main)/trade')({
+export const Route = createFileRoute('/(main)/(market)/trade')({
   validateSearch: (s: Record<string, unknown>): Search => ({
     symbol: typeof s.symbol === 'string' ? s.symbol.toUpperCase() : undefined,
     bar: typeof s.bar === 'string' && (BARS as readonly string[]).includes(s.bar) ? (s.bar as Bar) : undefined,
@@ -38,17 +40,34 @@ function Trade() {
   const symbol = search.symbol ?? data.positions[0]?.symbol ?? DEFAULT_SYMBOL
   const bar = search.bar ?? '1H'
   const options = symbols.includes(symbol) ? symbols : [symbol, ...symbols]
-  const mine = useMemo(() => data.positions.filter((p) => p.symbol === symbol), [data.positions, symbol])
+  // your own trades are an optional overlay: only the account on the market's venue, and only when connected
+  const connected = data.exchanges.some((e) => e.id === MARKET_EXCHANGE && e.configured)
+  const mine = useMemo(
+    () => data.positions.filter((p) => p.exchange === MARKET_EXCHANGE && p.symbol === symbol),
+    [data.positions, symbol],
+  )
   const selected = mine.find((p) => p.id === search.trade) ?? null
   const focus = useMemo(() => (selected ? { from: selected.openedAt, to: selected.closedAt } : null), [selected])
-  const exchange = mine[0]?.exchange ?? 'okx'
-  const { data: ticker = null } = useQuery(tickerQuery(exchange, symbol))
+  const exchange = MARKET_EXCHANGE
+  // the strip reads the same live feed as the chart, so the two never disagree; REST covers the first moment
+  const { data: polled = null } = useQuery(tickerQuery(exchange, symbol))
+  const live = useTicker(symbol)
+  const ticker: Ticker | null = live
+    ? {
+        symbol,
+        last: Number(live.last),
+        open24h: Number(live.open24h),
+        high24h: Number(live.high24h),
+        low24h: Number(live.low24h),
+        volume24h: Number(live.vol24h),
+      }
+    : polled
   const chartRef = useRef<HTMLDivElement>(null)
   const tradeUrl = mine[0]?.tradeUrl ?? `https://www.okx.com/trade-swap/${symbol.toLowerCase()}`
 
   return (
     <>
-      <PageHeader title="Trade">
+      <PageHeader title="Trade" source={`${MARKET_EXCHANGE_NAME} data`}>
         <Select value={symbol} onValueChange={(v) => set({ symbol: v, trade: undefined })}>
           <SelectTrigger size="sm" className="w-40 num sm:w-52" aria-label="Instrument">
             <SelectValue />
@@ -85,19 +104,21 @@ function Trade() {
               <span className="flex items-center gap-1.5">
                 <i className="size-2.5 shadow-[inset_0_0_0_1px_var(--foreground)]" /> Close below open
               </span>
-              <span className="num">L / S = your entry · square = your exit, toned by result</span>
+              {connected && <span className="num">L / S = your entry · square = your exit, toned by result</span>}
             </div>
           </div>
 
-          <YourTrades
-            symbol={symbol}
-            positions={mine}
-            selected={selected?.id ?? null}
-            onSelect={(id) => {
-              set({ trade: id === search.trade ? undefined : id })
-              chartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-            }}
-          />
+          {connected && (
+            <YourTrades
+              symbol={symbol}
+              positions={mine}
+              selected={selected?.id ?? null}
+              onSelect={(id) => {
+                set({ trade: id === search.trade ? undefined : id })
+                chartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+              }}
+            />
+          )}
         </div>
       </main>
     </>

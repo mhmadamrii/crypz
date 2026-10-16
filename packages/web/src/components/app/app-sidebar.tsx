@@ -1,4 +1,5 @@
-import type { ExchangeStatus } from '@crypz/exchanges'
+import type { ExchangeId, ExchangeStatus } from '@crypz/exchanges'
+import { MARKET_EXCHANGE_NAME } from '@/lib/market'
 
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
@@ -16,6 +17,8 @@ import {
   Newspaper,
   Rows3,
   Calculator,
+  LayoutDashboard,
+  Rewind,
   ShieldAlert,
   ScanSearch,
   type LucideIcon,
@@ -45,17 +48,45 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar'
 
-type NavItem = { label: string; icon: LucideIcon } & ({ to: '/dashboard' | '/trade' | '/positions' } | { soon: true })
+type MarketItem = { label: string; icon: LucideIcon; to: '/workspace' | '/trade' | '/trade/replay' }
+type AccountItem = { label: string; icon: LucideIcon; to: '/$exchange/overview' | '/$exchange/positions' }
+type SoonItem = { label: string; icon: LucideIcon; soon: true }
 
-// Each main menu entry gets its own page; "soon" entries are listed but not routable yet.
-const NAV: NavItem[] = [
-  { label: 'Overview', icon: LayoutGrid, to: '/dashboard' },
+// Market: public data from one pinned venue, no key needed. Account: one connected exchange, named in the URL.
+const MARKET: (MarketItem | SoonItem)[] = [
+  { label: 'Workspace', icon: LayoutDashboard, to: '/workspace' },
   { label: 'Trade', icon: CandlestickChart, to: '/trade' },
-  { label: 'Positions', icon: Rows3, to: '/positions' },
-  { label: 'Analytics', icon: ChartColumn, soon: true },
-  { label: 'Insights', icon: ScanSearch, soon: true },
+  { label: 'Replay', icon: Rewind, to: '/trade/replay' },
   { label: 'News', icon: Newspaper, soon: true },
 ]
+const ACCOUNT: (AccountItem | SoonItem)[] = [
+  { label: 'Overview', icon: LayoutGrid, to: '/$exchange/overview' },
+  { label: 'Positions', icon: Rows3, to: '/$exchange/positions' },
+  { label: 'Analytics', icon: ChartColumn, soon: true },
+  { label: 'Insights', icon: ScanSearch, soon: true },
+]
+
+function Soon({ item }: { item: SoonItem }) {
+  const Icon = item.icon
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton disabled tooltip={`${item.label} · coming soon`} aria-disabled>
+        <Icon strokeWidth={1.5} />
+        <span>{item.label}</span>
+      </SidebarMenuButton>
+      <SidebarMenuBadge className="label">Soon</SidebarMenuBadge>
+    </SidebarMenuItem>
+  )
+}
+
+function ActiveDot() {
+  return (
+    <i
+      aria-hidden
+      className="absolute top-1/2 right-2 size-1.5 -translate-y-1/2 bg-foreground group-data-[collapsible=icon]:hidden"
+    />
+  )
+}
 
 function StatusSquare({ on }: { on: boolean }) {
   return (
@@ -89,6 +120,12 @@ export function AppSidebar({
     navigate({ to: '/' })
   }
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  // the exchange the Account group points at: the one in the URL, else the first connected one, else OKX
+  const fromUrl = exchanges.find((e) => pathname.startsWith(`/${e.id}/`))?.id
+  const account: ExchangeId = fromUrl ?? exchanges.find((e) => e.configured)?.id ?? 'okx'
+  const accountName = exchanges.find((e) => e.id === account)?.name ?? account.toUpperCase()
+  // switching exchange keeps you on the same Account page
+  const accountPage = pathname.endsWith('/positions') && fromUrl ? '/$exchange/positions' : '/$exchange/overview'
 
   return (
     <Sidebar collapsible="icon">
@@ -109,22 +146,13 @@ export function AppSidebar({
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="label">Menu</SidebarGroupLabel>
+          <SidebarGroupLabel className="label">Market · {MARKET_EXCHANGE_NAME} data</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAV.map((item) => {
+              {MARKET.map((item) => {
+                if ('soon' in item) return <Soon key={item.label} item={item} />
                 const Icon = item.icon
-                if ('soon' in item)
-                  return (
-                    <SidebarMenuItem key={item.label}>
-                      <SidebarMenuButton disabled tooltip={`${item.label} · coming soon`} aria-disabled>
-                        <Icon strokeWidth={1.5} />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                      <SidebarMenuBadge className="label">Soon</SidebarMenuBadge>
-                    </SidebarMenuItem>
-                  )
-                const active = pathname.startsWith(item.to)
+                const active = pathname === item.to
                 return (
                   <SidebarMenuItem key={item.label}>
                     <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
@@ -133,12 +161,32 @@ export function AppSidebar({
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
-                    {active && (
-                      <i
-                        aria-hidden
-                        className="absolute top-1/2 right-2 size-1.5 -translate-y-1/2 bg-foreground group-data-[collapsible=icon]:hidden"
-                      />
-                    )}
+                    {active && <ActiveDot />}
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="label">Account · {accountName}</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {ACCOUNT.map((item) => {
+                if ('soon' in item) return <Soon key={item.label} item={item} />
+                const Icon = item.icon
+                const href = item.to.replace('$exchange', account)
+                const active = pathname === href
+                return (
+                  <SidebarMenuItem key={item.label}>
+                    <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
+                      <Link to={item.to} params={{ exchange: account }}>
+                        <Icon strokeWidth={1.5} />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                    {active && <ActiveDot />}
                   </SidebarMenuItem>
                 )
               })}
@@ -175,8 +223,12 @@ export function AppSidebar({
             <SidebarMenu>
               {exchanges.map((e) => (
                 <SidebarMenuItem key={e.id}>
-                  <SidebarMenuButton asChild tooltip={`${e.name} · ${e.configured ? 'connected' : 'not connected'}`}>
-                    <Link to="/settings/exchanges">
+                  <SidebarMenuButton
+                    asChild
+                    isActive={e.id === account}
+                    tooltip={`${e.name} · ${e.configured ? 'connected' : 'not connected'}`}
+                  >
+                    <Link to={accountPage} params={{ exchange: e.id }}>
                       <span className="grid size-4 place-items-center">
                         <StatusSquare on={e.configured} />
                       </span>

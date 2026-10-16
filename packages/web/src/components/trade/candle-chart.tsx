@@ -5,6 +5,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { latestCandlesQuery, olderCandlesQuery } from '@/lib/queries'
 import { cn } from '@/lib/utils'
 import { fmtPrice, fmtSigned } from '@/lib/format'
+import { useTicker } from '@/lib/okx-ws'
 import { createMosaicChart, palette, precisionFor, toBar, toChart, type Palette } from './chart-kit'
 
 import type {
@@ -46,15 +47,38 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
     return [...byTime.values()].sort((a, b) => a.time - b.time)
   }, [older.data, latest.data])
 
+  // One live price for every timeframe. Between REST polls (and on a cached timeframe you just switched to) the
+  // forming candle follows OKX's ticker, so 15m and 1W end on the same last price. A tick past the bar's end opens
+  // the next bar; month bars vary in length, so those wait for the poll to start one.
+  const tick = useTicker(symbol)
+  const liveBar = useMemo((): Candle | null => {
+    const last = candles.at(-1)
+    if (!tick || !last) return null
+    const px = Number(tick.last)
+    const at = Number(tick.ts)
+    if (at < last.time) return null
+    if (at >= last.time + BAR_MS[bar] && !bar.endsWith('M'))
+      return {
+        time: last.time + BAR_MS[bar] * Math.floor((at - last.time) / BAR_MS[bar]),
+        open: px,
+        high: px,
+        low: px,
+        close: px,
+      }
+    return { ...last, close: px, high: Math.max(last.high, px), low: Math.min(last.low, px) }
+  }, [tick, candles, bar])
+
   const box = useRef<HTMLDivElement>(null)
   const chartRef = useRef<Chart | null>(null)
   const [ready, setReady] = useState(false)
-  const [readout, setReadout] = useState<Readout | null>(null)
+  // only the hovered candle is state; with nothing hovered the readout is the live candle, derived each render
+  const [hovered, setHovered] = useState<number | null>(null)
 
   // What the chart's own event handlers read; refreshed every render so they never go stale.
-  const live = useRef({ candles, positions, bar, loadOlder: () => {} })
+  const live = useRef({ candles, liveBar, positions, bar, loadOlder: () => {} })
   live.current = {
     candles,
+    liveBar,
     positions,
     bar,
     loadOlder: () => {
@@ -78,9 +102,9 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
       dispose = made.dispose
 
       chart.subscribeCrosshairMove((param) => {
-        const data = live.current.candles
-        const k = (param.time && data.find((c) => toChart(c.time) === param.time)) || data[data.length - 1]
-        if (k) setReadout({ ...k, change: (k.close - k.open) / k.open })
+        // also fires with no pointer at all; then nothing is hovered and the readout falls back to live
+        const hit = param.time ? live.current.candles.find((c) => toChart(c.time) === param.time) : undefined
+        setHovered(hit ? hit.time : null)
       })
       // scrolling near the left edge pages in older history
       chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
@@ -122,8 +146,7 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
       if (prev.key !== key) {
         c.chart.applyOptions({ timeScale: { timeVisible: BAR_MS[bar] < BAR_MS['1D'] } })
         ts.setVisibleLogicalRange({ from: Math.max(0, candles.length - 140), to: candles.length + 4 })
-        const last = candles[candles.length - 1]
-        setReadout({ ...last, change: (last.close - last.open) / last.open })
+        setHovered(null)
       } else if (range && first < prev.first) {
         // older history prepended: keep the viewport where it was
         const added = candles.findIndex((k) => k.time === prev.first)
@@ -133,6 +156,19 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
     c.markers.setMarkers(buildMarkers(candles, positions, bar, palette()))
     shown.current = { key, first, length: candles.length }
   }, [ready, candles, positions, exchange, symbol, bar])
+
+  // 2b. Live tick: move the forming candle (runs after a data sync, so the poll's bar is never left stale on top).
+  useEffect(() => {
+    if (liveBar) chartRef.current?.candles.update(toBar(liveBar))
+  }, [ready, liveBar])
+
+  // the readout: the hovered candle (live if it is the forming one), else the live candle, else the last polled one
+  const shownBar =
+    (hovered !== null && hovered !== liveBar?.time ? candles.find((c) => c.time === hovered) : null) ??
+    liveBar ??
+    candles.at(-1) ??
+    null
+  const readout: Readout | null = shownBar && { ...shownBar, change: (shownBar.close - shownBar.open) / shownBar.open }
 
   // 3. Focus: page in history until the trade is covered, then frame it once.
   const framed = useRef<Props['focus']>(null)

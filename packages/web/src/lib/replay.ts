@@ -1,4 +1,4 @@
-import type { Candle } from '@crypz/exchanges'
+import { BAR_MS, type Bar, type Candle } from '@crypz/exchanges'
 
 // Manual bar replay: the session only ever sees candles up to the cursor. Pure state, no chart or fetching here.
 
@@ -145,5 +145,36 @@ export function sessionStats(trades: ReplayTrade[]) {
     winRate: trades.length ? wins / trades.length : null,
     net: trades.reduce((s, t) => s + t.pct, 0),
     avgR: withR.length ? withR.reduce((s, t) => s + t.r!, 0) / withR.length : null,
+  }
+}
+
+// ---- the forming candle -------------------------------------------------------------------------------------
+// On a higher timeframe the bar the clock sits inside has opened but not closed. It is drawn as it stood at the
+// clock, built from finer candles that had all closed by then, so its close is the same last price every timeframe
+// shows and nothing past the clock leaks in.
+
+const FINE: Bar[] = ['1m', '3m', '5m', '15m', '30m', '1H', '2H', '4H', '6H', '12H', '1D']
+const MAX_FINE = 300
+
+/**
+ * The finest bar that splits [open, now) exactly (both ends on its boundaries, so every one of its candles has
+ * closed by `now`) in at most 300 candles. Without an exact fit, the finest within the budget: its last candle may
+ * end a little before the clock.
+ */
+export function fineBar(bar: Bar, open: number, now: number): Bar | null {
+  const fits = FINE.filter((f) => BAR_MS[f] < BAR_MS[bar] && (now - open) / BAR_MS[f] <= MAX_FINE)
+  return fits.find((f) => open % BAR_MS[f] === 0 && now % BAR_MS[f] === 0) ?? fits.at(-1) ?? null
+}
+
+/** OHLC of the finer candles that closed by `now`, as one candle opening at `open`. */
+export function formingCandle(fine: Candle[], fineMs: number, open: number, now: number): Candle | null {
+  const inside = fine.filter((k) => k.time >= open && k.time + fineMs <= now)
+  if (!inside.length) return null
+  return {
+    time: open,
+    open: inside[0].open,
+    high: Math.max(...inside.map((k) => k.high)),
+    low: Math.min(...inside.map((k) => k.low)),
+    close: inside[inside.length - 1].close,
   }
 }

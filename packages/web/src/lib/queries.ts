@@ -9,6 +9,7 @@ const getCandles = ({ data: q }: { data: { exchange: ExchangeId; symbol: string;
     }),
   )
 import { api, unwrap } from './api'
+import { DEFAULT_STATE } from '@/components/workspace/model'
 
 // Every server read goes through these, so caching, polling and dedupe live in one place.
 
@@ -88,6 +89,26 @@ export const connectionsQuery = () =>
     queryFn: () => unwrap(api.connections.$get()),
   })
 
+/** Finer candles inside a forming replay bar, [open, before). History never changes, so cache it forever. */
+export const replayFineQuery = (exchange: ExchangeId, symbol: string, fine: Bar, open: number, before: number) =>
+  queryOptions({
+    queryKey: ['replay-fine', exchange, symbol, fine, open, before],
+    queryFn: async () => {
+      const out: Candle[] = []
+      let cut = before
+      // at most 300 candles (fineBar's budget), 100 per call
+      for (let page = 0; page < 3; page++) {
+        const got = await getCandles({ data: { exchange, symbol, bar: fine, before: cut } })
+        out.unshift(...got)
+        if (!got.length || got[0].time <= open) break
+        cut = got[0].time
+      }
+      return out.filter((k) => k.time >= open)
+    },
+    staleTime: Infinity,
+    gcTime: 10 * 60_000,
+  })
+
 /** Portfolio for pages under the (main) layout, whose loader has already filled the cache. */
 export const usePortfolio = () => useSuspenseQuery(portfolioQuery()).data
 
@@ -121,3 +142,31 @@ export function useInstruments() {
     return [...traded, ...POPULAR.filter((s) => !n.has(s))]
   }, [positions])
 }
+
+/** The portfolio narrowed to one exchange, for the Account pages (`/$exchange/...`). */
+export function useExchangePortfolio(exchange: ExchangeId) {
+  const data = usePortfolio()
+  return useMemo(() => {
+    const status = data.exchanges.find((e) => e.id === exchange)
+    return {
+      ...data,
+      exchange: status,
+      positions: data.positions.filter((p) => p.exchange === exchange),
+      accounts: data.accounts.filter((a) => a.exchange === exchange),
+      errors: data.errors.filter((e) => e.exchange === status?.name),
+    }
+  }, [data, exchange])
+}
+
+export const workspacesQuery = () =>
+  queryOptions({
+    queryKey: ['workspaces'],
+    // first visit: everyone starts with one workspace, created here rather than in an effect
+    queryFn: async () => {
+      const list = await unwrap(api.workspaces.$get())
+      if (list.length) return list
+      const created = await unwrap(api.workspaces.$post({ json: { name: 'Main', state: DEFAULT_STATE } }))
+      return [created]
+    },
+    staleTime: Infinity, // this tab is the only writer; it updates the cache itself
+  })
