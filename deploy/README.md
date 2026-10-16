@@ -7,38 +7,39 @@ api.example.com  → VPS: Caddy → api container (packages/api, Bun + Hono) →
 
 The web app holds no secrets. Exchange keys, the credentials master key and the auth secret live only on the VPS.
 
-This assumes the VPS already runs **Caddy and Postgres in Docker** (Caddy proxying to container names such as
-`server:8080`). crypz adds one container, `crypz_api`, that joins Caddy's network and Postgres's network. It publishes
-no host port, so it cannot collide with anything else on the machine; Caddy reaches it as `crypz_api:3001`.
+This assumes the VPS already runs **Caddy and Postgres in containers on one shared network** (Caddy proxying to
+container names such as `server:8080`). crypz adds one container, `crypz_api`, on that network. It publishes no host
+port, so it cannot collide with anything else on the machine; Caddy reaches it as `crypz_api:3001`.
 
-## 0. Find your networks (once)
+Commands below use `podman`; `docker` works the same.
+
+## 0. Find your network (once)
 
 ```sh
-docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Ports}}'
-
-# networks Caddy is on (pick the one its own compose file defines, so it survives a Caddy restart)
-docker inspect <caddy-container> -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}'
-
-# network the Postgres you want to use is on
-docker inspect <postgres-container> -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}'
+podman inspect <caddy-container> <postgres-container> \
+  --format '{{.Name}}: {{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}'
 ```
+
+Pick the network both are on (for compose projects usually `<project>_default`).
 
 ```sh
 cd crypz/deploy
-cp .env.example .env          # set CADDY_NETWORK and POSTGRES_NETWORK to the names above
+cp .env.example .env          # NETWORK=<that network>
 ```
 
 ## 1. Database (once)
 
-Use an existing Postgres container and give crypz its own role and database (never the `postgres` superuser):
+Give crypz its own role and database in the existing Postgres (never the admin user):
 
 ```sh
-docker exec -it <postgres-container> psql -U postgres \
-  -c "CREATE ROLE crypz LOGIN PASSWORD '<long random password>';" \
-  -c "CREATE DATABASE crypz OWNER crypz;"
+openssl rand -hex 24          # password for the crypz role (hex: no escaping needed in DATABASE_URL)
+podman exec -it <postgres-container> sh -c 'psql -U "$POSTGRES_USER" -d postgres'
 ```
 
-Keep port 5432 closed to the internet; the api reaches Postgres over the Docker network.
+```sql
+CREATE ROLE crypz LOGIN PASSWORD '<hex password>';
+CREATE DATABASE crypz OWNER crypz;
+```
 
 ## 2. Secrets (once)
 
@@ -48,23 +49,23 @@ openssl rand -base64 32   # → CREDENTIALS_KEY
 openssl rand -base64 32   # → BETTER_AUTH_SECRET
 ```
 
-Fill in `DATABASE_URL` (host = the Postgres container name, e.g. `postgresql://crypz:…@<postgres-container>:5432/crypz`),
-the two domains and `COOKIE_DOMAIN`. Both `.env` files are git-ignored.
+Fill in `DATABASE_URL` (host = the Postgres container name, e.g.
+`postgresql://crypz:<hex password>@<postgres-container>:5432/crypz?schema=public`), the two domains and
+`COOKIE_DOMAIN`. Both `.env` files are git-ignored.
 
 **Back up `CREDENTIALS_KEY` somewhere offline.** Without it the stored exchange keys cannot be decrypted, and every
 user has to re-enter theirs.
 
-## 3. Run
+## 3. Run (every deploy)
 
 ```sh
-docker compose up -d --build     # runs migrations first, then starts crypz_api
-docker compose logs -f api
-docker exec crypz_api bun -e "fetch('http://localhost:3001/health').then(r => r.text()).then(console.log)"
+git pull
+podman compose run --rm migrate      # apply migrations
+podman compose up -d --build api     # build and (re)start crypz_api
+podman logs -f crypz_api             # "[api] listening on :3001"
 ```
 
-Updating: `git pull && docker compose up -d --build`. New migrations apply automatically.
-
-## 4. DNS and Caddy
+## 4. DNS and Caddy (once)
 
 1. Point an `A` record for `api.<your-domain>` at the VPS IP (`curl -4 ifconfig.me`), and wait until it resolves.
 2. Add a block to your existing Caddyfile:
@@ -79,12 +80,12 @@ Updating: `git pull && docker compose up -d --build`. New migrations apply autom
 3. Reload Caddy without downtime, then check from outside:
 
    ```sh
-   docker exec <caddy-container> caddy reload --config /etc/caddy/Caddyfile
+   podman exec <caddy-container> caddy reload --config /etc/caddy/Caddyfile
    curl -s https://api.<your-domain>/health    # {"ok":true}
    ```
 
-Caddy fetches the TLS certificate on the first request. A `502` from `/health` means Caddy cannot reach
-`crypz_api`: it is not on the same network as Caddy, so recheck `CADDY_NETWORK` (or the api is not running).
+Caddy fetches the TLS certificate on the first request. A `502` from `/health` means Caddy cannot reach `crypz_api`:
+it is not on Caddy's network (recheck `NETWORK`) or it is not running.
 
 ## 5. Vercel (web)
 
@@ -102,7 +103,7 @@ OKX call, market data included, leaves from that address.
 
 ```sh
 # e.g. daily via cron; keep copies off the VPS
-docker exec <postgres-container> pg_dump -U crypz -Fc crypz > crypz-$(date +%F).dump
+podman exec <postgres-container> pg_dump -U crypz -Fc crypz > crypz-$(date +%F).dump
 ```
 
 ## Rotating the credentials key
