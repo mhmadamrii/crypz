@@ -1,5 +1,10 @@
 # crypz API on the VPS. Run from this folder:  docker compose up -d --build
-# Assumes Postgres already runs in Docker on a network called `postgres` (change below to match yours).
+#
+# Caddy and Postgres already run in Docker on this host. The api joins their networks and is reached by container
+# name (crypz_api:3001); nothing is published on a host port, so it cannot collide with other projects.
+# Set the two network names in deploy/.env (see deploy/README.md for how to find them).
+
+name: crypz
 
 services:
   # Applies pending Prisma migrations, then exits. The api starts only after it succeeds.
@@ -17,14 +22,12 @@ services:
     build:
       context: ..
       dockerfile: packages/api/Dockerfile
+    container_name: crypz_api
     env_file: .env.api
     depends_on:
       migrate:
         condition: service_completed_successfully
-    # Caddy on the host proxies to this; nothing else can reach it.
-    ports:
-      - '127.0.0.1:3001:3001'
-    networks: [postgres]
+    networks: [caddy, postgres]
     restart: unless-stopped
     healthcheck:
       test: ['CMD', 'bun', '-e', "fetch('http://localhost:3001/health').then(r => process.exit(r.ok ? 0 : 1))"]
@@ -33,6 +36,9 @@ services:
       retries: 3
 
 networks:
+  caddy:
+    external: true
+    name: ${CADDY_NETWORK:?set CADDY_NETWORK in deploy/.env}
   postgres:
     external: true
-    name: postgres
+    name: ${POSTGRES_NETWORK:?set POSTGRES_NETWORK in deploy/.env}

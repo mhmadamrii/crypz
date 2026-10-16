@@ -6,8 +6,20 @@ import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts'
 type LW = typeof import('lightweight-charts')
 
 // lightweight-charts plots UTC; shift to the viewer's zone so axis labels read local time.
-const tz = () => -new Date().getTimezoneOffset() * 60
-export const toChart = (ms: number) => (Math.floor(ms / 1000) + tz()) as UTCTimestamp
+// The offset is taken at that moment, not today, so dates across a daylight-saving change still line up.
+const tz = (ms: number) => -new Date(ms).getTimezoneOffset() * 60
+export const toChart = (ms: number) => (Math.floor(ms / 1000) + tz(ms)) as UTCTimestamp
+
+/** The viewer's zone as the chart shows it, e.g. "UTC+7 · Asia/Jakarta". */
+export function zoneLabel(at = Date.now()) {
+  const minutes = -new Date(at).getTimezoneOffset()
+  const sign = minutes < 0 ? '−' : '+'
+  const h = Math.floor(Math.abs(minutes) / 60)
+  const m = Math.abs(minutes) % 60
+  const offset = minutes === 0 ? 'UTC' : `UTC${sign}${h}${m ? `:${String(m).padStart(2, '0')}` : ''}`
+  const name = Intl.DateTimeFormat().resolvedOptions().timeZone
+  return name && name !== 'UTC' ? `${offset} · ${name}` : offset
+}
 
 /** Resolve a CSS colour (incl. oklch / var()) to rgba via canvas, since the chart parses only basic formats. */
 function resolveColor(expr: string, alpha = 1) {

@@ -4,7 +4,9 @@ dist
 .vercel
 .tanstack
 .env
-.env.local
+.env.*
+!.env.example
+!.env.*.example
 *.log
 .DS_Store
 .user

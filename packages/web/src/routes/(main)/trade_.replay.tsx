@@ -20,6 +20,7 @@ import {
 import { BAR_MS, BARS, type Bar, type Candle, type ExchangeId } from '@crypz/exchanges'
 import { DrawingToolbar } from '@/components/drawings/toolbar'
 import { IntervalBar, useIntervalHotkeys } from '@/components/trade/interval-bar'
+import { zoneLabel } from '@/components/trade/chart-kit'
 import { ReplayChart } from '@/components/trade/replay-chart'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
@@ -134,6 +135,7 @@ function Replay() {
             onChange={(e) => LOCAL_MINUTE.test(e.target.value) && set({ from: e.target.value })}
             className="h-8 w-36 px-2 num text-xs sm:w-[12.75rem] sm:px-3"
             aria-label="Replay start"
+            title={`Replay start, in your time zone (${zoneLabel()})`}
           />
         </label>
         <Button variant="outline" size="sm" onClick={shuffle} title="Random start date">
@@ -403,7 +405,16 @@ function ReplaySession({
           </ToggleGroup>
           <IntervalBar value={bar} onChange={onBar} className="md:hidden" />
           <div className="flex min-w-0 flex-col leading-tight">
-            <span className="num text-sm">{current ? fmtWhen(current.time) : '–'}</span>
+            <span className="num text-sm">
+              {current ? fmtWhen(current.time) : '–'}
+              {/* candles, the clock and the start field all read in the browser's zone */}
+              <span
+                className="ml-2 text-[11px] text-muted-foreground"
+                title="Times are shown in your browser's time zone"
+              >
+                {zoneLabel(current?.time)}
+              </span>
+            </span>
             <span className="num text-[11px] text-muted-foreground">
               {ended ? 'End of history' : `+${fmtDuration(state.now - state.start)} · ${bar}`}
               {q.isFetchingNextPage && ' · loading ahead'}
