@@ -3,6 +3,7 @@ import { Link, createRouter, parseSearchWith, stringifySearchWith } from '@tanst
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { routeTree } from './routeTree.gen'
 
+// my comment
 // Search values stay plain strings (?entry=65000.5, not ?entry=%2265000.5%22). Only objects, arrays and
 // quoted strings go through JSON, so typed input like "0.10" is never coerced to a number mid-edit.
 const jsonOnly = (s: string) => {
