@@ -53,6 +53,7 @@ cp .env.example .env
 #   CREDENTIALS_KEY    openssl rand -base64 32
 #   BETTER_AUTH_SECRET openssl rand -base64 32
 
+pnpm db:generate      # Prisma client (not generated on install)
 pnpm db:migrate
 pnpm dev              # web on :3000, api on :3001
 ```
@@ -68,16 +69,17 @@ pnpm --filter @crypz/api import-okx-env you@example.com
 
 ## Scripts
 
-| Command           | Does                                         |
-| ----------------- | -------------------------------------------- |
-| `pnpm dev`        | web + api in watch mode                      |
-| `pnpm dev:web`    | web only                                     |
-| `pnpm dev:api`    | api only                                     |
-| `pnpm build`      | production build of the web app              |
-| `pnpm typecheck`  | type-check web and api                       |
-| `pnpm db:migrate` | create/apply Prisma migrations (development) |
-| `pnpm db:studio`  | Prisma Studio                                |
-| `pnpm format`     | Prettier (with the Tailwind class sorter)    |
+| Command            | Does                                         |
+| ------------------ | -------------------------------------------- |
+| `pnpm dev`         | web + api in watch mode                      |
+| `pnpm dev:web`     | web only                                     |
+| `pnpm dev:api`     | api only                                     |
+| `pnpm build`       | production build of the web app              |
+| `pnpm typecheck`   | type-check web and api                       |
+| `pnpm db:generate` | generate the Prisma client                   |
+| `pnpm db:migrate`  | create/apply Prisma migrations (development) |
+| `pnpm db:studio`   | Prisma Studio                                |
+| `pnpm format`      | Prettier (with the Tailwind class sorter)    |
 
 ## Exchange keys and security
 

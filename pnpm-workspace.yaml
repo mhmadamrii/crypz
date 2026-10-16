@@ -9,3 +9,8 @@ minimumReleaseAgeExclude:
   - '@better-auth/prisma-adapter@1.7.9'
   - '@better-auth/telemetry@1.7.9'
   - better-auth@1.7.9
+# Prisma's install scripts only prefetch engines; the CLI fetches them on demand, and the api image installs with
+# --ignore-scripts. Denying them explicitly keeps CI (Vercel) from failing on "ignored build scripts".
+allowBuilds:
+  '@prisma/engines': false
+  prisma: false
