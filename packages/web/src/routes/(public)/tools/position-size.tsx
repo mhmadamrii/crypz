@@ -1,17 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { seo } from '@/lib/seo'
 import { DEFAULT_DRAFT, PositionSizeCalculator, parseDraft } from '@/components/tools/position-size-calculator'
 
 export const Route = createFileRoute('/(public)/tools/position-size')({
   validateSearch: parseDraft,
-  head: () => ({
-    meta: [
-      { title: 'Position size calculator · crypz' },
-      {
-        name: 'description',
-        content: 'Size a crypto trade from your equity, risk %, entry and stop loss. Free, no account needed.',
-      },
-    ],
-  }),
+  head: () =>
+    seo({
+      title: 'Position size calculator for crypto futures · crypz',
+      description:
+        'Size a crypto trade from your equity, risk %, entry and stop loss: units, notional, leverage needed and the target from your risk : reward. Free, no account needed.',
+      path: '/tools/position-size',
+    }),
   component: PositionSizePage,
 })
 

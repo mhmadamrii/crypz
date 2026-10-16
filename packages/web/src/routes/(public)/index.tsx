@@ -8,9 +8,36 @@ import { Mosaic, MosaicLegend } from '@/components/dashboard/mosaic'
 import { ReplayBand } from '@/components/landing/replay-band'
 import { Button } from '@/components/ui/button'
 import { samplePositions } from '@/lib/sample'
+import { SITE_NAME, SITE_URL, seo } from '@/lib/seo'
 import { cn } from '@/lib/utils'
 
-export const Route = createFileRoute('/(public)/')({ component: Landing })
+export const Route = createFileRoute('/(public)/')({
+  head: () => ({
+    ...seo({
+      title: 'crypz · Trading journal and bar-by-bar replay for crypto traders',
+      description:
+        'Turn your OKX position history into an honest edge report: win rate, fees, funding, best and worst coins, hours and leverage. Then practise on real candles with bar-by-bar replay and drawing tools.',
+      path: '/',
+    }),
+    scripts: [
+      {
+        type: 'application/ld+json',
+        children: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'WebApplication',
+          name: SITE_NAME,
+          url: SITE_URL,
+          applicationCategory: 'FinanceApplication',
+          operatingSystem: 'Web',
+          description:
+            'Trading journal and edge report built from your exchange history, with bar-by-bar replay of real candles.',
+          offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+        }),
+      },
+    ],
+  }),
+  component: Landing,
+})
 
 const ROADMAP: { name: string; what: string; state: 'Live' | 'Next' | 'Planned' }[] = [
   { name: 'OKX', what: 'Closed swap positions and account equity, read-only key', state: 'Live' },

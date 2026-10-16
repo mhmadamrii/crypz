@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { LoginArt } from '@/components/landing/login-art'
 import { authClient } from '@/lib/auth-client'
 import { searchText } from '@/lib/search'
+import { seo } from '@/lib/seo'
 
 type Search = { redirect?: string; mode?: 'signup' }
 
@@ -17,7 +18,13 @@ export const Route = createFileRoute('/(public)/login')({
     redirect: /^\/(?!\/)/.test(searchText(s.redirect) ?? '') ? searchText(s.redirect) : undefined,
     mode: s.mode === 'signup' ? 'signup' : undefined,
   }),
-  head: () => ({ meta: [{ title: 'Log in · crypz' }] }),
+  head: () =>
+    seo({
+      title: 'Log in · crypz',
+      description: 'Log in to crypz, or create an account to practise with bar-by-bar replay.',
+      path: '/login',
+      noindex: true,
+    }),
   component: Login,
 })
 

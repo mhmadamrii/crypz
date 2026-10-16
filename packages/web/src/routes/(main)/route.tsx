@@ -12,6 +12,8 @@ import { portfolioQuery, usePortfolio } from '@/lib/queries'
 // once; pages read it with usePortfolio().
 export const Route = createFileRoute('/(main)')({
   ssr: false,
+  // signed-in pages are private: keep them out of search results
+  head: () => ({ meta: [{ name: 'robots', content: 'noindex, nofollow' }] }),
   beforeLoad: async ({ location }) => {
     const { data } = await authClient.getSession()
     if (!data) throw redirect({ to: '/login', search: { redirect: location.href } })

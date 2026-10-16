@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /positions
+Disallow: /trade
+Disallow: /settings
+Disallow: /login
+
+Sitemap: https://crypz.space/sitemap.xml
