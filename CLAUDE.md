@@ -22,7 +22,21 @@ Work we deferred. When asked what's left, remind from here; tick items off (dele
 - [ ] Session notes, saved sessions, step back
 - [ ] Persist drawings, magnet snapping, undo, fib levels
 - [ ] Reset equity, risk-% position sizing
-- [ ] More replay indicators (our own implementations, not LuxAlgo ports): market structure BOS/CHoCH, fair value gaps, order blocks, liquidity levels
+
+### Replay indicators (next plan)
+
+Our own implementations, not LuxAlgo ports (theirs are Pine Script, closed or CC BY-NC-SA). They join the Indicators menu (`components/indicators/`, settings in `lib/indicators/store.ts`) as chart primitives like `sessions-layer.ts`. Rules for all of them:
+
+- Replay-safe: compute only from revealed candles and never repaint. Anything that needs bars to its right (a swing point) appears only once those bars are revealed.
+- Direction may use `--up` / `--down` at low alpha (bullish/bearish zones), as in order flow; everything else is ink.
+- Each one gets a size/sensitivity option and a "show only unmitigated" style toggle so the chart doesn't flood.
+
+Fair value gaps are done (`lib/indicators/fvg.ts`, `components/indicators/fvg-layer.ts`, ATR helper there too). Build the rest in this order; each step reuses the one before it:
+
+1. [ ] **Swing points + market structure** (foundation, not on the menu at first). Pivot highs/lows with N bars each side (confirmed N bars late), then BOS / CHoCH (break of structure, change of character) from closes beyond the last swing. Liquidity pools, sweeps and order blocks all build on this.
+2. [ ] **Liquidity pools** (plausible). Clusters of equal highs / equal lows: swing points within a tolerance (e.g. 0.1 × ATR) of each other, drawn as a level extending right until price takes it. Pool strength = number of touches.
+3. [ ] **Liquidity sweeps** (plausible, small once 2 exists). A candle whose wick runs through a pool or prior swing level but closes back on the other side: mark the sweep on that candle; the pool counts as taken.
+4. [ ] **Order block detector** (plausible, most subjective, do last). Last opposite-colour candle before a displacement move that breaks structure (needs 1): bullish OB = last down candle before an up-move that makes a BOS; zone = that candle's range (or body). Mitigated when price returns into it. Options: body vs full range, require an FVG in the displacement (`lib/indicators/fvg.ts`). Expect tuning, since definitions differ between traders.
 
 ### Product
 

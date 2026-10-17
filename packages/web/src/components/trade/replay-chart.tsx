@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { fmtPrice, fmtSigned } from '@/lib/format'
 import { attachDrawingLayer, createMapper } from '@/components/drawings/layer'
+import { attachFvgLayer } from '@/components/indicators/fvg-layer'
 import { attachSessionsLayer } from '@/components/indicators/sessions-layer'
 import { createMosaicChart, palette, precisionFor, toBar, toChart, type Palette } from './chart-kit'
 
@@ -54,6 +55,7 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
         if (ref.current) ref.current.palette = q
         layer.setPalette(q)
         sessions.refresh(q)
+        fvg.refresh(q)
         setTheme((n) => n + 1)
       })
       const mapper = createMapper(
@@ -72,6 +74,14 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
         palette: palette(),
         font: getComputedStyle(document.body).getPropertyValue('--font-mono') || 'monospace',
       })
+      // gaps draw over the session boxes: they are narrower and nearer to price
+      const fvg = attachFvgLayer({
+        chart: made.chart,
+        series: made.candles,
+        x: mapper.x,
+        candles: () => live.current.candles,
+        palette: palette(),
+      })
       const layer = attachDrawingLayer({
         chart: made.chart,
         series: made.candles,
@@ -83,6 +93,7 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
       dispose = () => {
         layer.dispose()
         sessions.dispose()
+        fvg.dispose()
         made.dispose()
       }
       ref.current = {
@@ -93,7 +104,10 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
         palette: palette(),
         lines: [],
         dashed: lw.LineStyle.Dashed,
-        refreshIndicators: sessions.refresh,
+        refreshIndicators: (q) => {
+          sessions.refresh(q)
+          fvg.refresh(q)
+        },
       }
       made.chart.subscribeCrosshairMove((param) => {
         const k = param.time ? live.current.candles.find((c) => toChart(c.time) === param.time) : undefined

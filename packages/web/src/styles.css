@@ -28,6 +28,10 @@
   --hairline: oklch(0.9 0.003 95);
   --up: oklch(0.56 0.13 160);
   --down: oklch(0.56 0.2 20);
+  /* trading sessions: the one place hue names a thing; kept clear of up's teal and down's red */
+  --session-asia: oklch(0.5 0.17 300);
+  --session-london: oklch(0.5 0.14 250);
+  --session-ny: oklch(0.58 0.17 130);
   --sidebar: var(--background);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--foreground);
@@ -61,6 +65,9 @@
   --hairline: oklch(0.215 0 0);
   --up: oklch(0.74 0.15 162);
   --down: oklch(0.67 0.2 18);
+  --session-asia: oklch(0.72 0.14 300);
+  --session-london: oklch(0.72 0.13 245);
+  --session-ny: oklch(0.86 0.19 128);
   --sidebar: var(--background);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--foreground);
@@ -96,6 +103,9 @@
   --color-hairline: var(--hairline);
   --color-up: var(--up);
   --color-down: var(--down);
+  --color-session-asia: var(--session-asia);
+  --color-session-london: var(--session-london);
+  --color-session-ny: var(--session-ny);
 
   /* The world has no curves. */
   --radius-xs: 0px;

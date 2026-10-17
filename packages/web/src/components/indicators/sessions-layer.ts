@@ -2,14 +2,16 @@ import type { Candle } from '@crypz/exchanges'
 import type { IChartApi, IPrimitivePaneView, ISeriesApi, ISeriesPrimitive, Time } from 'lightweight-charts'
 import type { Palette } from '@/components/trade/chart-kit'
 import { indicators } from '@/lib/indicators/store'
-import { sessionsBetween, type SessionId } from '@/lib/indicators/sessions'
+import { sessionsBetween } from '@/lib/indicators/sessions'
 
 // Trading sessions behind the candles: each one a box from its open to its close, spanning the high and low traded
 // inside it. Built from the candles the chart was given, so in replay a session's box grows bar by bar and never
-// shows a high that has not happened yet. Ink only, told apart by density and their label: Asia faintest, New York
-// densest, and where London and New York overlap the two washes stack.
+// shows a high that has not happened yet. Each session has its own hue (violet Asia, blue London, lime New York) as
+// a translucent wash with a stronger frame and label, so the three stay apart in either theme and where London and
+// New York overlap the two washes mix instead of hiding each other.
 
-const INK: Record<SessionId, number> = { asia: 0.035, london: 0.055, newYork: 0.075 }
+const FILL = 0.13
+const FRAME = 0.6
 
 /** Sessions span hours; on bars this long or longer a session is one or two candles and the boxes stop reading. */
 export const SESSION_MAX_BAR = 2 * 3_600_000
@@ -91,9 +93,10 @@ export function attachSessionsLayer(opts: {
               const top = Math.round(ya)
               const height = Math.max(1, Math.round(yb - ya))
 
-              ctx.fillStyle = alpha(p.fg, INK[span.id])
+              const hue = p.session[span.id]
+              ctx.fillStyle = alpha(hue, FILL)
               ctx.fillRect(left, top, right - left, height)
-              ctx.strokeStyle = alpha(p.fg, 0.28)
+              ctx.strokeStyle = alpha(hue, FRAME)
               ctx.lineWidth = 1
               ctx.strokeRect(left + 0.5, top + 0.5, right - left - 1, height - 1)
               // above the box, or tucked inside it near the chart top where the OHLC readout lives
@@ -102,7 +105,7 @@ export function attachSessionsLayer(opts: {
               const y = top - 2 < LABEL_CLEAR ? top + 13 : top - 2
               const free = !placed.some((q) => Math.abs(q.y - y) < 12 && left < q.r + 6 && left + w > q.l - 6)
               if (right - left >= w + 4 && free) {
-                ctx.fillStyle = p.muted
+                ctx.fillStyle = hue
                 ctx.fillText(text, left + 2, y)
                 placed.push({ l: left, r: left + w, y })
               }

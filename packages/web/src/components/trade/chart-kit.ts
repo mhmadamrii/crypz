@@ -44,6 +44,11 @@ export function palette() {
     border: resolveColor('var(--border)'),
     up: resolveColor('var(--up)'),
     down: resolveColor('var(--down)'),
+    session: {
+      asia: resolveColor('var(--session-asia)'),
+      london: resolveColor('var(--session-london)'),
+      newYork: resolveColor('var(--session-ny)'),
+    },
   }
 }
 
