@@ -1,13 +1,18 @@
-import type { Candle } from '@crypz/exchanges'
+import type { Bar, Candle } from '@crypz/exchanges'
 import type { IPriceLine, ISeriesApi, ISeriesMarkersPluginApi, SeriesMarker, Time } from 'lightweight-charts'
 import type { OpenPosition, ReplayTrade } from '@/lib/replay'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { computeBias, type Bias } from '@/lib/indicators/bias'
+import { useIndicators } from '@/lib/indicators/store'
 import { cn } from '@/lib/utils'
 import { fmtPrice, fmtSigned } from '@/lib/format'
 import { attachDrawingLayer, createMapper } from '@/components/drawings/layer'
+import { attachBiasLayer } from '@/components/indicators/bias-layer'
+import { BiasReadout } from '@/components/indicators/bias-readout'
 import { attachFvgLayer } from '@/components/indicators/fvg-layer'
 import { attachSessionsLayer } from '@/components/indicators/sessions-layer'
+import { attachStructureLayer } from '@/components/indicators/structure-layer'
 import { createMosaicChart, palette, precisionFor, toBar, toChart, type Palette } from './chart-kit'
 
 type Props = {
@@ -19,6 +24,10 @@ type Props = {
   barMs: number
   /** Drawings are kept per instrument. */
   symbol: string
+  /** The chart's interval, for the bias readout. */
+  barLabel: Bar
+  /** Closed candles of the bias's higher timeframe, when one is set above the chart's. */
+  higher: { bar: Bar; candles: Candle[] } | null
   position: OpenPosition | null
   trades: ReplayTrade[]
   className?: string
@@ -35,14 +44,39 @@ type Handles = {
   refreshIndicators: (p?: Palette) => void
 }
 
-export function ReplayChart({ candles, intraday, barMs, symbol, position, trades, className }: Props) {
+export function ReplayChart({
+  candles,
+  intraday,
+  barMs,
+  symbol,
+  barLabel,
+  higher,
+  position,
+  trades,
+  className,
+}: Props) {
   const box = useRef<HTMLDivElement>(null)
   const ref = useRef<Handles | null>(null)
   const [ready, setReady] = useState(false)
   const [hover, setHover] = useState<Candle | null>(null)
   const [theme, setTheme] = useState(0)
-  const live = useRef({ candles, barMs })
-  live.current = { candles, barMs }
+  const ind = useIndicators()
+  // the bias is plain data from the revealed candles: the readout renders it, the layer draws its invalidation
+  const bias = useMemo<Bias | null>(
+    () =>
+      ind.bias.on && candles.length
+        ? computeBias({
+            chart: candles,
+            chartLabel: barLabel,
+            higher: higher?.candles ?? null,
+            higherLabel: higher?.bar ?? null,
+            length: ind.structure.length,
+          })
+        : null,
+    [ind.bias.on, ind.structure.length, candles, barLabel, higher],
+  )
+  const live = useRef({ candles, barMs, bias })
+  live.current = { candles, barMs, bias }
 
   // 1. Lifecycle: create the chart once, tear it down on unmount.
   useEffect(() => {
@@ -56,6 +90,8 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
         layer.setPalette(q)
         sessions.refresh(q)
         fvg.refresh(q)
+        structure.refresh(q)
+        biasLayer.refresh(q)
         setTheme((n) => n + 1)
       })
       const mapper = createMapper(
@@ -82,6 +118,24 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
         candles: () => live.current.candles,
         palette: palette(),
       })
+      // structure labels and break lines sit over the candles, under the drawings
+      const structure = attachStructureLayer({
+        chart: made.chart,
+        series: made.candles,
+        x: mapper.x,
+        candles: () => live.current.candles,
+        palette: palette(),
+        font: getComputedStyle(document.body).getPropertyValue('--font-mono') || 'monospace',
+      })
+      const biasLayer = attachBiasLayer({
+        chart: made.chart,
+        series: made.candles,
+        x: mapper.x,
+        candles: () => live.current.candles,
+        bias: () => live.current.bias,
+        palette: palette(),
+        font: getComputedStyle(document.body).getPropertyValue('--font-mono') || 'monospace',
+      })
       const layer = attachDrawingLayer({
         chart: made.chart,
         series: made.candles,
@@ -94,6 +148,8 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
         layer.dispose()
         sessions.dispose()
         fvg.dispose()
+        structure.dispose()
+        biasLayer.dispose()
         made.dispose()
       }
       ref.current = {
@@ -107,6 +163,8 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
         refreshIndicators: (q) => {
           sessions.refresh(q)
           fvg.refresh(q)
+          structure.refresh(q)
+          biasLayer.refresh(q)
         },
       }
       made.chart.subscribeCrosshairMove((param) => {
@@ -142,6 +200,11 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
     shown.current = { first, length: candles.length }
     c.refreshIndicators()
   }, [ready, candles, intraday])
+
+  // the higher timeframe can move the bias without a new chart candle
+  useEffect(() => {
+    ref.current?.refreshIndicators()
+  }, [ready, bias])
 
   // 3. Orders: entry/exit markers and the open position's entry, stop and target lines.
   useEffect(() => {
@@ -208,6 +271,7 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
           <span className="text-foreground">{fmtSigned(((k.close - k.open) / k.open) * 100)}%</span>
         </div>
       )}
+      {bias && <BiasReadout bias={bias} chartLabel={barLabel} higherLabel={higher?.bar ?? null} />}
       <div ref={box} className="absolute inset-0 [&[data-cursor]_*]:cursor-[inherit]!" />
     </div>
   )

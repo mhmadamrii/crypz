@@ -31,12 +31,11 @@ Our own implementations, not LuxAlgo ports (theirs are Pine Script, closed or CC
 - Direction may use `--up` / `--down` at low alpha (bullish/bearish zones), as in order flow; everything else is ink.
 - Each one gets a size/sensitivity option and a "show only unmitigated" style toggle so the chart doesn't flood.
 
-Fair value gaps are done (`lib/indicators/fvg.ts`, `components/indicators/fvg-layer.ts`, ATR helper there too). Build the rest in this order; each step reuses the one before it:
+Done: fair value gaps (`lib/indicators/fvg.ts`, ATR helper there too) and swing points + market structure (`lib/indicators/structure.ts`: swings, HH/LH/HL/LL, BOS/CHoCH on a close, the unbroken `lastHigh`/`lastLow`). Bias with invalidation is done too (`lib/indicators/bias.ts`; factors from candles only, no CVD since replay has no taker history; no win-rate until measured from replay history). Layers share `components/indicators/pane-layer.ts`. Build the rest in this order:
 
-1. [ ] **Swing points + market structure** (foundation, not on the menu at first). Pivot highs/lows with N bars each side (confirmed N bars late), then BOS / CHoCH (break of structure, change of character) from closes beyond the last swing. Liquidity pools, sweeps and order blocks all build on this.
-2. [ ] **Liquidity pools** (plausible). Clusters of equal highs / equal lows: swing points within a tolerance (e.g. 0.1 × ATR) of each other, drawn as a level extending right until price takes it. Pool strength = number of touches.
-3. [ ] **Liquidity sweeps** (plausible, small once 2 exists). A candle whose wick runs through a pool or prior swing level but closes back on the other side: mark the sweep on that candle; the pool counts as taken.
-4. [ ] **Order block detector** (plausible, most subjective, do last). Last opposite-colour candle before a displacement move that breaks structure (needs 1): bullish OB = last down candle before an up-move that makes a BOS; zone = that candle's range (or body). Mitigated when price returns into it. Options: body vs full range, require an FVG in the displacement (`lib/indicators/fvg.ts`). Expect tuning, since definitions differ between traders.
+1. [ ] **Liquidity pools** (plausible). Clusters of equal highs / equal lows: swing points within a tolerance (e.g. 0.1 × ATR) of each other, drawn as a level extending right until price takes it. Pool strength = number of touches.
+2. [ ] **Liquidity sweeps** (plausible, small once 1 exists). A candle whose wick runs through a pool or prior swing level but closes back on the other side: mark the sweep on that candle; the pool counts as taken.
+3. [ ] **Order block detector** (plausible, most subjective, do last). Last opposite-colour candle before a displacement move that breaks structure (uses market structure's BOS): bullish OB = last down candle before an up-move that makes a BOS; zone = that candle's range (or body). Mitigated when price returns into it. Options: body vs full range, require an FVG in the displacement (`lib/indicators/fvg.ts`). Expect tuning, since definitions differ between traders.
 
 ### Product
 

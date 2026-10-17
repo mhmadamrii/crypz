@@ -31,6 +31,7 @@ import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { MARKET_EXCHANGE } from '@/lib/market'
+import { useIndicators } from '@/lib/indicators/store'
 import { replayCandlesQuery, replayFineQuery, useInstruments } from '@/lib/queries'
 import {
   DEFAULT_LEVERAGE,
@@ -244,6 +245,23 @@ function ReplaySession({
     const closed = cursor < 0 ? [] : candles.slice(0, cursor + 1)
     return partial ? [...closed, partial] : closed
   }, [candles, cursor, partial])
+  // Top-down bias: the higher timeframe's closed candles, loaded from the session start and paged forward as the
+  // clock moves. Fetched only while the bias indicator is on and its timeframe sits above the chart's.
+  const indicatorState = useIndicators()
+  const higherBar =
+    indicatorState.bias.on && BAR_MS[indicatorState.bias.higher] > BAR_MS[bar] ? indicatorState.bias.higher : null
+  const hq = useInfiniteQuery({ ...replayCandlesQuery(exchange, symbol, higherBar ?? bar, from), enabled: !!higherBar })
+  const higher = useMemo(() => {
+    if (!higherBar || !hq.data || hq.isPlaceholderData) return null
+    const ms = BAR_MS[higherBar]
+    const byTime = new Map<number, Candle>()
+    for (const page of hq.data.pages) for (const k of page) byTime.set(k.time, k)
+    const all = [...byTime.values()].sort((a, b) => a.time - b.time)
+    // closed bars only: a forming higher bar would let the bias change inside it
+    const closed = all.filter((k, i) => (all[i + 1]?.time ?? k.time + ms) <= state.now)
+    return { bar: higherBar, candles: closed, loadedTo: all.at(-1)?.time ?? 0 }
+  }, [higherBar, hq.data, hq.isPlaceholderData, state.now])
+
   // the last price: the forming candle's when there is one, so every timeframe trades at the same price
   const current = cursor < 0 ? undefined : (partial ?? candles[cursor])
   const ended = !candles[cursor + 1] && !q.hasNextPage && q.isSuccess
@@ -275,6 +293,8 @@ function ReplaySession({
     }
     dispatch({ type: 'step', candle: next, closesAt: closesAt(cursor + 1) })
     if (candles.length - cursor < 60 && more) void q.fetchNextPage()
+    if (higher && hq.hasNextPage && !hq.isFetchingNextPage && higher.loadedTo - state.now < 10 * BAR_MS[higher.bar])
+      void hq.fetchNextPage()
   }
 
   const open = (side: Side) => {
@@ -368,6 +388,8 @@ function ReplaySession({
               intraday={BAR_MS[bar] < BAR_MS['1D']}
               barMs={BAR_MS[bar]}
               symbol={symbol}
+              barLabel={bar}
+              higher={higher}
               candles={revealed}
               position={p}
               trades={state.trades}
