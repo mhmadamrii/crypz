@@ -6,13 +6,26 @@ import { MARKET_EXCHANGE } from '@/lib/market'
 import { useBook, useFunding, useMarkPrice, useTicker, useTrades } from '@/lib/okx-ws'
 import { fmtDuration, fmtNum, fmtPrice, fmtSigned, tone } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { BasisBody, LiquidationsBody, LongShortBody, OpenInterestBody, TakerBody } from './derivatives'
+import { Segmented, Waiting, decimalsOf, stepsFor } from './kit'
 import type { WidgetKind } from './model'
+import {
+  CvdBody,
+  DepthBody,
+  DepthControls,
+  FootprintBody,
+  FootprintControls,
+  PeriodControls,
+  ProfileBody,
+} from './order-flow'
 
 export type Settings = Record<string, string | number | boolean>
 export type WidgetProps = { symbol: string; settings: Settings; set: (patch: Settings) => void }
 
 type Entry = {
   title: string
+  /** Section in the Add widget picker. */
+  group: 'Market' | 'Order flow' | 'Derivatives'
   description: string
   /** Default and minimum size in grid cells. */
   size: { w: number; h: number; minW: number; minH: number }
@@ -47,10 +60,6 @@ const useNow = () =>
     () => 0,
   )
 
-const Waiting = () => (
-  <p className="grid h-full place-items-center label">Waiting for {MARKET_EXCHANGE.toUpperCase()}…</p>
-)
-
 // ---- chart ---------------------------------------------------------------------------------------------------
 
 function ChartBody({ symbol, settings }: WidgetProps) {
@@ -62,35 +71,18 @@ function ChartControls({ settings, set }: WidgetProps) {
   const { selected } = useIntervals()
   const bar = String(settings.bar ?? '1H')
   return (
-    <div className="flex" role="group" aria-label="Interval">
-      {BARS.filter((b) => b === bar || selected.includes(b)).map((b) => (
-        <button
-          key={b}
-          type="button"
-          aria-pressed={b === bar}
-          onClick={() => set({ bar: b })}
-          className={cn(
-            'h-6 px-1.5 num text-[11px] text-muted-foreground hover:text-foreground',
-            b === bar && 'bg-foreground text-background hover:text-background',
-          )}
-        >
-          {b}
-        </button>
-      ))}
-    </div>
+    <Segmented
+      label="Interval"
+      options={BARS.filter((b) => b === bar || selected.includes(b))}
+      value={bar}
+      onChange={(b) => set({ bar: b })}
+    />
   )
 }
 
 // ---- order book ----------------------------------------------------------------------------------------------
 
 const ROWS = 40
-
-/** Price groupings from the price's magnitude: e.g. 0.1 / 1 / 10 for BTC near 80,000. */
-const stepsFor = (mid: number) => {
-  const base = 10 ** (Math.floor(Math.log10(mid)) - 5)
-  return [base, base * 10, base * 100]
-}
-const decimalsOf = (step: number) => Math.max(0, -Math.floor(Math.log10(step) + 1e-9))
 
 function group(levels: Map<string, string>, step: number, side: 'bid' | 'ask') {
   const out = new Map<number, number>()
@@ -141,22 +133,14 @@ function BookBody({ symbol, settings, set }: WidgetProps) {
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-hairline px-2 py-0.5">
         <span className="label">Group</span>
-        <div className="flex" role="group" aria-label="Price grouping">
-          {stepsFor(mid).map((s, i) => (
-            <button
-              key={s}
-              type="button"
-              aria-pressed={s === step}
-              onClick={() => set({ step: i })}
-              className={cn(
-                'h-5 px-1.5 num text-[11px] text-muted-foreground hover:text-foreground',
-                s === step && 'bg-foreground text-background hover:text-background',
-              )}
-            >
-              {fmtNum(s, decimalsOf(s))}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label="Price grouping"
+          options={stepsFor(mid)}
+          value={step}
+          onChange={(s) => set({ step: stepsFor(mid).indexOf(s) })}
+          format={(s) => fmtNum(s, decimalsOf(s))}
+          size="strip"
+        />
       </div>
       <div className="grid shrink-0 grid-cols-3 px-2 py-1 label">
         <span>Price</span>
@@ -280,6 +264,7 @@ function StatsBody({ symbol }: WidgetProps) {
 export const WIDGETS: Record<WidgetKind, Entry> = {
   chart: {
     title: 'Chart',
+    group: 'Market',
     description: 'Candles with live updates; interval per widget.',
     size: { w: 12, h: 14, minW: 6, minH: 8 },
     Body: ChartBody,
@@ -287,21 +272,93 @@ export const WIDGETS: Record<WidgetKind, Entry> = {
   },
   book: {
     title: 'Order book',
+    group: 'Order flow',
     description: 'Live depth ladder with grouping, spread and bid/ask imbalance.',
     size: { w: 5, h: 16, minW: 4, minH: 10 },
     Body: BookBody,
   },
   trades: {
     title: 'Trades',
+    group: 'Order flow',
     description: 'Time & sales tape; the biggest prints stand out.',
     size: { w: 5, h: 14, minW: 4, minH: 6 },
     Body: TradesBody,
   },
   stats: {
     title: 'Market stats',
+    group: 'Market',
     description: 'Last, 24h range and volume, mark price, funding and its countdown.',
     size: { w: 12, h: 3, minW: 6, minH: 3 },
     Body: StatsBody,
+  },
+  depth: {
+    title: 'Depth',
+    group: 'Order flow',
+    description: 'Cumulative bids and asks either side of the mid, zoomable into the touch.',
+    size: { w: 6, h: 10, minW: 4, minH: 6 },
+    Body: DepthBody,
+    Controls: DepthControls,
+  },
+  cvd: {
+    title: 'CVD',
+    group: 'Order flow',
+    description: 'Cumulative taker buy minus sell volume under price, with each period’s delta.',
+    size: { w: 10, h: 14, minW: 6, minH: 9 },
+    Body: CvdBody,
+    Controls: PeriodControls,
+  },
+  profile: {
+    title: 'Volume profile',
+    group: 'Order flow',
+    description: 'Volume traded at each price over 1 to 50 days, with point of control and value area.',
+    size: { w: 5, h: 14, minW: 4, minH: 8 },
+    Body: ProfileBody,
+  },
+  footprint: {
+    title: 'Footprint',
+    group: 'Order flow',
+    description: 'Sell × buy size per price row and minute, from the live trades feed.',
+    size: { w: 12, h: 16, minW: 6, minH: 10 },
+    Body: FootprintBody,
+    Controls: FootprintControls,
+  },
+  oi: {
+    title: 'Open interest',
+    group: 'Derivatives',
+    description: 'Contracts held open, in USD, under price, with each period’s change.',
+    size: { w: 10, h: 13, minW: 6, minH: 9 },
+    Body: OpenInterestBody,
+    Controls: PeriodControls,
+  },
+  longshort: {
+    title: 'Long/short ratio',
+    group: 'Derivatives',
+    description: 'How the crowd leans: all accounts, top traders, or top traders’ position size.',
+    size: { w: 8, h: 13, minW: 6, minH: 9 },
+    Body: LongShortBody,
+    Controls: PeriodControls,
+  },
+  taker: {
+    title: 'Taker buy/sell',
+    group: 'Derivatives',
+    description: 'Aggressive buying against selling per period, and the buyers’ share.',
+    size: { w: 10, h: 13, minW: 6, minH: 9 },
+    Body: TakerBody,
+    Controls: PeriodControls,
+  },
+  basis: {
+    title: 'Basis',
+    group: 'Derivatives',
+    description: 'The perpetual’s premium over spot, live against the index, with the funding it drives.',
+    size: { w: 8, h: 12, minW: 6, minH: 8 },
+    Body: BasisBody,
+  },
+  liquidations: {
+    title: 'Liquidations',
+    group: 'Derivatives',
+    description: 'Forced closes as they happen, with the long/short split in USD.',
+    size: { w: 5, h: 14, minW: 4, minH: 7 },
+    Body: LiquidationsBody,
   },
 }
 

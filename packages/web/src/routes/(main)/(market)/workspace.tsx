@@ -196,7 +196,9 @@ function WorkspaceView({ ws, onSaved }: { ws: Ws; onSaved: (s: WorkspaceState) =
         <div className="grid place-items-center border border-dashed border-border py-24 text-center">
           <LayoutPanelTop className="mb-3 size-5 text-muted-foreground" strokeWidth={1.5} />
           <p className="text-sm font-medium">Empty workspace</p>
-          <p className="mt-1 text-sm text-muted-foreground">Add a chart, order book or tape to start.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Add a chart, order book, footprint or any other widget to start.
+          </p>
         </div>
       )}
     </div>
@@ -212,24 +214,35 @@ function AddWidget({ onAdd }: { onAdd: (k: WidgetKind) => void }) {
           <Plus /> Add widget
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 p-1">
-        <ul>
-          {(Object.keys(WIDGETS) as WidgetKind[]).map((k) => (
-            <li key={k}>
-              <button
-                type="button"
-                onClick={() => {
-                  onAdd(k)
-                  setOpen(false)
-                }}
-                className="flex w-full flex-col items-start gap-0.5 px-3 py-2.5 text-left hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
-              >
-                <span className="text-sm font-medium">{WIDGETS[k].title}</span>
-                <span className="text-xs text-pretty text-muted-foreground">{WIDGETS[k].description}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+      <PopoverContent align="start" className="max-h-[70vh] w-80 overflow-y-auto p-1">
+        {(['Market', 'Order flow', 'Derivatives'] as const).map((group) => (
+          <section
+            key={group}
+            aria-label={group}
+            className="not-first:mt-1 not-first:border-t not-first:border-hairline"
+          >
+            <h3 className="px-3 pt-2.5 pb-1 label">{group}</h3>
+            <ul>
+              {(Object.keys(WIDGETS) as WidgetKind[])
+                .filter((k) => WIDGETS[k].group === group)
+                .map((k) => (
+                  <li key={k}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onAdd(k)
+                        setOpen(false)
+                      }}
+                      className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+                    >
+                      <span className="text-sm font-medium">{WIDGETS[k].title}</span>
+                      <span className="text-xs text-pretty text-muted-foreground">{WIDGETS[k].description}</span>
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          </section>
+        ))}
       </PopoverContent>
     </Popover>
   )

@@ -83,7 +83,31 @@ export const BAR_MS: Record<Bar, number> = {
   '3M': 91 * DAY,
 }
 
-export type Candle = { time: number; open: number; high: number; low: number; close: number }
+/** `volume` is in contracts for swaps; candles built in the browser (live, replay) leave it out. */
+export type Candle = { time: number; open: number; high: number; low: number; close: number; volume?: number }
+
+/** Taker buy and sell volume over one period, in contracts. */
+export type TakerFlow = { time: number; buy: number; sell: number }
+
+/** Periods the exchange's trading-statistics series (taker flow, open interest, long/short) come in. */
+export const STAT_BARS = ['5m', '15m', '1H', '4H', '1D'] as const
+export type StatBar = (typeof STAT_BARS)[number]
+
+/** Open interest at the end of a period: contracts and their USD value. */
+export type OpenInterest = { time: number; contracts: number; usd: number }
+
+/** Whose long/short split: all accounts, the top traders' accounts, or the top traders' position sizes. */
+export const LONG_SHORT_KINDS = ['accounts', 'top-accounts', 'top-positions'] as const
+export type LongShortKind = (typeof LONG_SHORT_KINDS)[number]
+export type LongShort = { time: number; ratio: number }
+
+/** A forced close. `side` is the position that was liquidated; `size` is in contracts. */
+export type Liquidation = { time: number; side: 'long' | 'short'; price: number; size: number }
+/** Recent liquidations, newest first, with what one contract is worth in the base coin. */
+export type Liquidations = { contractValue: number; events: Liquidation[] }
+
+/** Perpetual premium over the index, as a fraction (−0.0004 = 4bp under). */
+export type Premium = { time: number; premium: number }
 
 export type Ticker = {
   symbol: string
@@ -112,5 +136,14 @@ export interface ExchangeAdapter {
   /** Public market data, oldest first. `before` (ms) pages back into history. */
   fetchCandles(symbol: string, bar: Bar, before?: number): Promise<Candle[]>
   fetchTicker(symbol: string): Promise<Ticker>
+  /** Taker buy/sell volume per period, oldest first; the newest period is still forming. */
+  fetchTakerFlow(symbol: string, bar: StatBar): Promise<TakerFlow[]>
+  /** Open interest per period, oldest first. */
+  fetchOpenInterest(symbol: string, bar: StatBar): Promise<OpenInterest[]>
+  /** Long/short ratio per period, oldest first. */
+  fetchLongShort(symbol: string, bar: StatBar, kind: LongShortKind): Promise<LongShort[]>
+  fetchLiquidations(symbol: string): Promise<Liquidations>
+  /** Premium history over roughly the last hour and a half, oldest first. */
+  fetchPremium(symbol: string): Promise<Premium[]>
   tradeUrl(symbol: string): string
 }

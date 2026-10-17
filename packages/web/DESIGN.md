@@ -302,6 +302,21 @@ The landing's second peak after the mosaic hero: a full-bleed SVG candle chart i
 
 Order flow is the one place up/down colour means direction rather than result: bids, buy prints and the bid side of the imbalance bar use `--up`, asks and sells `--down`, with depth bars at 12%. Funding is shown neutral, because its meaning depends on the side held. A status pill in the header (filled square = live) reports the OKX feed.
 
+The Add widget picker groups widgets under Market and Order flow. Narrow widgets (book, volume profile) keep secondary toggles in a body strip so the header title survives; wide ones put them in the header. The order-flow widgets:
+
+- **Depth:** cumulative bid and ask step areas (`--up` / `--down` at 12%, 1.5px edge) either side of a dashed mid line. The range is a 1× / 2× / 4× zoom into the depth OKX actually sends (400 levels), with the real ±% in the readout. Hover draws a dotted cursor and a 7px square on the curve.
+- **CVD:** hollow candles on top, the cumulative delta as a 2px ink line over a dashed zero below, each period's delta as up/down bars at 60% at the bottom (lightweight-charts panes). History comes from OKX taker volume, not from when the widget opened.
+- **Volume profile:** ink density only, because volume has no direction: the point of control is solid ink, the value area (70%) 40%, the tails 15%. The last price is an inverted chip on the right axis.
+- **Footprint:** sell × buy per price row and column of time, in 10px mono. Cell ink density is the row's volume, a side outweighing the other 3:1 goes bold in its colour, and the column's point of control carries the 1px inset outline. It is fed by live trades only, so its strip says "Live since".
+
+The derivatives widgets (Derivatives group) share one chart: hollow candles on top, the statistic as a 2px ink line in the middle with a dashed reference level (0 for a delta, 1 for a ratio, 50% for a share), and per-period bars at the bottom in up/down at 60%. Readouts sit top-left in 11px mono and label the period by time today, date and time before today, or date alone for daily periods.
+
+- **Open interest:** USD open interest with each period's change as bars, and the change across the window.
+- **Long/short ratio:** all accounts, top traders' accounts or top traders' position size, chosen in a body strip. Long and short shares take up/down only as the two sides of the split.
+- **Taker buy/sell:** the buyers' share as the line, buy volume above the axis and sell volume below.
+- **Basis:** the premium over the index (about a point a minute), with a live strip of last − index, the index and funding, all neutral because their meaning depends on the side held.
+- **Liquidations:** a tape like Trades. A liquidated long is a forced sell and takes `--down`; a liquidated short takes `--up`. Sizes are USD notional, the biggest tenth is bold, and the footer splits longs against shorts since the oldest listed event.
+
 ### Public Shell and Tools
 
 Pages reachable without login (`(public)` route group: landing, login, `/tools/*`) share one public header (wordmark, a Tools nav with unbuilt tools marked SOON, theme toggle, Log in) and footer. The app (`(main)` route group) keeps the sidebar shell, whose Tools group links to the same public tool pages. A tool page is a form panel beside one result panel, both 1px bordered, never a grid of cards. Results read as a ledger: mono labels over mono figures, sections split by hairlines, with green and red only on signed money outcomes (loss at stop, profit at target, max risk). Price levels are drawn to scale on a vertical rule: the entry is a filled square, the target and stop are hollow squares. The formula explanation lives in a dialog that substitutes the user's live numbers into every step.

@@ -4,12 +4,36 @@ import {
   type AccountSnapshot,
   type Bar,
   type Candle,
+  type TakerFlow,
+  type LongShortKind,
+  type Liquidation,
+  type OpenInterest,
   type Credentials,
   type ExchangeAdapter,
   type Position,
 } from './types'
 
 const BASE_URL = 'https://www.okx.com'
+
+const LONG_SHORT_PATH: Record<LongShortKind, string> = {
+  accounts: 'long-short-account-ratio-contract',
+  'top-accounts': 'long-short-account-ratio-contract-top-trader',
+  'top-positions': 'long-short-position-ratio-contract-top-trader',
+}
+
+// Contract specs barely ever change; one lookup per instrument per process.
+const contractValues = new Map<string, Promise<number>>()
+function contractValue(symbol: string) {
+  let v = contractValues.get(symbol)
+  if (!v) {
+    v = okxPublic<{ ctVal: string }[]>('/api/v5/public/instruments', { instType: 'SWAP', instId: symbol }).then(([i]) =>
+      num(i?.ctVal ?? '1'),
+    )
+    v.catch(() => contractValues.delete(symbol))
+    contractValues.set(symbol, v)
+  }
+  return v
+}
 
 type OkxPositionHistory = {
   instId: string
@@ -62,7 +86,9 @@ async function okxGet<T>(c: Credentials, path: string, params: Record<string, st
 }
 
 async function okxPublic<T>(path: string, params: Record<string, string>): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}?${new URLSearchParams(params)}`)
+  // OKX occasionally holds a request open; give up before the server's own 10s idle cut so the caller gets an
+  // error it can retry instead of a dropped connection
+  const res = await fetch(`${BASE_URL}${path}?${new URLSearchParams(params)}`, { signal: AbortSignal.timeout(8000) })
   const json = (await res.json()) as { code: string; msg: string; data: T }
   if (json.code !== '0') throw new Error(`OKX ${json.code}: ${json.msg}`)
   return json.data
@@ -171,8 +197,66 @@ export const okx: ExchangeAdapter = {
         high: num(r[2]),
         low: num(r[3]),
         close: num(r[4]),
+        volume: num(r[5]),
       }))
       .reverse()
+  },
+
+  // OKX's trading-statistics series: 100 periods of taker volume, rows of [ts, sellVol, buyVol] in contracts.
+  async fetchTakerFlow(symbol, bar) {
+    const rows = await okxPublic<string[][]>('/api/v5/rubik/stat/taker-volume-contract', {
+      instId: symbol,
+      period: bar,
+      limit: '100',
+    })
+    return rows.map((r): TakerFlow => ({ time: num(r[0]), sell: num(r[1]), buy: num(r[2]) })).reverse()
+  },
+
+  // Rows of [ts, oi (contracts), oiCcy, oiUsd].
+  async fetchOpenInterest(symbol, bar) {
+    const rows = await okxPublic<string[][]>('/api/v5/rubik/stat/contracts/open-interest-history', {
+      instId: symbol,
+      period: bar,
+      limit: '100',
+    })
+    return rows.map((r): OpenInterest => ({ time: num(r[0]), contracts: num(r[1]), usd: num(r[3]) })).reverse()
+  },
+
+  async fetchLongShort(symbol, bar, kind) {
+    const rows = await okxPublic<string[][]>(`/api/v5/rubik/stat/contracts/${LONG_SHORT_PATH[kind]}`, {
+      instId: symbol,
+      period: bar,
+      limit: '100',
+    })
+    return rows.map((r) => ({ time: num(r[0]), ratio: num(r[1]) })).reverse()
+  },
+
+  // The newest 100 filled liquidations of the instrument's family; `side` is the closing order, so a sell closes a long.
+  async fetchLiquidations(symbol) {
+    const family = symbol.replace(/-SWAP$/, '')
+    const [orders, instruments] = await Promise.all([
+      okxPublic<{ instId: string; details: { side: string; bkPx: string; sz: string; ts: string }[] }[]>(
+        '/api/v5/public/liquidation-orders',
+        { instType: 'SWAP', instFamily: family, state: 'filled', limit: '100' },
+      ),
+      contractValue(symbol),
+    ])
+    const events = (orders.find((o) => o.instId === symbol)?.details ?? orders[0]?.details ?? []).map(
+      (d): Liquidation => ({
+        time: num(d.ts),
+        side: d.side === 'sell' ? 'long' : 'short',
+        price: num(d.bkPx),
+        size: num(d.sz),
+      }),
+    )
+    return { contractValue: instruments, events }
+  },
+
+  async fetchPremium(symbol) {
+    const rows = await okxPublic<{ premium: string; ts: string }[]>('/api/v5/public/premium-history', {
+      instId: symbol,
+    })
+    return rows.map((r) => ({ time: num(r.ts), premium: num(r.premium) })).reverse()
   },
 
   async fetchTicker(symbol) {

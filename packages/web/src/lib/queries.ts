@@ -1,6 +1,6 @@
 import { infiniteQueryOptions, keepPreviousData, queryOptions, useSuspenseQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
-import { BAR_MS, type Bar, type Candle, type ExchangeId } from '@crypz/exchanges'
+import { BAR_MS, type Bar, type Candle, type ExchangeId, type LongShortKind, type StatBar } from '@crypz/exchanges'
 
 const getCandles = ({ data: q }: { data: { exchange: ExchangeId; symbol: string; bar: Bar; before?: number } }) =>
   unwrap(
@@ -81,6 +81,49 @@ export const replayCandlesQuery = (exchange: ExchangeId, symbol: string, bar: Ba
     gcTime: 10 * 60_000,
     // switching interval keeps the old candles on screen (blurred) until the new ones land
     placeholderData: keepPreviousData,
+  })
+
+/** Taker buy/sell volume per period (100 periods), for CVD. The newest period is still forming. */
+export const takerFlowQuery = (exchange: ExchangeId, symbol: string, bar: StatBar) =>
+  queryOptions({
+    queryKey: ['taker-flow', exchange, symbol, bar],
+    queryFn: () => unwrap(api.market['taker-flow'].$get({ query: { exchange, symbol, bar } })),
+    refetchInterval: 15_000,
+    staleTime: 10_000,
+  })
+
+// Derivatives statistics. The exchange refreshes them about once a period, so polling faster buys nothing.
+
+export const openInterestQuery = (exchange: ExchangeId, symbol: string, bar: StatBar) =>
+  queryOptions({
+    queryKey: ['open-interest', exchange, symbol, bar],
+    queryFn: () => unwrap(api.market['open-interest'].$get({ query: { exchange, symbol, bar } })),
+    refetchInterval: 30_000,
+    staleTime: 20_000,
+  })
+
+export const longShortQuery = (exchange: ExchangeId, symbol: string, bar: StatBar, kind: LongShortKind) =>
+  queryOptions({
+    queryKey: ['long-short', exchange, symbol, bar, kind],
+    queryFn: () => unwrap(api.market['long-short'].$get({ query: { exchange, symbol, bar, kind } })),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  })
+
+/** The newest 100 liquidations; live ones arrive over the WebSocket, so this only seeds the tape. */
+export const liquidationsQuery = (exchange: ExchangeId, symbol: string) =>
+  queryOptions({
+    queryKey: ['liquidations', exchange, symbol],
+    queryFn: () => unwrap(api.market.liquidations.$get({ query: { exchange, symbol } })),
+    staleTime: 5 * 60_000,
+  })
+
+export const premiumQuery = (exchange: ExchangeId, symbol: string) =>
+  queryOptions({
+    queryKey: ['premium', exchange, symbol],
+    queryFn: () => unwrap(api.market.premium.$get({ query: { exchange, symbol } })),
+    refetchInterval: 30_000,
+    staleTime: 20_000,
   })
 
 export const connectionsQuery = () =>

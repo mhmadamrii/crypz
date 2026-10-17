@@ -7,11 +7,12 @@ import { useSyncExternalStore } from 'react'
 
 const URL = 'wss://ws.okx.com:8443/ws/v5/public'
 
-export type Arg = { channel: string; instId: string }
+/** A channel on one instrument, or on a whole instrument type (liquidations arrive for every swap at once). */
+export type Arg = { channel: string; instId?: string; instType?: string }
 type Push = { action?: 'snapshot' | 'update'; data: unknown[] }
 type Handler = (push: Push) => void
 
-const keyOf = (a: Arg) => `${a.channel}:${a.instId}`
+const keyOf = (a: Arg) => `${a.channel}:${a.instId ?? a.instType}`
 
 class OkxPublic {
   private ws: WebSocket | null = null
@@ -153,8 +154,14 @@ class Feed<T> {
 
 const feeds = new Map<string, Feed<unknown>>()
 
-function feed<T>(arg: Arg, initial: T, reduce: (prev: T, push: Push, f: { resync: () => void }) => T) {
-  const key = keyOf(arg)
+/** `name` lets a second store fold the same channel differently (the footprint reads the trades channel too). */
+function feed<T>(
+  arg: Arg,
+  initial: T,
+  reduce: (prev: T, push: Push, f: { resync: () => void }) => T,
+  name = keyOf(arg),
+) {
+  const key = name
   if (!feeds.has(key)) feeds.set(key, new Feed(arg, initial, reduce) as Feed<unknown>)
   return feeds.get(key) as Feed<T>
 }
@@ -194,6 +201,87 @@ export function useTrades(instId: string) {
       return [...fresh, ...prev].slice(0, TAPE)
     }),
     [],
+  )
+}
+
+// Footprint: every trade since the widget opened, as buy and sell size per raw price per minute. Grouping into
+// price rows and longer columns happens at render, so changing them needs no re-fold. The last hour is kept.
+
+export type Footprint = {
+  /** First trade seen (ms); 0 until then. */
+  since: number
+  last: number
+  minutes: Map<number, Map<string, [buy: number, sell: number]>>
+}
+
+const FOOTPRINT_EMPTY: Footprint = { since: 0, last: 0, minutes: new Map() }
+const FOOTPRINT_KEEP = 60 * 60_000
+
+function foldFootprint(prev: Footprint, p: Push): Footprint {
+  const trades = p.data as Trade[]
+  if (!trades.length) return prev
+  // the empty store is shared and reused after a reset, so the first push starts a fresh map instead
+  const minutes = prev.since ? prev.minutes : new Map<number, Map<string, [number, number]>>()
+  let first = Infinity
+  let latest = { ts: 0, px: prev.last }
+  for (const t of trades) {
+    const ts = Number(t.ts)
+    const minute = ts - (ts % 60_000)
+    first = Math.min(first, ts)
+    if (ts >= latest.ts) latest = { ts, px: Number(t.px) }
+    let levels = minutes.get(minute)
+    if (!levels) minutes.set(minute, (levels = new Map()))
+    const cell = levels.get(t.px) ?? [0, 0]
+    cell[t.side === 'buy' ? 0 : 1] += Number(t.sz)
+    levels.set(t.px, cell)
+  }
+  for (const m of minutes.keys()) if (m < latest.ts - FOOTPRINT_KEEP) minutes.delete(m)
+  return { since: prev.since || first, last: latest.px, minutes }
+}
+
+export function useFootprint(instId: string) {
+  return useFeed(
+    feed<Footprint>({ channel: 'trades', instId }, FOOTPRINT_EMPTY, foldFootprint, `footprint:${instId}`),
+    FOOTPRINT_EMPTY,
+  )
+}
+
+// Liquidations: OKX pushes forced closes for every swap on one channel. The store keeps the latest few hundred across
+// all instruments and each widget picks its own; `side` is the position that was closed.
+
+export type LiveLiquidation = { instId: string; time: number; side: 'long' | 'short'; price: number; size: number }
+type LiquidationPush = { instId: string; details: { side: string; bkPx: string; sz: string; ts: string }[] }
+
+const LIQ_KEEP = 400
+const LIQ_EMPTY: LiveLiquidation[] = []
+
+export function useLiquidationFeed() {
+  return useFeed(
+    feed<LiveLiquidation[]>({ channel: 'liquidation-orders', instType: 'SWAP' }, LIQ_EMPTY, (prev, p) => {
+      const fresh = (p.data as LiquidationPush[]).flatMap((o) =>
+        o.details.map((d): LiveLiquidation => ({
+          instId: o.instId,
+          time: Number(d.ts),
+          side: d.side === 'sell' ? 'long' : 'short',
+          price: Number(d.bkPx),
+          size: Number(d.sz),
+        })),
+      )
+      return fresh.length ? [...fresh.sort((a, b) => b.time - a.time), ...prev].slice(0, LIQ_KEEP) : prev
+    }),
+    LIQ_EMPTY,
+  )
+}
+
+/** The spot index a perpetual tracks, e.g. BTC-USDT for BTC-USDT-SWAP. */
+export function useIndexPrice(instId: string) {
+  return useFeed(
+    feed<string | null>(
+      { channel: 'index-tickers', instId: instId.replace(/-SWAP$/, '') },
+      null,
+      (_, p) => (p.data[0] as { idxPx: string } | undefined)?.idxPx ?? null,
+    ),
+    null,
   )
 }
 

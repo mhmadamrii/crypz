@@ -7,7 +7,20 @@ import type { WorkspaceStateT } from '@crypz/api'
 export type WorkspaceState = WorkspaceStateT
 export type WidgetConfig = WorkspaceState['widgets'][number]
 export type LinkGroup = 1 | 2 | 3
-export type WidgetKind = 'chart' | 'book' | 'trades' | 'stats'
+export type WidgetKind =
+  | 'chart'
+  | 'book'
+  | 'trades'
+  | 'stats'
+  | 'depth'
+  | 'cvd'
+  | 'profile'
+  | 'footprint'
+  | 'oi'
+  | 'longshort'
+  | 'taker'
+  | 'basis'
+  | 'liquidations'
 
 export const COLS = 24
 export const ROW = 28

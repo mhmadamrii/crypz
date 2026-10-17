@@ -21,5 +21,20 @@ export const binance: ExchangeAdapter = {
   fetchTicker: async () => {
     throw new Error('Binance adapter not implemented yet')
   },
+  fetchTakerFlow: async () => {
+    throw new Error('Binance adapter not implemented yet')
+  },
+  fetchOpenInterest: async () => {
+    throw new Error('Binance adapter not implemented yet')
+  },
+  fetchLongShort: async () => {
+    throw new Error('Binance adapter not implemented yet')
+  },
+  fetchLiquidations: async () => {
+    throw new Error('Binance adapter not implemented yet')
+  },
+  fetchPremium: async () => {
+    throw new Error('Binance adapter not implemented yet')
+  },
   tradeUrl: (symbol) => `https://www.binance.com/en/futures/${symbol.replace(/-/g, '')}`,
 }
