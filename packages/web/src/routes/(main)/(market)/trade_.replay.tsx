@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { BAR_MS, BARS, type Bar, type Candle, type ExchangeId } from '@crypz/exchanges'
 import { DrawingToolbar } from '@/components/drawings/toolbar'
+import { IndicatorMenu } from '@/components/indicators/menu'
 import { IntervalBar, useIntervalHotkeys } from '@/components/trade/interval-bar'
 import { zoneLabel } from '@/components/trade/chart-kit'
 import { ReplayChart } from '@/components/trade/replay-chart'
@@ -144,6 +145,7 @@ function Replay() {
           <Shuffle />
           <span className="hidden xl:inline">Random</span>
         </Button>
+        <IndicatorMenu barMs={BAR_MS[bar]} className="hidden md:inline-flex" />
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
           <span className="hidden sm:contents">
             <ThemeToggle />
@@ -423,6 +425,8 @@ function ReplaySession({
             ))}
           </ToggleGroup>
           <IntervalBar value={bar} onChange={onBar} className="md:hidden" />
+          {/* the top bar has no room left on a phone; the menu joins the interval controls here */}
+          <IndicatorMenu barMs={BAR_MS[bar]} className="md:hidden" />
           <div className="flex min-w-0 flex-col leading-tight">
             <span className="num text-sm">
               {current ? fmtWhen(current.time) : '–'}

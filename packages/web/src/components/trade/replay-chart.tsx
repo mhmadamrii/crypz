@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { fmtPrice, fmtSigned } from '@/lib/format'
 import { attachDrawingLayer, createMapper } from '@/components/drawings/layer'
+import { attachSessionsLayer } from '@/components/indicators/sessions-layer'
 import { createMosaicChart, palette, precisionFor, toBar, toChart, type Palette } from './chart-kit'
 
 type Props = {
@@ -30,6 +31,7 @@ type Handles = {
   palette: Palette
   lines: IPriceLine[]
   dashed: number
+  refreshIndicators: (p?: Palette) => void
 }
 
 export function ReplayChart({ candles, intraday, barMs, symbol, position, trades, className }: Props) {
@@ -51,23 +53,36 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
       const made = createMosaicChart(lw, box.current, (q) => {
         if (ref.current) ref.current.palette = q
         layer.setPalette(q)
+        sessions.refresh(q)
         setTheme((n) => n + 1)
+      })
+      const mapper = createMapper(
+        made.chart,
+        made.candles,
+        () => live.current.candles,
+        () => live.current.barMs,
+      )
+      // indicators sit under the candles; drawings above them
+      const sessions = attachSessionsLayer({
+        chart: made.chart,
+        series: made.candles,
+        x: mapper.x,
+        candles: () => live.current.candles,
+        barMs: () => live.current.barMs,
+        palette: palette(),
+        font: getComputedStyle(document.body).getPropertyValue('--font-mono') || 'monospace',
       })
       const layer = attachDrawingLayer({
         chart: made.chart,
         series: made.candles,
         el: box.current,
         symbol,
-        mapper: createMapper(
-          made.chart,
-          made.candles,
-          () => live.current.candles,
-          () => live.current.barMs,
-        ),
+        mapper,
         palette: palette(),
       })
       dispose = () => {
         layer.dispose()
+        sessions.dispose()
         made.dispose()
       }
       ref.current = {
@@ -78,6 +93,7 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
         palette: palette(),
         lines: [],
         dashed: lw.LineStyle.Dashed,
+        refreshIndicators: sessions.refresh,
       }
       made.chart.subscribeCrosshairMove((param) => {
         const k = param.time ? live.current.candles.find((c) => toChart(c.time) === param.time) : undefined
@@ -110,6 +126,7 @@ export function ReplayChart({ candles, intraday, barMs, symbol, position, trades
       if (prev.first !== first) c.setView(candles.length)
     }
     shown.current = { first, length: candles.length }
+    c.refreshIndicators()
   }, [ready, candles, intraday])
 
   // 3. Orders: entry/exit markers and the open position's entry, stop and target lines.

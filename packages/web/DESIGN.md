@@ -292,6 +292,12 @@ Price charts use TradingView lightweight-charts, lazy-loaded on the client. Cand
 
 A 40px tool rail left of the replay chart: cursor, trend, rectangle, fib, long, short, path, then hide and remove all. The armed tool is solid ink, like every pressed toggle. Drawings are ink only: 1.5px strokes, rectangles at 7% ink fill with a 75% ink border, fib edges (0, 1) muted with the retracement levels in full ink and extensions dotted. Long/short is the one exception, and only because it shows profit and loss: target zone up at 14%, stop zone down at 14%, labels outside each zone. Selected drawings show 7px square handles (background fill, ink border), never round ones.
 
+### Indicators (replay)
+
+An Indicators button in the replay toolbar (beside the interval bar on phones) opens a popover listing each indicator as a row with a square switch: filled = on, hollow = off, the language of the exchange status squares. Options sit indented under their indicator and dim while it is off. The button carries the number switched on. Choices persist in the browser.
+
+- **Sessions:** Asia (Tokyo 09:00–18:00), London (08:00–17:00) and New York (08:00–17:00), each in its own city's clock, so daylight saving moves them as it moves the market; the menu lists today's hours in the viewer's zone. Each session is a box behind the candles from its open to its close, spanning the high and low traded inside it, built only from revealed bars, so in replay it grows bar by bar and stops at the newest one. Ink only: fills at 3.5% (Asia), 5.5% (London) and 7.5% (New York), stacking where London and New York overlap, with a 28% ink hairline frame and a 10px uppercase mono label in Muted Text above the box (inside it near the top, under the OHLC readout). Labels that do not fit or would collide are dropped. Shown on 2H bars and shorter.
+
 ### Landing Replay Band (signature)
 
 The landing's second peak after the mosaic hero: a full-bleed SVG candle chart in the hollow-candle inks, cut by a 1.5px ink replay cursor. Past the cursor is a 45° hairline hatch at 35% background veil with a bordered "Next bar hidden →" tag; the only colour is a long position's target and stop zones (up/down at 13%) and the open R readout. The last 24 candles step in bar by bar via a scroll-driven `clip-path` (`steps(24)`), CSS only, complete by default when unsupported or under reduced motion. A narrower 40-candle crop replaces it below `md` so labels stay legible. Keycap legend underneath mirrors the replay shortcuts.

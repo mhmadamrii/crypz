@@ -22,6 +22,7 @@ Work we deferred. When asked what's left, remind from here; tick items off (dele
 - [ ] Session notes, saved sessions, step back
 - [ ] Persist drawings, magnet snapping, undo, fib levels
 - [ ] Reset equity, risk-% position sizing
+- [ ] More replay indicators (our own implementations, not LuxAlgo ports): market structure BOS/CHoCH, fair value gaps, order blocks, liquidity levels
 
 ### Product
 
