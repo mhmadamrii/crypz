@@ -2,6 +2,7 @@ import { Link, Outlet, createFileRoute } from '@tanstack/react-router'
 import { Wordmark } from '@/components/brand/pixel-logo'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
+import { useSignedIn } from '@/lib/auth-client'
 
 // Shared shell for everything reachable without logging in: landing, login, public tools.
 export const Route = createFileRoute('/(public)')({ component: PublicLayout })
@@ -9,6 +10,7 @@ export const Route = createFileRoute('/(public)')({ component: PublicLayout })
 const NAV = [{ to: '/tools/position-size', label: 'Position size' }] as const
 
 function PublicLayout() {
+  const signedIn = useSignedIn()
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-20 border-b border-border bg-background">
@@ -35,7 +37,13 @@ function PublicLayout() {
           <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
             <Button asChild size="sm" variant="outline">
-              <Link to="/login">Log in</Link>
+              {signedIn ? (
+                <Link to="/$exchange/overview" params={{ exchange: 'okx' }}>
+                  Open dashboard
+                </Link>
+              ) : (
+                <Link to="/login">Log in</Link>
+              )}
             </Button>
           </div>
         </div>

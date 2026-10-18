@@ -40,12 +40,11 @@ function AppLayout() {
   const { user } = Route.useRouteContext()
   console.log('exchanges', exchanges)
   const pathname = useRouterState({ select: (s) => s.location.pathname })
-  // Replay is a focus mode: the sidebar starts collapsed there and keeps its own open state.
-  const replay = pathname.startsWith('/trade/replay')
+  // Replay is a focus mode: no sidebar at all, its header carries the way out.
   const [open, setOpen] = useState(true)
-  const [replayOpen, setReplayOpen] = useState(false)
+  if (pathname.startsWith('/trade/replay')) return <Outlet />
   return (
-    <SidebarProvider open={replay ? replayOpen : open} onOpenChange={replay ? setReplayOpen : setOpen}>
+    <SidebarProvider open={open} onOpenChange={setOpen}>
       <AppSidebar exchanges={exchanges} user={user} />
       <SidebarInset className="min-w-0">
         {/* Market pages need no key; Account pages gate themselves in (account)/$exchange */}

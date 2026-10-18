@@ -126,6 +126,15 @@ export const premiumQuery = (exchange: ExchangeId, symbol: string) =>
     staleTime: 20_000,
   })
 
+/** Market news, merged from publisher feeds by the api (which refetches them every few minutes). */
+export const newsQuery = () =>
+  queryOptions({
+    queryKey: ['news'],
+    queryFn: () => unwrap(api.news.$get()),
+    refetchInterval: 5 * 60_000,
+    staleTime: 2 * 60_000,
+  })
+
 export const connectionsQuery = () =>
   queryOptions({
     queryKey: ['connections'],

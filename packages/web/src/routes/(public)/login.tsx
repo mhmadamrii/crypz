@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { LoginArt } from '@/components/landing/login-art'
-import { authClient } from '@/lib/auth-client'
+import { authClient, APP_HOME } from '@/lib/auth-client'
 import { searchText } from '@/lib/search'
 import { seo } from '@/lib/seo'
 
@@ -48,7 +48,7 @@ function Login() {
     setBusy(false)
     if (res.error) return setError(res.error.message ?? 'Could not sign you in.')
     queryClient.clear() // nothing cached for a previous user survives a sign-in
-    router.history.push(redirect ?? '/okx/overview')
+    router.history.push(redirect ?? APP_HOME)
   }
 
   return (

@@ -27,8 +27,6 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
-import { SidebarTrigger } from '@/components/ui/sidebar'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { MARKET_EXCHANGE } from '@/lib/market'
 import { useIndicators } from '@/lib/indicators/store'
@@ -114,8 +112,6 @@ function Replay() {
   return (
     <div className="flex h-svh flex-col overflow-hidden">
       <div className="flex h-12 shrink-0 items-center gap-1.5 border-b border-border px-2 sm:gap-3 sm:px-4">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="hidden data-[orientation=vertical]:h-5 sm:block" />
         <span className="hidden label sm:inline">Replay</span>
         <Select value={symbol} onValueChange={(v) => set({ symbol: v })}>
           <SelectTrigger size="sm" className="w-28 num sm:w-48" aria-label="Instrument">

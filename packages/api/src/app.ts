@@ -6,6 +6,7 @@ import { auth } from './auth'
 import { env } from './env'
 import { connections } from './routes/connections'
 import { market } from './routes/market'
+import { news } from './routes/news'
 import { portfolio } from './routes/portfolio'
 import { workspaces } from './routes/workspaces'
 
@@ -22,6 +23,7 @@ export const app = new Hono()
   .on(['GET', 'POST'], '/auth/*', (c) => auth.handler(c.req.raw))
   .get('/health', (c) => c.json({ ok: true }))
   .route('/market', market)
+  .route('/news', news)
   .route('/portfolio', portfolio)
   .route('/connections', connections)
   .route('/workspaces', workspaces)

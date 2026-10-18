@@ -1,15 +1,18 @@
 import { Link } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { marketStructure } from '@/lib/indicators/structure'
 import { cn } from '@/lib/utils'
 import { Candles, series } from './candles'
 
 // The landing page's Replay band: one large hand-plotted chart in the world's hollow-candle ink, cut by a replay
 // cursor. Left of it the market as you would see it mid-session, with a long position drawn on; right of it the
-// hatched "next bar hidden" void. Synthetic and deterministic, so server and client render the same picture.
+// hatched "next bar hidden" void. Synthetic and deterministic, so server and client render the same picture. Market
+// structure is the app's own indicator run over the revealed candles, drawn the way the chart's structure layer is.
 
-/** A sell-off, a base, then a rally: the arc a trader wants to have read correctly. */
-const arc = (t: number) => (t < 0.34 ? -0.5 : t < 0.56 ? 0.04 : 0.48)
+/** A sell-off, a base, then a rally: the arc a trader wants to have read correctly. Gentle, so each bar's own range
+ * reads against the trend the way real candles do. */
+const arc = (t: number) => (t < 0.34 ? -0.34 : t < 0.56 ? 0.03 : 0.36)
 
 type ArtProps = {
   /** viewBox width/height; the chart scales to its container width. */
@@ -23,15 +26,23 @@ type ArtProps = {
   font: number
   /** Text on the tag past the cursor. */
   hidden: string
+  /** Bars either side of a swing point. */
+  swing: number
+  /** Picks the price path; chosen so the sell-off breaks down and the rally turns structure up. */
+  seed: number
   className?: string
 }
 
-function CandleArt({ w, h, count, cursor, entry, font, hidden, className }: ArtProps) {
-  const all = series(count, 7, arc)
+function CandleArt({ w, h, count, cursor, entry, font, hidden, swing, seed, className }: ArtProps) {
+  const all = series(count, seed, arc, 84_400, 1.7)
   const shown = all.slice(0, cursor + 1)
+  const structure = marketStructure(
+    shown.map((k, i) => ({ time: i, open: k.o, high: k.h, low: k.l, close: k.c })),
+    swing,
+  )
   const axis = font * 6.2
   const step = (w - axis) / count
-  const body = Math.max(3, step * 0.58)
+  const body = Math.max(3, step * 0.62)
   const top = font * 2.4
   const bottom = h - font * 2.6
 
@@ -48,6 +59,8 @@ function CandleArt({ w, h, count, cursor, entry, font, hidden, className }: ArtP
   const cx = x(cursor) + step / 2
   const last = shown[cursor].c
   const r = risk > 0 ? (last - e) / risk : 0
+  // the open result sits clear of the latest wicks
+  const rAt = Math.min(y(last) - font * 1.4, y(Math.max(...shown.slice(-4).map((k) => k.h))) - font * 0.7)
 
   const ticks = Array.from({ length: 6 }, (_, i) => lo + ((hi - lo) * (i + 0.5)) / 6)
   const fmt = (v: number) => Math.round(v).toLocaleString('en-US')
@@ -115,6 +128,61 @@ function CandleArt({ w, h, count, cursor, entry, font, hidden, className }: ArtP
       {/* candles revealed so far; the last stretch steps in like the replay does */}
       <g className="replay-reveal" style={{ ['--reveal-from' as string]: `${(x(cursor - 24) / w) * 100}%` }}>
         <Candles data={shown} x={x} y={y} body={body} />
+        {/* the levels the next break would come from, up to the cursor */}
+        {[structure.lastHigh, structure.lastLow].map(
+          (sw) =>
+            sw && (
+              <line
+                key={sw.kind}
+                x1={x(sw.index)}
+                x2={cx}
+                y1={y(sw.price)}
+                y2={y(sw.price)}
+                stroke="currentColor"
+                strokeOpacity="0.45"
+                strokeDasharray="1.5 4"
+              />
+            ),
+        )}
+        {/* each break runs from the swing it took to the candle that closed through it: dashed BOS, solid CHoCH */}
+        {structure.breaks.map((b) => {
+          const hue = b.dir === 'up' ? 'var(--up)' : 'var(--down)'
+          const at = y(b.from.price)
+          return (
+            <g key={b.index} fill={hue}>
+              <line
+                x1={x(b.from.index)}
+                x2={x(b.index)}
+                y1={at}
+                y2={at}
+                stroke={hue}
+                strokeWidth="1.25"
+                strokeDasharray={b.type === 'BOS' ? '6 4' : undefined}
+              />
+              <text
+                x={(x(b.from.index) + x(b.index)) / 2}
+                y={b.dir === 'up' ? at - font * 0.45 : at + font * 1.15}
+                textAnchor="middle"
+              >
+                {b.type}
+              </text>
+            </g>
+          )
+        })}
+        {structure.swings.map(
+          (sw) =>
+            sw.label && (
+              <text
+                key={`${sw.kind}-${sw.index}`}
+                x={x(sw.index)}
+                y={sw.kind === 'high' ? y(sw.price) - font * 0.5 : y(sw.price) + font * 1.2}
+                textAnchor="middle"
+                fill="var(--muted-foreground)"
+              >
+                {sw.label}
+              </text>
+            ),
+        )}
         {/* entry arrow under the entry candle */}
         <path
           d={`M ${x(entry)} ${y(shown[entry].l) + font * 0.9} l ${-font * 0.55} ${font * 0.8} h ${font * 1.1} z`}
@@ -160,7 +228,7 @@ function CandleArt({ w, h, count, cursor, entry, font, hidden, className }: ArtP
       <text x={w - axis + font * 0.8} y={y(last)} dy="0.35em" fill="var(--background)">
         {fmt(last)}
       </text>
-      <text x={cx - font * 0.8} y={y(last) - font * 1.4} textAnchor="end" fill={r >= 0 ? 'var(--up)' : 'var(--down)'}>
+      <text x={cx - font * 0.8} y={rAt} textAnchor="end" fill={r >= 0 ? 'var(--up)' : 'var(--down)'}>
         {r >= 0 ? '+' : '−'}
         {Math.abs(r).toFixed(1)}R open
       </text>
@@ -200,20 +268,24 @@ export function ReplayBand() {
         <CandleArt
           w={1600}
           h={600}
-          count={96}
-          cursor={70}
-          entry={52}
+          count={64}
+          cursor={46}
+          entry={34}
           font={15}
+          swing={4}
+          seed={37}
           hidden="Next bar hidden →"
           className="hidden md:block"
         />
         <CandleArt
           w={760}
           h={620}
-          count={40}
-          cursor={29}
-          entry={20}
+          count={32}
+          cursor={23}
+          entry={16}
           font={20}
+          swing={3}
+          seed={150}
           hidden="Hidden →"
           className="md:hidden"
         />

@@ -48,7 +48,7 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar'
 
-type MarketItem = { label: string; icon: LucideIcon; to: '/workspace' | '/trade' | '/trade/replay' }
+type MarketItem = { label: string; icon: LucideIcon; to: '/workspace' | '/trade' | '/trade/replay' | '/news' }
 type AccountItem = { label: string; icon: LucideIcon; to: '/$exchange/overview' | '/$exchange/positions' }
 type SoonItem = { label: string; icon: LucideIcon; soon: true }
 
@@ -57,7 +57,7 @@ const MARKET: (MarketItem | SoonItem)[] = [
   { label: 'Workspace', icon: LayoutDashboard, to: '/workspace' },
   { label: 'Trade', icon: CandlestickChart, to: '/trade' },
   { label: 'Replay', icon: Rewind, to: '/trade/replay' },
-  { label: 'News', icon: Newspaper, soon: true },
+  { label: 'News', icon: Newspaper, to: '/news' },
 ]
 const ACCOUNT: (AccountItem | SoonItem)[] = [
   { label: 'Overview', icon: LayoutGrid, to: '/$exchange/overview' },

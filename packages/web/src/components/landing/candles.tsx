@@ -10,8 +10,9 @@ function rng(seed: number) {
   }
 }
 
-/** `drift(t)` steers the path over the series (t from 0 to 1), in units of a bar's volatility. */
-export function series(n: number, seed: number, drift: (t: number) => number, start = 84_400): K[] {
+/** `drift(t)` steers the path over the series (t from 0 to 1), in units of a bar's volatility; `wick` is how far a
+ * wick can run past the body, in the same units. */
+export function series(n: number, seed: number, drift: (t: number) => number, start = 84_400, wick = 0.9): K[] {
   const r = rng(seed)
   const out: K[] = []
   let p = start
@@ -19,7 +20,7 @@ export function series(n: number, seed: number, drift: (t: number) => number, st
     const vol = 210 + r() * 160
     const o = p
     const c = o + (r() - 0.5 + drift(i / n) * 0.42) * vol * 2
-    out.push({ o, c, h: Math.max(o, c) + r() * vol * 0.9, l: Math.min(o, c) - r() * vol * 0.9 })
+    out.push({ o, c, h: Math.max(o, c) + r() * vol * wick, l: Math.min(o, c) - r() * vol * wick })
     p = c
   }
   return out

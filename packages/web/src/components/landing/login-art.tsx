@@ -6,7 +6,8 @@ import { Candles, series } from './candles'
 // Inks follow DESIGN.md's drawing rules: fib edges muted, the retracement zone in full ink, extensions dotted.
 
 const LEVELS = [1, 0.618, 0.5, 0, -0.2]
-const rallyThenPullback = (t: number) => (t < 0.62 ? 0.6 : -0.62)
+// gentle drift and few bars, so each candle's own range reads against the move the way real candles do
+const rallyThenPullback = (t: number) => (t < 0.62 ? 0.42 : -0.45)
 
 export function LoginArt({ className }: { className?: string }) {
   // close to the panel's own shape, so the drawing fills it instead of floating in margins
@@ -14,10 +15,10 @@ export function LoginArt({ className }: { className?: string }) {
   const h = 720
   const font = 15
   const axis = font * 6.2
-  const count = 46
-  const data = series(count, 11, rallyThenPullback, 79_800)
+  const count = 34
+  const data = series(count, 11, rallyThenPullback, 79_800, 1.7)
   const step = (w - axis) / count
-  const body = step * 0.58
+  const body = step * 0.62
   const x = (i: number) => i * step + step / 2
 
   // swing low in the first third, swing high across the whole run

@@ -5,8 +5,10 @@ import { computeStats, deriveInsights } from '@crypz/exchanges'
 import { CellStrip } from '@/components/dashboard/cell-strip'
 import { EdgeBars } from '@/components/dashboard/edge-bars'
 import { Mosaic, MosaicLegend } from '@/components/dashboard/mosaic'
+import { Pricing } from '@/components/landing/pricing'
 import { ReplayBand } from '@/components/landing/replay-band'
 import { Button } from '@/components/ui/button'
+import { useSignedIn } from '@/lib/auth-client'
 import { samplePositions } from '@/lib/sample'
 import { SITE_NAME, SITE_URL, seo } from '@/lib/seo'
 import { cn } from '@/lib/utils'
@@ -64,12 +66,20 @@ function StateSquare({ state }: { state: (typeof ROADMAP)[number]['state'] }) {
 }
 
 function Ctas({ className }: { className?: string }) {
+  // a signed-in visitor already has an account; send them to it instead of the sign-up form
+  const signedIn = useSignedIn()
   return (
     <div className={cn('flex flex-wrap gap-3', className)}>
       <Button asChild size="lg">
-        <Link to="/login" search={{ mode: 'signup' }}>
-          Create account <ArrowRight />
-        </Link>
+        {signedIn ? (
+          <Link to="/$exchange/overview" params={{ exchange: 'okx' }}>
+            Open dashboard <ArrowRight />
+          </Link>
+        ) : (
+          <Link to="/login" search={{ mode: 'signup' }}>
+            Create account <ArrowRight />
+          </Link>
+        )}
       </Button>
       <Button asChild size="lg" variant="outline">
         <Link to="/trade/replay">
@@ -192,6 +202,8 @@ function Landing() {
             <Ctas />
           </div>
         </section>
+
+        <Pricing />
       </main>
     </div>
   )
