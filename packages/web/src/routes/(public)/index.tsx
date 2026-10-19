@@ -194,6 +194,8 @@ function Landing() {
           </ul>
         </section>
 
+        <Pricing />
+
         <section className="border-t border-border">
           <div className="flex flex-col items-start justify-between gap-8 px-4 py-20 sm:px-8 md:flex-row md:items-end">
             <h2 className="text-5xl leading-[0.95] font-semibold tracking-[-0.04em] sm:text-7xl">
@@ -202,8 +204,6 @@ function Landing() {
             <Ctas />
           </div>
         </section>
-
-        <Pricing />
       </main>
     </div>
   )
