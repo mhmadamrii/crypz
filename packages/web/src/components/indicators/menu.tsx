@@ -2,7 +2,7 @@ import { ChartSpline } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { SESSIONS, localHours, type SessionId } from '@/lib/indicators/sessions'
-import { BIAS_FRAMES, FVG_SIZES, SWING_LENGTHS, activeCount, indicators, useIndicators } from '@/lib/indicators/store'
+import { BIAS_FRAMES, FVG_SIZES, OB_STRENGTHS, SWING_LENGTHS, activeCount, indicators, useIndicators } from '@/lib/indicators/store'
 import { BAR_MS } from '@crypz/exchanges'
 import { Segmented } from '@/components/workspace/kit'
 import { cn } from '@/lib/utils'
@@ -135,6 +135,60 @@ export function IndicatorMenu({ barMs, className }: { barMs: number; className?:
             >
               <span className="text-sm">Show filled gaps</span>
             </Switch>
+          </div>
+        </div>
+        <div className="mt-1 border-t border-hairline pt-1">
+          <Switch
+            on={s.orderBlocks.on}
+            onToggle={() => indicators.setOrderBlocks({ on: !s.orderBlocks.on })}
+            label="Order blocks"
+          >
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-sm font-medium">Order blocks</span>
+              <span className="text-xs text-pretty text-muted-foreground">
+                The last candle before an impulsive move, as a supply or demand zone. Strongest on its first tap.
+              </span>
+            </span>
+          </Switch>
+          <div className={cn('flex flex-col gap-1 pb-2 pl-5', !s.orderBlocks.on && 'opacity-50')}>
+            <div className="flex items-center justify-between gap-3 px-3 py-1">
+              <span className="text-sm" title="How far the move away from the zone must travel, in ATR">
+                Impulse
+              </span>
+              <Segmented
+                label="Minimum impulse, in ATR"
+                options={OB_STRENGTHS}
+                value={s.orderBlocks.strength}
+                onChange={(strength) => indicators.setOrderBlocks({ strength, on: true })}
+                format={(v) => `${v} ATR`}
+                size="strip"
+              />
+            </div>
+            <Switch
+              on={s.orderBlocks.imbalance}
+              onToggle={() => indicators.setOrderBlocks({ imbalance: !s.orderBlocks.imbalance, on: true })}
+              label="Require imbalance"
+            >
+              <span className="text-sm">Require an imbalance (FVG) in the move</span>
+            </Switch>
+            <Switch
+              on={s.orderBlocks.withTrend}
+              onToggle={() => indicators.setOrderBlocks({ withTrend: !s.orderBlocks.withTrend, on: true })}
+              label="With the trend only"
+            >
+              <span className="text-sm">With the trend only</span>
+            </Switch>
+            <Switch
+              on={s.orderBlocks.showSpent}
+              onToggle={() => indicators.setOrderBlocks({ showSpent: !s.orderBlocks.showSpent, on: true })}
+              label="Show spent zones"
+            >
+              <span className="text-sm">Show spent zones</span>
+            </Switch>
+            <p className="px-3 text-xs text-pretty text-muted-foreground">
+              A zone is spent on its second tap or a close through it. The trend follows Market structure’s swing
+              length.
+            </p>
           </div>
         </div>
         <div className="mt-1 border-t border-hairline pt-1">

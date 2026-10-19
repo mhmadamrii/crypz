@@ -11,6 +11,7 @@ import { attachDrawingLayer, createMapper } from '@/components/drawings/layer'
 import { attachBiasLayer } from '@/components/indicators/bias-layer'
 import { BiasReadout } from '@/components/indicators/bias-readout'
 import { attachFvgLayer } from '@/components/indicators/fvg-layer'
+import { attachOrderBlocksLayer } from '@/components/indicators/order-blocks-layer'
 import { attachSessionsLayer } from '@/components/indicators/sessions-layer'
 import { attachStructureLayer } from '@/components/indicators/structure-layer'
 import { createMosaicChart, palette, precisionFor, toBar, toChart, type Palette } from './chart-kit'
@@ -118,6 +119,15 @@ export function ReplayChart({
         candles: () => live.current.candles,
         palette: palette(),
       })
+      // order blocks draw over the gaps: a zone is the base the gap was left from
+      const orderBlocks = attachOrderBlocksLayer({
+        chart: made.chart,
+        series: made.candles,
+        x: mapper.x,
+        candles: () => live.current.candles,
+        palette: palette(),
+        font: getComputedStyle(document.body).getPropertyValue('--font-mono') || 'monospace',
+      })
       // structure labels and break lines sit over the candles, under the drawings
       const structure = attachStructureLayer({
         chart: made.chart,
@@ -148,6 +158,7 @@ export function ReplayChart({
         layer.dispose()
         sessions.dispose()
         fvg.dispose()
+        orderBlocks.dispose()
         structure.dispose()
         biasLayer.dispose()
         made.dispose()
@@ -163,6 +174,7 @@ export function ReplayChart({
         refreshIndicators: (q) => {
           sessions.refresh(q)
           fvg.refresh(q)
+          orderBlocks.refresh(q)
           structure.refresh(q)
           biasLayer.refresh(q)
         },

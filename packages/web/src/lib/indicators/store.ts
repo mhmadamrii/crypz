@@ -8,6 +8,10 @@ import type { SessionId } from './sessions'
 export const FVG_SIZES = [0, 0.25, 0.5, 1] as const
 export type FvgSize = (typeof FVG_SIZES)[number]
 
+/** How far an impulse must travel to make an order block, in ATRs. */
+export const OB_STRENGTHS = [1, 1.5, 2, 3] as const
+export type ObStrength = (typeof OB_STRENGTHS)[number]
+
 /** Bars each side of a swing point. Longer swings are fewer and confirm later. */
 export const SWING_LENGTHS = [3, 5, 10] as const
 export type SwingLength = (typeof SWING_LENGTHS)[number]
@@ -21,6 +25,7 @@ export type IndicatorState = {
   fvg: { on: boolean; minAtr: FvgSize; showFilled: boolean }
   structure: { on: boolean; length: SwingLength; labels: boolean }
   bias: { on: boolean; higher: BiasFrame }
+  orderBlocks: { on: boolean; strength: ObStrength; imbalance: boolean; withTrend: boolean; showSpent: boolean }
 }
 
 const KEY = 'crypz.indicators.v1'
@@ -29,6 +34,7 @@ const DEFAULTS: IndicatorState = {
   fvg: { on: false, minAtr: 0.25, showFilled: false },
   structure: { on: false, length: 5, labels: true },
   bias: { on: false, higher: '4H' },
+  orderBlocks: { on: false, strength: 1.5, imbalance: true, withTrend: false, showSpent: false },
 }
 
 function load(): IndicatorState {
@@ -42,7 +48,9 @@ function load(): IndicatorState {
     if (!SWING_LENGTHS.includes(structure.length)) structure.length = DEFAULTS.structure.length
     const bias = { ...DEFAULTS.bias, ...saved.bias }
     if (!BIAS_FRAMES.includes(bias.higher)) bias.higher = DEFAULTS.bias.higher
-    return { sessions: { ...DEFAULTS.sessions, ...saved.sessions }, fvg, structure, bias }
+    const orderBlocks = { ...DEFAULTS.orderBlocks, ...saved.orderBlocks }
+    if (!OB_STRENGTHS.includes(orderBlocks.strength)) orderBlocks.strength = DEFAULTS.orderBlocks.strength
+    return { sessions: { ...DEFAULTS.sessions, ...saved.sessions }, fvg, structure, bias, orderBlocks }
   } catch {
     return DEFAULTS
   }
@@ -74,10 +82,12 @@ export const indicators = {
   setStructure: (patch: Partial<IndicatorState['structure']>) =>
     set({ ...get(), structure: { ...get().structure, ...patch } }),
   setBias: (patch: Partial<IndicatorState['bias']>) => set({ ...get(), bias: { ...get().bias, ...patch } }),
+  setOrderBlocks: (patch: Partial<IndicatorState['orderBlocks']>) =>
+    set({ ...get(), orderBlocks: { ...get().orderBlocks, ...patch } }),
 }
 
 /** How many indicators are on, for the toolbar button. */
 export const activeCount = (s: IndicatorState) =>
-  Number(s.sessions.on) + Number(s.fvg.on) + Number(s.structure.on) + Number(s.bias.on)
+  Number(s.sessions.on) + Number(s.fvg.on) + Number(s.structure.on) + Number(s.bias.on) + Number(s.orderBlocks.on)
 
 export const useIndicators = () => useSyncExternalStore(indicators.subscribe, indicators.get, () => DEFAULTS)

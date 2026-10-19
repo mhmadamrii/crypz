@@ -31,11 +31,10 @@ Our own implementations, not LuxAlgo ports (theirs are Pine Script, closed or CC
 - Direction may use `--up` / `--down` at low alpha (bullish/bearish zones), as in order flow; everything else is ink.
 - Each one gets a size/sensitivity option and a "show only unmitigated" style toggle so the chart doesn't flood.
 
-Done: fair value gaps (`lib/indicators/fvg.ts`, ATR helper there too) and swing points + market structure (`lib/indicators/structure.ts`: swings, HH/LH/HL/LL, BOS/CHoCH on a close, the unbroken `lastHigh`/`lastLow`). Bias with invalidation is done too (`lib/indicators/bias.ts`; factors from candles only, no CVD since replay has no taker history; no win-rate until measured from replay history). Layers share `components/indicators/pane-layer.ts`. Build the rest in this order:
+Done: fair value gaps (`lib/indicators/fvg.ts`, ATR helper there too) and swing points + market structure (`lib/indicators/structure.ts`: swings, HH/LH/HL/LL, BOS/CHoCH on a close, the unbroken `lastHigh`/`lastLow`). Bias with invalidation is done too (`lib/indicators/bias.ts`; factors from candles only, no CVD since replay has no taker history; no win-rate until measured from replay history). Order blocks are done too (`lib/indicators/order-blocks.ts`: last candle before an impulse of N ATR within 4 bars, optional FVG and with-trend filters, first tap counts, spent on second tap or a close through). Layers share `components/indicators/pane-layer.ts`. Build the rest in this order:
 
 1. [ ] **Liquidity pools** (plausible). Clusters of equal highs / equal lows: swing points within a tolerance (e.g. 0.1 × ATR) of each other, drawn as a level extending right until price takes it. Pool strength = number of touches.
 2. [ ] **Liquidity sweeps** (plausible, small once 1 exists). A candle whose wick runs through a pool or prior swing level but closes back on the other side: mark the sweep on that candle; the pool counts as taken.
-3. [ ] **Order block detector** (plausible, most subjective, do last). Last opposite-colour candle before a displacement move that breaks structure (uses market structure's BOS): bullish OB = last down candle before an up-move that makes a BOS; zone = that candle's range (or body). Mitigated when price returns into it. Options: body vs full range, require an FVG in the displacement (`lib/indicators/fvg.ts`). Expect tuning, since definitions differ between traders.
 
 ### Product
 
