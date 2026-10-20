@@ -5,6 +5,7 @@ import { secureHeaders } from 'hono/secure-headers'
 import { auth } from './auth'
 import { env } from './env'
 import { connections } from './routes/connections'
+import { insights } from './routes/insights'
 import { market } from './routes/market'
 import { news } from './routes/news'
 import { portfolio } from './routes/portfolio'
@@ -27,6 +28,7 @@ export const app = new Hono()
   .route('/portfolio', portfolio)
   .route('/connections', connections)
   .route('/workspaces', workspaces)
+  .route('/insights', insights)
   .onError((err, c) => {
     if (err instanceof HTTPException) return err.getResponse()
     // log the failure, never the request body: it may carry credentials
@@ -35,6 +37,7 @@ export const app = new Hono()
   })
 
 export type { WorkspaceStateT } from './routes/workspaces'
+export type { InsightsResult } from './insights'
 
 /** Route types for the web app's typed `hc` client. */
 export type AppType = typeof app

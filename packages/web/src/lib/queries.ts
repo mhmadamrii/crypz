@@ -135,6 +135,34 @@ export const newsQuery = () =>
     staleTime: 2 * 60_000,
   })
 
+/** Prediction-market odds on crypto prices (Polymarket), refetched by the api every few minutes. */
+export const oddsQuery = () =>
+  queryOptions({
+    queryKey: ['news', 'odds'],
+    queryFn: () => unwrap(api.news.odds.$get()),
+    refetchInterval: 5 * 60_000,
+    staleTime: 2 * 60_000,
+  })
+
+export const insightsStatusQuery = () =>
+  queryOptions({
+    queryKey: ['insights', 'status'],
+    queryFn: () => unwrap(api.insights.status.$get()),
+    staleTime: 10 * 60_000,
+  })
+
+export type InsightsScope = { exchange: ExchangeId; days: number | null; asset: string | null }
+
+/** Gemini's read of one dashboard scope. Never runs on its own: the reader asks for it, and each scope keeps its answer. */
+export const insightsQuery = (scope: InsightsScope) =>
+  queryOptions({
+    queryKey: ['insights', scope],
+    queryFn: () => unwrap(api.insights.$post({ json: scope })),
+    enabled: false,
+    staleTime: Infinity,
+    retry: false,
+  })
+
 export const connectionsQuery = () =>
   queryOptions({
     queryKey: ['connections'],

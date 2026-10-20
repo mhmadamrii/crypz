@@ -162,7 +162,7 @@ function Dashboard() {
               <p className="grid h-80 place-items-center text-sm text-muted-foreground">No trades in this range.</p>
             )}
           </div>
-          <Insights insights={insights} scope={scope} />
+          <Insights insights={insights} scope={scope} request={{ exchange, days: RANGES[range], asset }} />
         </section>
 
         <Section

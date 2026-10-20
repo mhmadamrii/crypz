@@ -39,7 +39,8 @@ Done: fair value gaps (`lib/indicators/fvg.ts`, ATR helper there too) and swing 
 ### Product
 
 - [ ] Binance adapter in `packages/exchanges`
-- [ ] AI insights, Analytics, Risk pages
+- [ ] Analytics, Risk pages
+- [ ] AI insights: the ask-a-question box (one-shot Gemini read is done, `api/src/insights.ts`); lesson loop once positions sync into the DB (journal note per trade, settled with realized PnL, recent lessons fed into the next read)
 - [ ] News: exchange announcements tab (OKX `/api/v5/support/announcements`, public, no key: listings, delistings, suspensions), flagging ones about coins you trade
 - [ ] Sync positions into the DB
 - [ ] Persist user prefs (interval, layout, etc.)

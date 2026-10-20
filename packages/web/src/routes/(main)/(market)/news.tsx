@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { ArrowUpRight, X } from 'lucide-react'
 import { PageHeader } from '@/components/app/page-header'
+import { Odds } from '@/components/news/odds'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { newsQuery, usePortfolio } from '@/lib/queries'
@@ -13,6 +14,7 @@ import { cn } from '@/lib/utils'
 // ruled row per story, the time in mono, the source as a label, the headline linking out to the publisher. Coins
 // the story names are chips; a coin you have traded is an inverted chip and marks its row with a filled square, so
 // what touches your book stands out without reordering the tape. Filters live in the URL, like the asset focus.
+// Prediction-market odds on crypto prices head the column: the crowd's price view beside the stories moving it.
 
 type Search = { source?: string; coin?: string; mine?: boolean }
 
@@ -110,6 +112,7 @@ function News() {
         {/* phones: filters above the list, as one scrolling row of chips */}
         <div className="min-w-0 lg:hidden">{filters}</div>
         <section aria-label="Headlines" className="min-w-0">
+          <Odds mine={mine} className="mb-10" />
           {q.isPending ? (
             <ListSkeleton />
           ) : q.isError ? (

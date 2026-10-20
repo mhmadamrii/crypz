@@ -75,7 +75,7 @@ function clip(s: string, max = 240) {
   return `${cut.slice(0, cut.lastIndexOf(' ')).replace(/[,;:.\s]+$/, '')}…`
 }
 
-function coinsIn(text: string) {
+export function coinsIn(text: string) {
   const lower = text.toLowerCase()
   return COINS.filter(
     (c) => new RegExp(`\\b${c.ticker}\\b`).test(text) || c.names.some((n) => new RegExp(`\\b${n}\\b`).test(lower)),

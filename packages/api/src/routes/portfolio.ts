@@ -9,13 +9,17 @@ const cache = new Map<string, { at: number; value: Promise<Portfolio> }>()
 
 export const invalidatePortfolio = (userId: string) => cache.delete(userId)
 
-export const portfolio = new Hono().use(requireUser).get('/', async (c) => {
-  const userId = c.var.user.id
+/** The user's portfolio through the short cache; `fresh` skips it. Shared with the insights route. */
+export function portfolioFor(userId: string, fresh = false) {
   const hit = cache.get(userId)
-  if (!hit || Date.now() - hit.at > TTL || c.req.query('fresh') === '1') {
+  if (!hit || Date.now() - hit.at > TTL || fresh) {
     const value = credentialsFor(userId).then(loadPortfolio)
     cache.set(userId, { at: Date.now(), value })
     value.catch(() => cache.delete(userId))
   }
-  return c.json(await cache.get(userId)!.value)
-})
+  return cache.get(userId)!.value
+}
+
+export const portfolio = new Hono()
+  .use(requireUser)
+  .get('/', async (c) => c.json(await portfolioFor(c.var.user.id, c.req.query('fresh') === '1')))
