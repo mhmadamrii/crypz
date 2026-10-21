@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import type { Minute } from './footprint'
 
 // One WebSocket to OKX's public feed for the whole app. Public market data needs no key, so the browser talks to
 // OKX directly and the api stays out of the hot path. Every channel is reference-counted: the first widget that
@@ -204,39 +205,50 @@ export function useTrades(instId: string) {
   )
 }
 
-// Footprint: every trade since the widget opened, as buy and sell size per raw price per minute. Grouping into
-// price rows and longer columns happens at render, so changing them needs no re-fold. The last hour is kept.
+// Footprint: every trade since the widget opened, as buy and sell size per raw price per minute, with each minute's
+// open, high, low and close. Grouping into price rows and longer columns happens at render (`lib/footprint.ts`), so
+// changing them needs no re-fold. The last hour is kept.
 
 export type Footprint = {
   /** First trade seen (ms); 0 until then. */
   since: number
+  /** Price and time of the newest trade. */
   last: number
-  minutes: Map<number, Map<string, [buy: number, sell: number]>>
+  lastTs: number
+  minutes: Map<number, Minute>
 }
 
-const FOOTPRINT_EMPTY: Footprint = { since: 0, last: 0, minutes: new Map() }
+const FOOTPRINT_EMPTY: Footprint = { since: 0, last: 0, lastTs: 0, minutes: new Map() }
 const FOOTPRINT_KEEP = 60 * 60_000
 
 function foldFootprint(prev: Footprint, p: Push): Footprint {
   const trades = p.data as Trade[]
   if (!trades.length) return prev
   // the empty store is shared and reused after a reset, so the first push starts a fresh map instead
-  const minutes = prev.since ? prev.minutes : new Map<number, Map<string, [number, number]>>()
+  const minutes = prev.since ? prev.minutes : new Map<number, Minute>()
   let first = Infinity
-  let latest = { ts: 0, px: prev.last }
+  let latest = { ts: prev.lastTs, px: prev.last }
   for (const t of trades) {
     const ts = Number(t.ts)
+    const px = Number(t.px)
     const minute = ts - (ts % 60_000)
     first = Math.min(first, ts)
-    if (ts >= latest.ts) latest = { ts, px: Number(t.px) }
-    let levels = minutes.get(minute)
-    if (!levels) minutes.set(minute, (levels = new Map()))
-    const cell = levels.get(t.px) ?? [0, 0]
+    if (ts >= latest.ts) latest = { ts, px }
+    let m = minutes.get(minute)
+    if (!m) {
+      m = { levels: new Map(), open: px, high: px, low: px, close: px, first: ts, last: ts }
+      minutes.set(minute, m)
+    }
+    if (ts < m.first) [m.open, m.first] = [px, ts]
+    if (ts >= m.last) [m.close, m.last] = [px, ts]
+    m.high = Math.max(m.high, px)
+    m.low = Math.min(m.low, px)
+    const cell = m.levels.get(t.px) ?? [0, 0]
     cell[t.side === 'buy' ? 0 : 1] += Number(t.sz)
-    levels.set(t.px, cell)
+    m.levels.set(t.px, cell)
   }
   for (const m of minutes.keys()) if (m < latest.ts - FOOTPRINT_KEEP) minutes.delete(m)
-  return { since: prev.since || first, last: latest.px, minutes }
+  return { since: prev.since || first, last: latest.px, lastTs: latest.ts, minutes }
 }
 
 export function useFootprint(instId: string) {
