@@ -4,7 +4,7 @@ import { STAT_BARS, type Candle } from '@crypz/exchanges'
 import { fmtNum, fmtPrice, fmtSigned, tone } from '@/lib/format'
 import { MARKET_EXCHANGE } from '@/lib/market'
 import { latestCandlesQuery, takerFlowQuery } from '@/lib/queries'
-import { absorptionsOf, columnsOf, imbalancesOf, rowOf, type Absorption } from '@/lib/footprint'
+import { absorptionsOf, columnsOf, imbalancesOf, rowOf, type Absorption, type ImbalanceMode } from '@/lib/footprint'
 import { useBook, useFootprint, useTicker } from '@/lib/okx-ws'
 import { cn } from '@/lib/utils'
 import { IndicatorChart, Readout, within, type Bar } from './indicator-chart'
@@ -394,6 +394,9 @@ export function ProfileBody({ symbol, settings, set }: WidgetProps) {
 const FOOTPRINT_TF = ['1m', '5m'] as const
 const ROW_STEPS = [0, 1, 2] as const
 const ABSORB = [0, 2, 3, 5] as const // × the column's median row; 0 is off
+// sell and buy as bars at the depth chart's 12% (which keeps the numbers over them readable), or one grey shade
+const CELLS = ['bars', 'volume'] as const
+const IMBALANCE = ['diagonal', 'row', 'off'] as const satisfies readonly ImbalanceMode[]
 const REACH = 40 // price rows each side of the last trade
 
 export function FootprintBody({ symbol, settings, set }: WidgetProps) {
@@ -401,6 +404,8 @@ export function FootprintBody({ symbol, settings, set }: WidgetProps) {
   const tf = pick(settings.tf, FOOTPRINT_TF, '1m')
   const stepIndex = pick(settings.step, ROW_STEPS, 1)
   const absorb = pick(settings.absorb, ABSORB, 3)
+  const bars = pick(settings.cells, CELLS, 'bars') === 'bars'
+  const imbalance = pick(settings.imbalance, IMBALANCE, 'diagonal')
   // a notch coarser than the book's groupings: a footprint row has to hold two numbers
   const steps = fp.last ? stepsFor(fp.last).map((s) => s * 10) : [1, 1, 1]
   const step = steps[stepIndex]
@@ -410,31 +415,49 @@ export function FootprintBody({ symbol, settings, set }: WidgetProps) {
     const all = columnsOf(fp.minutes, tf === '1m' ? 60_000 : 300_000, step, fp.lastTs)
     const absorbed = absorb ? absorptionsOf(all, step, absorb) : new Map<number, Absorption>()
     let peak = 0
+    let sidePeak = 0
     const list = all
       .slice(-24)
       .reverse()
       .map((col) => {
-        for (const [b, s] of col.cells.values()) peak = Math.max(peak, b + s)
-        return { ...col, imbalances: imbalancesOf(col), absorbed: absorbed.get(col.start) }
+        for (const [b, s] of col.cells.values()) {
+          peak = Math.max(peak, b + s)
+          sidePeak = Math.max(sidePeak, b, s)
+        }
+        return { ...col, imbalances: imbalancesOf(col, imbalance), absorbed: absorbed.get(col.start) }
       })
     const lastKey = rowOf(fp.last, step)
     const keys = Array.from({ length: REACH * 2 + 1 }, (_, i) => lastKey + REACH - i)
-    return { list, peak: peak || 1, keys, lastKey }
-  }, [fp, tf, step, absorb])
+    return { list, peak: peak || 1, sidePeak: sidePeak || 1, keys, lastKey }
+  }, [fp, tf, step, absorb, imbalance])
 
   if (!view) return <Waiting />
   const dp = decimalsOf(step)
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-hairline px-2 py-0.5">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-2 gap-y-0.5 border-b border-hairline px-2 py-0.5">
         <span className="min-w-0 truncate label" title="OKX has no trade history to fill earlier columns">
           Live since {clockTime(fp.since, true)}
         </span>
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-x-3 gap-y-0.5">
           <div
             className="flex items-center gap-1.5"
-            title="Aggressive size into a column's high or low, in multiples of its median row, that the next column did not trade past"
+            title="Diagonal: buying at a price against selling one row below it (the two sides of the spread), selling against buying one row above. Row: buy against sell at the same price."
+          >
+            <span className="label">Imb</span>
+            <Segmented
+              label="Imbalance"
+              options={IMBALANCE}
+              value={imbalance}
+              onChange={(i) => set({ imbalance: i })}
+              format={(i) => (i === 'diagonal' ? 'Diag' : i === 'row' ? 'Row' : 'Off')}
+              size="strip"
+            />
+          </div>
+          <div
+            className="flex items-center gap-1.5"
+            title="Aggressive size into the top or bottom third of a column, in multiples of its median row, that the column closed back out of and the next column did not trade past"
           >
             <span className="label">Absorb</span>
             <Segmented
@@ -495,7 +518,9 @@ export function FootprintBody({ symbol, settings, set }: WidgetProps) {
                             : undefined
                         }
                         style={{
-                          backgroundColor: `color-mix(in oklch, var(--foreground) ${Math.round(4 + ((buy + sell) / view.peak) * 28)}%, transparent)`,
+                          backgroundColor: bars
+                            ? undefined
+                            : `color-mix(in oklch, var(--foreground) ${Math.round(4 + ((buy + sell) / view.peak) * 28)}%, transparent)`,
                           boxShadow: held
                             ? `inset 0 0 0 1px ${absTone}`
                             : k === col.poc
@@ -503,6 +528,21 @@ export function FootprintBody({ symbol, settings, set }: WidgetProps) {
                               : undefined,
                         }}
                       >
+                        {bars && (
+                          <>
+                            {/* sell grows left from the cell's middle, buy right, on one scale */}
+                            <i
+                              aria-hidden
+                              className="absolute inset-y-0 right-1/2 bg-down/12"
+                              style={{ width: `${(sell / view.sidePeak) * 50}%` }}
+                            />
+                            <i
+                              aria-hidden
+                              className="absolute inset-y-0 left-1/2 bg-up/12"
+                              style={{ width: `${(buy / view.sidePeak) * 50}%` }}
+                            />
+                          </>
+                        )}
                         {imb?.stacked && (
                           <i
                             aria-hidden
@@ -512,10 +552,12 @@ export function FootprintBody({ symbol, settings, set }: WidgetProps) {
                             )}
                           />
                         )}
-                        <span className={cn('text-right', imb?.side === 'sell' && 'font-semibold text-down')}>
+                        <span className={cn('relative text-right', imb?.side === 'sell' && 'font-semibold text-down')}>
                           {fmtSize(sell)}
                         </span>
-                        <span className={cn(imb?.side === 'buy' && 'font-semibold text-up')}>{fmtSize(buy)}</span>
+                        <span className={cn('relative', imb?.side === 'buy' && 'font-semibold text-up')}>
+                          {fmtSize(buy)}
+                        </span>
                       </span>
                     )
                   })}
@@ -552,11 +594,20 @@ export function FootprintBody({ symbol, settings, set }: WidgetProps) {
 
 export function FootprintControls({ settings, set }: WidgetProps) {
   return (
-    <Segmented
-      label="Column"
-      options={FOOTPRINT_TF}
-      value={pick(settings.tf, FOOTPRINT_TF, '1m')}
-      onChange={(tf) => set({ tf })}
-    />
+    <div className="flex items-center gap-2">
+      <Segmented
+        label="Cells: sell and buy as bars, or one shade of the row's volume"
+        options={CELLS}
+        value={pick(settings.cells, CELLS, 'bars')}
+        onChange={(cells) => set({ cells })}
+        format={(c) => (c === 'bars' ? 'Bars' : 'Vol')}
+      />
+      <Segmented
+        label="Column"
+        options={FOOTPRINT_TF}
+        value={pick(settings.tf, FOOTPRINT_TF, '1m')}
+        onChange={(tf) => set({ tf })}
+      />
+    </div>
   )
 }

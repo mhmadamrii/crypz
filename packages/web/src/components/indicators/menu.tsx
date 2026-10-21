@@ -5,6 +5,8 @@ import { SESSIONS, localHours, type SessionId } from '@/lib/indicators/sessions'
 import {
   BIAS_FRAMES,
   FOOTPRINT_ABSORB,
+  FOOTPRINT_CELLS,
+  FOOTPRINT_IMBALANCE,
   FOOTPRINT_ROWS,
   FVG_SIZES,
   OB_STRENGTHS,
@@ -285,6 +287,38 @@ export function IndicatorMenu({ barMs, className }: { barMs: number; className?:
           </Switch>
           <div className={cn('flex flex-col gap-1 pb-2 pl-5', !s.footprint.on && 'opacity-50')}>
             <div className="flex items-center justify-between gap-3 px-3 py-1">
+              <span
+                className="text-sm"
+                title="Bars: sell grows left and buy right from the cell's middle. Volume: one grey, darker the busier the row. Zoomed out, rows are always grey."
+              >
+                Cells
+              </span>
+              <Segmented
+                label="How a cell shows its size"
+                options={FOOTPRINT_CELLS}
+                value={s.footprint.cells}
+                onChange={(cells) => indicators.setFootprint({ cells, on: true })}
+                format={(v) => (v === 'bars' ? 'Bars' : 'Volume')}
+                size="strip"
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3 px-3 py-1">
+              <span
+                className="text-sm"
+                title="Diagonal: buying at a price against selling one row below it (the two sides of the spread, who faced each other), selling against buying one row above. One row: buy against sell at the same price. Bold number at 3:1; three in a row add a rail."
+              >
+                Imbalance
+              </span>
+              <Segmented
+                label="What an imbalance weighs a row against"
+                options={FOOTPRINT_IMBALANCE}
+                value={s.footprint.imbalance}
+                onChange={(imbalance) => indicators.setFootprint({ imbalance, on: true })}
+                format={(v) => (v === 'diagonal' ? 'Diagonal' : v === 'row' ? 'One row' : 'Off')}
+                size="strip"
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3 px-3 py-1">
               <span className="text-sm" title="Price row size, over the finest row (BTC: $1, $10, $100)">
                 Rows
               </span>
@@ -300,7 +334,7 @@ export function IndicatorMenu({ barMs, className }: { barMs: number; className?:
             <div className="flex items-center justify-between gap-3 px-3 py-1">
               <span
                 className="text-sm"
-                title="Aggressive size into a bar's high or low, in multiples of its median row, that the next bar did not trade past"
+                title="Aggressive size into the top or bottom third of a bar, in multiples of its median row, that the bar closed back out of and the next bar did not trade past"
               >
                 Absorption
               </span>

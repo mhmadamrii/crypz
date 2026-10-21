@@ -28,6 +28,8 @@ import { attachPaneLayer } from './pane-layer'
 export const FOOTPRINT_MAX_BAR = 60 * 60_000
 const DETAIL_BAR = 64 // px per bar before cells carry numbers
 const DETAIL_ROW = 11 // px per row before cells carry numbers
+/** Bar tint: the depth chart's 12%, which keeps the numbers over it readable. */
+const BAR_ALPHA = 0.12
 
 export type FootprintData = {
   /** Every minute loaded, possibly past the clock; the layer reads only what had closed by `now`. */
@@ -54,7 +56,11 @@ export function attachFootprintLayer(opts: {
   // clock sits inside. Readings are kept per column object, so a finished bar is read once.
   let full: { minutes: Map<number, Minute>; span: number; step: number; cols: Column[] } | null = null
   let view: { cols: Column[]; now: number; absorb: number; absorbed: Map<number, Absorption> } | null = null
-  const imbalances = new WeakMap<Column, Map<number, Imbalance>>()
+  const imbalances = {
+    diagonal: new WeakMap<Column, Map<number, Imbalance>>(),
+    row: new WeakMap<Column, Map<number, Imbalance>>(),
+  }
+  const NONE = new Map<number, Imbalance>()
 
   const read = () => {
     const s = indicators.get().footprint
@@ -78,8 +84,10 @@ export function attachFootprintLayer(opts: {
     return { step, ...view }
   }
   const imbalancesFor = (col: Column) => {
-    let m = imbalances.get(col)
-    if (!m) imbalances.set(col, (m = imbalancesOf(col)))
+    const mode = indicators.get().footprint.imbalance
+    if (mode === 'off') return NONE
+    let m = imbalances[mode].get(col)
+    if (!m) imbalances[mode].set(col, (m = imbalancesOf(col, mode)))
     return m
   }
 
@@ -112,6 +120,12 @@ export function attachFootprintLayer(opts: {
     return peak || 1
   }
   const density = (v: number, peak: number) => 0.04 + (v / peak) * 0.28
+  /** The largest single side in any cell, the scale both bars share so their lengths compare across rows. */
+  const sidePeakOf = (shown: { col: Column }[]) => {
+    let peak = 0
+    for (const { col } of shown) for (const [b, s] of col.cells.values()) peak = Math.max(peak, b, s)
+    return peak || 1
+  }
 
   // behind the candles: the heat strips, when zoomed out
   const heat = attachPaneLayer(series, 'bottom', opts.palette, (ctx, p) => {
@@ -139,6 +153,8 @@ export function attachFootprintLayer(opts: {
     const { shown, spacing, detail } = layout(r.cols, r.step)
     if (spacing < 2) return
     const peak = peakOf(shown)
+    const bars = indicators.get().footprint.cells === 'bars'
+    const sidePeak = bars ? sidePeakOf(shown) : 1
     const w = detail ? Math.round(spacing - 4) : Math.max(1, Math.round(spacing * 0.9))
     ctx.lineWidth = 1
 
@@ -162,8 +178,17 @@ export function attachFootprintLayer(opts: {
         for (const [k, [b, s]] of col.cells) {
           const box = rowBox(k, r.step)
           if (!box) continue
-          ctx.fillStyle = alpha(p.fg, density(b + s, peak))
-          ctx.fillRect(left + 6, box.top, w - 6, box.h)
+          if (bars) {
+            // sell grows left from the cell's middle, buy right, on one scale
+            const half = (w - 6) / 2
+            ctx.fillStyle = alpha(p.down, BAR_ALPHA)
+            ctx.fillRect(Math.round(mid - (s / sidePeak) * half), box.top, Math.round((s / sidePeak) * half), box.h)
+            ctx.fillStyle = alpha(p.up, BAR_ALPHA)
+            ctx.fillRect(Math.round(mid), box.top, Math.round((b / sidePeak) * half), box.h)
+          } else {
+            ctx.fillStyle = alpha(p.fg, density(b + s, peak))
+            ctx.fillRect(left + 6, box.top, w - 6, box.h)
+          }
           const side = imb.get(k)?.side
           const yText = box.top + box.h / 2
           ctx.font = `${side === 'sell' ? '600 ' : ''}10px ${opts.font}`

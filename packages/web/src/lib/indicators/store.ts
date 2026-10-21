@@ -28,13 +28,27 @@ export type FootprintRows = (typeof FOOTPRINT_ROWS)[number]
 export const FOOTPRINT_ABSORB = [0, 2, 3, 5] as const
 export type FootprintAbsorb = (typeof FOOTPRINT_ABSORB)[number]
 
+/** Which size an imbalance weighs a row's side against: its diagonal neighbour, the same row, or none (off). */
+export const FOOTPRINT_IMBALANCE = ['diagonal', 'row', 'off'] as const
+export type FootprintImbalance = (typeof FOOTPRINT_IMBALANCE)[number]
+
+/** How a footprint cell shows its size: sell and buy as two bars, or as one ink density (the row's volume). */
+export const FOOTPRINT_CELLS = ['bars', 'volume'] as const
+export type FootprintCells = (typeof FOOTPRINT_CELLS)[number]
+
 export type IndicatorState = {
   sessions: { on: boolean } & Record<SessionId, boolean>
   fvg: { on: boolean; minAtr: FvgSize; showFilled: boolean }
   structure: { on: boolean; length: SwingLength; labels: boolean }
   bias: { on: boolean; higher: BiasFrame }
   orderBlocks: { on: boolean; strength: ObStrength; imbalance: boolean; withTrend: boolean; showSpent: boolean }
-  footprint: { on: boolean; rows: FootprintRows; absorb: FootprintAbsorb }
+  footprint: {
+    on: boolean
+    rows: FootprintRows
+    absorb: FootprintAbsorb
+    cells: FootprintCells
+    imbalance: FootprintImbalance
+  }
 }
 
 const KEY = 'crypz.indicators.v1'
@@ -44,7 +58,7 @@ const DEFAULTS: IndicatorState = {
   structure: { on: false, length: 5, labels: true },
   bias: { on: false, higher: '4H' },
   orderBlocks: { on: false, strength: 1.5, imbalance: true, withTrend: false, showSpent: false },
-  footprint: { on: false, rows: 1, absorb: 3 },
+  footprint: { on: false, rows: 1, absorb: 3, cells: 'bars', imbalance: 'diagonal' },
 }
 
 function load(): IndicatorState {
@@ -63,6 +77,8 @@ function load(): IndicatorState {
     const footprint = { ...DEFAULTS.footprint, ...saved.footprint }
     if (!FOOTPRINT_ROWS.includes(footprint.rows)) footprint.rows = DEFAULTS.footprint.rows
     if (!FOOTPRINT_ABSORB.includes(footprint.absorb)) footprint.absorb = DEFAULTS.footprint.absorb
+    if (!FOOTPRINT_CELLS.includes(footprint.cells)) footprint.cells = DEFAULTS.footprint.cells
+    if (!FOOTPRINT_IMBALANCE.includes(footprint.imbalance)) footprint.imbalance = DEFAULTS.footprint.imbalance
     return { sessions: { ...DEFAULTS.sessions, ...saved.sessions }, fvg, structure, bias, orderBlocks, footprint }
   } catch {
     return DEFAULTS
