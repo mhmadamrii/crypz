@@ -114,3 +114,24 @@ model Workspace {
   @@index([userId])
   @@map("workspace")
 }
+
+/// One exchange day of trades folded into a footprint, cached forever once built (past trades never change).
+/// Built on demand from the exchange's daily trade file; `day` is the file's own calendar day (OKX: UTC+8).
+model FootprintDay {
+  exchange  String
+  symbol    String
+  day       String
+  /// pending | ready | failed
+  status    String
+  error     String?
+  /// Price row size the bars were folded at; renderers group upward from it.
+  step      Float?
+  trades    Int?
+  /// [[time, open, high, low, close, [row, buy, sell, row, buy, sell, …]], …], one entry per minute with trades.
+  bars      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([exchange, symbol, day])
+  @@map("footprint_day")
+}

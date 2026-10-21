@@ -2,10 +2,21 @@ import { ChartSpline } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { SESSIONS, localHours, type SessionId } from '@/lib/indicators/sessions'
-import { BIAS_FRAMES, FVG_SIZES, OB_STRENGTHS, SWING_LENGTHS, activeCount, indicators, useIndicators } from '@/lib/indicators/store'
+import {
+  BIAS_FRAMES,
+  FOOTPRINT_ABSORB,
+  FOOTPRINT_ROWS,
+  FVG_SIZES,
+  OB_STRENGTHS,
+  SWING_LENGTHS,
+  activeCount,
+  indicators,
+  useIndicators,
+} from '@/lib/indicators/store'
 import { BAR_MS } from '@crypz/exchanges'
 import { Segmented } from '@/components/workspace/kit'
 import { cn } from '@/lib/utils'
+import { FOOTPRINT_MAX_BAR } from './footprint-layer'
 import { SESSION_MAX_BAR } from './sessions-layer'
 
 // The chart's indicator menu. Each indicator is one row with a square switch (filled = on, hollow = off, the same
@@ -54,6 +65,7 @@ export function IndicatorMenu({ barMs, className }: { barMs: number; className?:
   const s = useIndicators()
   const count = activeCount(s)
   const tooLong = barMs > SESSION_MAX_BAR
+  const footprintTooLong = barMs > FOOTPRINT_MAX_BAR
 
   return (
     <Popover>
@@ -254,6 +266,62 @@ export function IndicatorMenu({ barMs, className }: { barMs: number; className?:
               {BAR_MS[s.bias.higher] > barMs
                 ? `Bias from ${s.bias.higher} structure, timed on the chart. Swing length follows Market structure.`
                 : `${s.bias.higher} is not above this chart, so the bias reads the chart’s own structure.`}
+            </p>
+          </div>
+        </div>
+        <div className="mt-1 border-t border-hairline pt-1">
+          <Switch
+            on={s.footprint.on}
+            onToggle={() => indicators.setFootprint({ on: !s.footprint.on })}
+            label="Footprint"
+          >
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-sm font-medium">Footprint</span>
+              <span className="text-xs text-pretty text-muted-foreground">
+                Taker sell × buy at each price inside every bar, with diagonal imbalances and absorption, from OKX trade
+                history.
+              </span>
+            </span>
+          </Switch>
+          <div className={cn('flex flex-col gap-1 pb-2 pl-5', !s.footprint.on && 'opacity-50')}>
+            <div className="flex items-center justify-between gap-3 px-3 py-1">
+              <span className="text-sm" title="Price row size, over the finest row (BTC: $1, $10, $100)">
+                Rows
+              </span>
+              <Segmented
+                label="Price row size, over the finest row"
+                options={FOOTPRINT_ROWS}
+                value={s.footprint.rows}
+                onChange={(rows) => indicators.setFootprint({ rows, on: true })}
+                format={(v) => (v ? `${10 ** v}×` : 'Fine')}
+                size="strip"
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3 px-3 py-1">
+              <span
+                className="text-sm"
+                title="Aggressive size into a bar's high or low, in multiples of its median row, that the next bar did not trade past"
+              >
+                Absorption
+              </span>
+              <Segmented
+                label="Absorption threshold, times the bar's median row"
+                options={FOOTPRINT_ABSORB}
+                value={s.footprint.absorb}
+                onChange={(absorb) => indicators.setFootprint({ absorb, on: true })}
+                format={(v) => (v ? `${v}×` : 'Off')}
+                size="strip"
+              />
+            </div>
+            <p
+              className={cn(
+                'px-3 text-xs text-pretty text-muted-foreground',
+                footprintTooLong && s.footprint.on && 'text-foreground',
+              )}
+            >
+              {footprintTooLong && s.footprint.on
+                ? 'Switch to 1H or shorter to see it.'
+                : 'Each OKX day is built on first use, in a few seconds. Zoom in to read the numbers; absorption is marked once the next bar closes.'}
             </p>
           </div>
         </div>

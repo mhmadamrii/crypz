@@ -6,10 +6,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { computeBias, type Bias } from '@/lib/indicators/bias'
 import { useIndicators } from '@/lib/indicators/store'
 import { cn } from '@/lib/utils'
-import { fmtPrice, fmtSigned } from '@/lib/format'
+import { fmtPrice, fmtSigned, tone } from '@/lib/format'
+import { fmtSize, signedSize } from '@/components/workspace/kit'
 import { attachDrawingLayer, createMapper } from '@/components/drawings/layer'
 import { attachBiasLayer } from '@/components/indicators/bias-layer'
 import { BiasReadout } from '@/components/indicators/bias-readout'
+import { attachFootprintLayer, type FootprintData } from '@/components/indicators/footprint-layer'
 import { attachFvgLayer } from '@/components/indicators/fvg-layer'
 import { attachOrderBlocksLayer } from '@/components/indicators/order-blocks-layer'
 import { attachSessionsLayer } from '@/components/indicators/sessions-layer'
@@ -29,6 +31,8 @@ type Props = {
   barLabel: Bar
   /** Closed candles of the bias's higher timeframe, when one is set above the chart's. */
   higher: { bar: Bar; candles: Candle[] } | null
+  /** Footprint history to draw, when the indicator is on and its days have loaded. */
+  footprint: FootprintData | null
   position: OpenPosition | null
   trades: ReplayTrade[]
   className?: string
@@ -43,6 +47,7 @@ type Handles = {
   lines: IPriceLine[]
   dashed: number
   refreshIndicators: (p?: Palette) => void
+  footprintAt: ReturnType<typeof attachFootprintLayer>['at']
 }
 
 export function ReplayChart({
@@ -52,6 +57,7 @@ export function ReplayChart({
   symbol,
   barLabel,
   higher,
+  footprint,
   position,
   trades,
   className,
@@ -76,8 +82,8 @@ export function ReplayChart({
         : null,
     [ind.bias.on, ind.structure.length, candles, barLabel, higher],
   )
-  const live = useRef({ candles, barMs, bias })
-  live.current = { candles, barMs, bias }
+  const live = useRef({ candles, barMs, bias, footprint })
+  live.current = { candles, barMs, bias, footprint }
 
   // 1. Lifecycle: create the chart once, tear it down on unmount.
   useEffect(() => {
@@ -89,6 +95,7 @@ export function ReplayChart({
       const made = createMosaicChart(lw, box.current, (q) => {
         if (ref.current) ref.current.palette = q
         layer.setPalette(q)
+        footprintLayer.refresh(q)
         sessions.refresh(q)
         fvg.refresh(q)
         structure.refresh(q)
@@ -101,6 +108,17 @@ export function ReplayChart({
         () => live.current.candles,
         () => live.current.barMs,
       )
+      // the footprint's heat sits lowest and its cell columns replace the candles when zoomed in, so every other
+      // indicator draws over it
+      const footprintLayer = attachFootprintLayer({
+        chart: made.chart,
+        series: made.candles,
+        x: mapper.x,
+        data: () => live.current.footprint,
+        barMs: () => live.current.barMs,
+        palette: palette(),
+        font: getComputedStyle(document.body).getPropertyValue('--font-mono') || 'monospace',
+      })
       // indicators sit under the candles; drawings above them
       const sessions = attachSessionsLayer({
         chart: made.chart,
@@ -156,6 +174,7 @@ export function ReplayChart({
       })
       dispose = () => {
         layer.dispose()
+        footprintLayer.dispose()
         sessions.dispose()
         fvg.dispose()
         orderBlocks.dispose()
@@ -172,12 +191,14 @@ export function ReplayChart({
         lines: [],
         dashed: lw.LineStyle.Dashed,
         refreshIndicators: (q) => {
+          footprintLayer.refresh(q)
           sessions.refresh(q)
           fvg.refresh(q)
           orderBlocks.refresh(q)
           structure.refresh(q)
           biasLayer.refresh(q)
         },
+        footprintAt: footprintLayer.at,
       }
       made.chart.subscribeCrosshairMove((param) => {
         const k = param.time ? live.current.candles.find((c) => toChart(c.time) === param.time) : undefined
@@ -213,10 +234,10 @@ export function ReplayChart({
     c.refreshIndicators()
   }, [ready, candles, intraday])
 
-  // the higher timeframe can move the bias without a new chart candle
+  // the higher timeframe can move the bias, and a footprint day can land, without a new chart candle
   useEffect(() => {
     ref.current?.refreshIndicators()
-  }, [ready, bias])
+  }, [ready, bias, footprint?.minutes])
 
   // 3. Orders: entry/exit markers and the open position's entry, stop and target lines.
   useEffect(() => {
@@ -264,6 +285,7 @@ export function ReplayChart({
   }, [ready, theme, trades, position, candles])
 
   const k = hover ?? candles[candles.length - 1]
+  const fp = k && footprint ? ref.current?.footprintAt(k.time) : null
   return (
     <div className={cn('relative min-h-0', className)}>
       {k && (
@@ -281,6 +303,22 @@ export function ReplayChart({
             C <span className="text-foreground">{fmtPrice(k.close)}</span>
           </span>
           <span className="text-foreground">{fmtSigned(((k.close - k.open) / k.open) * 100)}%</span>
+          {fp && (
+            <>
+              <span>
+                Δ <span className={tone(fp.buy - fp.sell)}>{signedSize(fp.buy - fp.sell)}</span>
+              </span>
+              <span>
+                Vol <span className="text-foreground">{fmtSize(fp.buy + fp.sell) || '0'}</span>
+              </span>
+              {fp.absorbed && (
+                <span className={fp.absorbed.side === 'bid' ? 'text-up' : 'text-down'}>
+                  {fp.absorbed.side === 'bid' ? 'Bids' : 'Asks'} absorbed {fmtSize(fp.absorbed.size)} at{' '}
+                  {fmtPrice(fp.absorbed.price)}
+                </span>
+              )}
+            </>
+          )}
         </div>
       )}
       {bias && <BiasReadout bias={bias} chartLabel={barLabel} higherLabel={higher?.bar ?? null} />}

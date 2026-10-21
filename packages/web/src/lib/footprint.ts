@@ -160,3 +160,52 @@ export function absorptionsOf(cols: Column[], step: number, factor = 3) {
   }
   return out
 }
+
+// ---- history (replay) ---------------------------------------------------------------------------------------
+// The api folds OKX's daily trade files into minute bars, one OKX day (UTC+8) per request.
+
+/** [time, open, high, low, close, [row, buy, sell, …]] at the day's `step`. */
+export type HistoryBar = [number, number, number, number, number, number[]]
+
+export const FIRST_HISTORY_DAY = '2021-11-01'
+const UTC8 = 8 * 3_600_000
+
+/** The OKX day (UTC+8 calendar date) a moment falls in. */
+export const okxDay = (ms: number) => new Date(ms + UTC8).toISOString().slice(0, 10)
+
+/** Every OKX day from the one holding `from` to the one holding `to`, oldest first. */
+export function okxDays(from: number, to: number) {
+  const days: string[] = []
+  for (let d = okxDay(from); d <= okxDay(to); d = okxDay(Date.parse(`${d}T00:00:00Z`) - UTC8 + 36 * 3_600_000))
+    days.push(d)
+  return days
+}
+
+/**
+ * Stored bars as minutes. Each row stands at its middle price, so grouping into any coarser row (a multiple of
+ * `step`) never lands a row on the wrong side of a boundary through float error.
+ */
+export function minutesOf(bars: HistoryBar[], step: number, into = new Map<number, Minute>()) {
+  for (const [time, open, high, low, close, flat] of bars) {
+    const levels = new Map<string, [number, number]>()
+    for (let i = 0; i < flat.length; i += 3) levels.set(String((flat[i] + 0.5) * step), [flat[i + 1], flat[i + 2]])
+    into.set(time, { levels, open, high, low, close, first: time, last: time + 59_999 })
+  }
+  return into
+}
+
+/**
+ * The columns as they stood at `now`, from `all` (every column, built with `now = Infinity`): those finished by
+ * then, plus the one `now` sits inside, rebuilt from the minutes that had closed. Nothing after `now` is read.
+ */
+export function columnsAt(all: Column[], minutes: Map<number, Minute>, span: number, step: number, now: number) {
+  const done = all.filter((c) => c.start + span <= now)
+  const start = now - (now % span)
+  if (start === now) return done
+  const inside = new Map<number, Minute>()
+  for (let t = start; t + 60_000 <= now; t += 60_000) {
+    const m = minutes.get(t)
+    if (m) inside.set(t, m)
+  }
+  return inside.size ? [...done, ...columnsOf(inside, span, step, now)] : done
+}

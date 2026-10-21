@@ -83,6 +83,27 @@ export const replayCandlesQuery = (exchange: ExchangeId, symbol: string, bar: Ba
     placeholderData: keepPreviousData,
   })
 
+/**
+ * One OKX day (UTC+8) of footprint bars for replay. The api builds a day from OKX's trade file the first time
+ * anyone asks, so a new day answers `pending` and is polled until it is ready; a built day never changes.
+ */
+export const footprintDayQuery = (exchange: ExchangeId, symbol: string, day: string) =>
+  queryOptions({
+    queryKey: ['footprint', exchange, symbol, day],
+    queryFn: () => getFootprintDay(exchange, symbol, day),
+    refetchInterval: (q) => (q.state.data?.status === 'pending' ? 3_000 : false),
+    staleTime: Infinity,
+    gcTime: 10 * 60_000,
+  })
+
+/** `retry` asks the api to rebuild a day that failed. */
+export const getFootprintDay = (exchange: ExchangeId, symbol: string, day: string, retry = false) =>
+  unwrap(
+    api.market.footprint.$get({
+      query: { exchange: exchange as 'okx', symbol, day, ...(retry ? { retry: '1' as const } : {}) },
+    }),
+  )
+
 /** Taker buy/sell volume per period (100 periods), for CVD. The newest period is still forming. */
 export const takerFlowQuery = (exchange: ExchangeId, symbol: string, bar: StatBar) =>
   queryOptions({

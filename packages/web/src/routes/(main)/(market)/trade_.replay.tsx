@@ -19,7 +19,9 @@ import {
 } from 'lucide-react'
 import { BAR_MS, BARS, type Bar, type Candle, type ExchangeId } from '@crypz/exchanges'
 import { DrawingToolbar } from '@/components/drawings/toolbar'
+import { FootprintStatus } from '@/components/indicators/footprint-status'
 import { IndicatorMenu } from '@/components/indicators/menu'
+import { useFootprintHistory } from '@/components/indicators/use-footprint-history'
 import { IntervalBar, useIntervalHotkeys } from '@/components/trade/interval-bar'
 import { zoneLabel } from '@/components/trade/chart-kit'
 import { ReplayChart } from '@/components/trade/replay-chart'
@@ -258,6 +260,9 @@ function ReplaySession({
     return { bar: higherBar, candles: closed, loadedTo: all.at(-1)?.time ?? 0 }
   }, [higherBar, hq.data, hq.isPlaceholderData, state.now])
 
+  // Footprint from OKX trade history, fetched per OKX day only while the indicator is on.
+  const footprint = useFootprintHistory(exchange, symbol, bar, state.now, revealed)
+
   // the last price: the forming candle's when there is one, so every timeframe trades at the same price
   const current = cursor < 0 ? undefined : (partial ?? candles[cursor])
   const ended = !candles[cursor + 1] && !q.hasNextPage && q.isSuccess
@@ -386,11 +391,15 @@ function ReplaySession({
               symbol={symbol}
               barLabel={bar}
               higher={higher}
+              footprint={footprint.data}
               candles={revealed}
               position={p}
               trades={state.trades}
               className="absolute inset-0"
             />
+            {footprint.on && (
+              <FootprintStatus blocked={footprint.blocked} states={footprint.states} onRetry={footprint.retry} />
+            )}
             {loading && (
               <div
                 role="status"

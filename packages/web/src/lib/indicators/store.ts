@@ -20,12 +20,21 @@ export type SwingLength = (typeof SWING_LENGTHS)[number]
 export const BIAS_FRAMES = ['1H', '4H', '1D'] as const
 export type BiasFrame = (typeof BIAS_FRAMES)[number]
 
+/** Footprint row size, as a power of ten over the finest row (0 = finest; BTC: 1, 10, 100). */
+export const FOOTPRINT_ROWS = [0, 1, 2] as const
+export type FootprintRows = (typeof FOOTPRINT_ROWS)[number]
+
+/** Absorption threshold in multiples of a bar's median row; 0 hides absorption. */
+export const FOOTPRINT_ABSORB = [0, 2, 3, 5] as const
+export type FootprintAbsorb = (typeof FOOTPRINT_ABSORB)[number]
+
 export type IndicatorState = {
   sessions: { on: boolean } & Record<SessionId, boolean>
   fvg: { on: boolean; minAtr: FvgSize; showFilled: boolean }
   structure: { on: boolean; length: SwingLength; labels: boolean }
   bias: { on: boolean; higher: BiasFrame }
   orderBlocks: { on: boolean; strength: ObStrength; imbalance: boolean; withTrend: boolean; showSpent: boolean }
+  footprint: { on: boolean; rows: FootprintRows; absorb: FootprintAbsorb }
 }
 
 const KEY = 'crypz.indicators.v1'
@@ -35,6 +44,7 @@ const DEFAULTS: IndicatorState = {
   structure: { on: false, length: 5, labels: true },
   bias: { on: false, higher: '4H' },
   orderBlocks: { on: false, strength: 1.5, imbalance: true, withTrend: false, showSpent: false },
+  footprint: { on: false, rows: 1, absorb: 3 },
 }
 
 function load(): IndicatorState {
@@ -50,7 +60,10 @@ function load(): IndicatorState {
     if (!BIAS_FRAMES.includes(bias.higher)) bias.higher = DEFAULTS.bias.higher
     const orderBlocks = { ...DEFAULTS.orderBlocks, ...saved.orderBlocks }
     if (!OB_STRENGTHS.includes(orderBlocks.strength)) orderBlocks.strength = DEFAULTS.orderBlocks.strength
-    return { sessions: { ...DEFAULTS.sessions, ...saved.sessions }, fvg, structure, bias, orderBlocks }
+    const footprint = { ...DEFAULTS.footprint, ...saved.footprint }
+    if (!FOOTPRINT_ROWS.includes(footprint.rows)) footprint.rows = DEFAULTS.footprint.rows
+    if (!FOOTPRINT_ABSORB.includes(footprint.absorb)) footprint.absorb = DEFAULTS.footprint.absorb
+    return { sessions: { ...DEFAULTS.sessions, ...saved.sessions }, fvg, structure, bias, orderBlocks, footprint }
   } catch {
     return DEFAULTS
   }
@@ -84,10 +97,17 @@ export const indicators = {
   setBias: (patch: Partial<IndicatorState['bias']>) => set({ ...get(), bias: { ...get().bias, ...patch } }),
   setOrderBlocks: (patch: Partial<IndicatorState['orderBlocks']>) =>
     set({ ...get(), orderBlocks: { ...get().orderBlocks, ...patch } }),
+  setFootprint: (patch: Partial<IndicatorState['footprint']>) =>
+    set({ ...get(), footprint: { ...get().footprint, ...patch } }),
 }
 
 /** How many indicators are on, for the toolbar button. */
 export const activeCount = (s: IndicatorState) =>
-  Number(s.sessions.on) + Number(s.fvg.on) + Number(s.structure.on) + Number(s.bias.on) + Number(s.orderBlocks.on)
+  Number(s.sessions.on) +
+  Number(s.fvg.on) +
+  Number(s.structure.on) +
+  Number(s.bias.on) +
+  Number(s.orderBlocks.on) +
+  Number(s.footprint.on)
 
 export const useIndicators = () => useSyncExternalStore(indicators.subscribe, indicators.get, () => DEFAULTS)
