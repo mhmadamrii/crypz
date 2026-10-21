@@ -84,23 +84,35 @@ export const replayCandlesQuery = (exchange: ExchangeId, symbol: string, bar: Ba
   })
 
 /**
- * One OKX day (UTC+8) of footprint bars for replay. The api builds a day from OKX's trade file the first time
- * anyone asks, so a new day answers `pending` and is polled until it is ready; a built day never changes.
+ * One OKX day (UTC+8) of footprint bars for replay. `peek` only reads what the api has built, and a day nobody
+ * built comes back `missing`; `build` starts building it, answers `pending`, and is polled until it is ready.
+ * A built day never changes.
  */
-export const footprintDayQuery = (exchange: ExchangeId, symbol: string, day: string) =>
+export const footprintDayQuery = (exchange: ExchangeId, symbol: string, day: string, mode: 'peek' | 'build') =>
   queryOptions({
-    queryKey: ['footprint', exchange, symbol, day],
-    queryFn: () => getFootprintDay(exchange, symbol, day),
+    queryKey: ['footprint', exchange, symbol, day, mode],
+    queryFn: () => getFootprintDay(exchange, symbol, day, { peek: mode === 'peek' }),
     refetchInterval: (q) => (q.state.data?.status === 'pending' ? 3_000 : false),
     staleTime: Infinity,
     gcTime: 10 * 60_000,
   })
 
-/** `retry` asks the api to rebuild a day that failed. */
-export const getFootprintDay = (exchange: ExchangeId, symbol: string, day: string, retry = false) =>
+/** `retry` asks the api to rebuild a day that failed; `peek` never starts a build. */
+export const getFootprintDay = (
+  exchange: ExchangeId,
+  symbol: string,
+  day: string,
+  { retry = false, peek = false } = {},
+) =>
   unwrap(
     api.market.footprint.$get({
-      query: { exchange: exchange as 'okx', symbol, day, ...(retry ? { retry: '1' as const } : {}) },
+      query: {
+        exchange: exchange as 'okx',
+        symbol,
+        day,
+        ...(retry ? { retry: '1' as const } : {}),
+        ...(peek ? { peek: '1' as const } : {}),
+      },
     }),
   )
 

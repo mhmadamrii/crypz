@@ -53,8 +53,8 @@ export const market = new Hono()
     const q = c.req.valid('query')
     return c.json(await getAdapter(q.exchange).fetchPremium(q.symbol))
   })
-  // One OKX day (UTC+8) of footprint bars, built from the exchange's trade file on first request. Compressed: a
-  // busy day is a megabyte or two of JSON.
+  // One OKX day (UTC+8) of footprint bars, built from the exchange's trade file on request (`peek` only reads).
+  // Compressed: a busy day is a megabyte or two of JSON.
   .get(
     '/footprint',
     validate(
@@ -67,11 +67,12 @@ export const market = new Hono()
           .regex(/^\d{4}-\d{2}-\d{2}$/)
           .refine((d) => d >= FIRST_DAY, `OKX trade files before ${FIRST_DAY} cannot tell buyers from sellers.`),
         retry: z.literal('1').optional(),
+        peek: z.literal('1').optional(),
       }),
     ),
     compress(),
     async (c) => {
       const q = c.req.valid('query')
-      return c.json(await footprintDay(q.symbol, q.day, q.retry === '1'))
+      return c.json(await footprintDay(q.symbol, q.day, { retry: q.retry === '1', peek: q.peek === '1' }))
     },
   )

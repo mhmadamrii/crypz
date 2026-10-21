@@ -194,18 +194,26 @@ export type FootprintDayResult =
   | { status: 'pending'; day: string }
   | { status: 'unpublished'; day: string; at: number }
   | { status: 'failed'; day: string; error: string }
+  /** Never built, and not built now: the caller only peeked. */
+  | { status: 'missing'; day: string }
 
 /**
- * A day's footprint if it is built; otherwise starts building it and says so. `retry` rebuilds a failed day.
- * A day OKX has not published yet is never stored, so it is tried again once the file is due.
+ * A day's footprint if it is built; otherwise starts building it and says so. `peek` only reads: a day nobody has
+ * built comes back `missing` and nothing is downloaded, so a client can ask freely and build only on consent.
+ * `retry` rebuilds a failed day. A day OKX has not published yet is never stored, so it is tried again once due.
  */
-export async function footprintDay(symbol: string, day: string, retry = false): Promise<FootprintDayResult> {
+export async function footprintDay(
+  symbol: string,
+  day: string,
+  { retry = false, peek = false } = {},
+): Promise<FootprintDayResult> {
   const at = publishedBy(day)
   if (Date.now() < at) return { status: 'unpublished', day, at }
   const where = { exchange_symbol_day: { exchange: EXCHANGE, symbol, day } }
   const row = await db().footprintDay.findUnique({ where })
   if (row?.status === 'ready') return { status: 'ready', day, step: row.step!, bars: row.bars as FootprintBar[] }
   if (row?.status === 'failed' && !retry) return { status: 'failed', day, error: row.error ?? 'Could not build.' }
+  if (!row && peek) return { status: 'missing', day }
   if (!row) {
     // two requests for the same new day race here; the loser's insert is skipped and it just waits on the winner
     await db().footprintDay.createMany({

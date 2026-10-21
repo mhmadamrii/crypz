@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { QueryClient } from '@tanstack/react-query'
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from '@tanstack/react-router'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { Toaster } from '@/components/ui/sonner'
 import { themeScript } from '@/components/theme-toggle'
 import appCss from '@/styles.css?url'
 import { seo } from '@/lib/seo'
@@ -48,6 +49,7 @@ function RootDocument({ children }: { children: ReactNode }) {
       </head>
       <body>
         <TooltipProvider delayDuration={150}>{children}</TooltipProvider>
+        <Toaster />
         <Scripts />
       </body>
     </html>
