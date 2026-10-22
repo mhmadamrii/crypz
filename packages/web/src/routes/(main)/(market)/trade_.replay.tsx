@@ -17,19 +17,20 @@ import {
   TrendingUp,
   X,
 } from 'lucide-react'
-import { BAR_MS, BARS, type Bar, type Candle, type ExchangeId } from '@crypz/exchanges'
+import { BAR_MS, type Bar, type ExchangeId } from '@crypz/exchanges'
 import { DrawingToolbar } from '@/components/drawings/toolbar'
 import { IndicatorMenu } from '@/components/indicators/menu'
 import { useFootprintHistory } from '@/components/indicators/use-footprint-history'
+import { InstrumentSelect } from '@/components/trade/instrument-select'
 import { IntervalBar, useIntervalHotkeys } from '@/components/trade/interval-bar'
 import { zoneLabel } from '@/components/trade/chart-kit'
 import { ReplayChart } from '@/components/trade/replay-chart'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { MARKET_EXCHANGE } from '@/lib/market'
+import { mergeCandles } from '@/lib/candles'
+import { DEFAULT_BAR, DEFAULT_SYMBOL, MARKET_EXCHANGE, symbolBarSearch } from '@/lib/market'
 import { useIndicators } from '@/lib/indicators/store'
 import { replayCandlesQuery, replayFineQuery, useInstruments } from '@/lib/queries'
 import {
@@ -45,40 +46,29 @@ import {
   sessionStats,
   type Side,
 } from '@/lib/replay'
-import { fmtDuration, fmtNum, fmtPct, fmtPrice, fmtSigned, tone } from '@/lib/format'
+import {
+  LOCAL_MINUTE,
+  fmtDuration,
+  fmtNum,
+  fmtPct,
+  fmtPrice,
+  fmtSigned,
+  fmtWhen,
+  startOfDay,
+  toLocalInput,
+  tone,
+} from '@/lib/format'
 import { searchText } from '@/lib/search'
 import { cn } from '@/lib/utils'
 
 type Search = { symbol?: string; bar?: Bar; from?: string; equity?: string; lev?: string }
 
-const DEFAULT_SYMBOL = 'BTC-USDT-SWAP'
-const LOCAL_MINUTE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/
 const SPEEDS = [1, 2, 5, 10] // bars per second
 const DAY = 864e5
 
-/** ms → the `YYYY-MM-DDTHH:mm` a datetime-local input speaks, in the viewer's zone. */
-const toLocalInput = (ms: number) => {
-  const d = new Date(ms)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-const startOfDay = (ms: number) => new Date(new Date(ms).setHours(0, 0, 0, 0)).getTime()
-
-const fmtWhen = (ms: number) =>
-  new Date(ms).toLocaleString('en-GB', {
-    weekday: 'short',
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-
 export const Route = createFileRoute('/(main)/(market)/trade_/replay')({
   validateSearch: (s: Record<string, unknown>): Search => ({
-    symbol: typeof s.symbol === 'string' ? s.symbol.toUpperCase() : undefined,
-    bar: typeof s.bar === 'string' && (BARS as readonly string[]).includes(s.bar) ? (s.bar as Bar) : undefined,
+    ...symbolBarSearch(s),
     from: typeof s.from === 'string' && LOCAL_MINUTE.test(s.from) ? s.from : undefined,
     equity: /^\d*\.?\d*$/.test(searchText(s.equity) ?? 'x') ? searchText(s.equity) : undefined,
     lev: LEVERAGES.map(String).includes(searchText(s.lev) ?? '') ? searchText(s.lev) : undefined,
@@ -97,11 +87,10 @@ function Replay() {
   useIntervalHotkeys((b) => set({ bar: b }))
 
   const symbol = search.symbol ?? symbols[0] ?? DEFAULT_SYMBOL
-  const bar = search.bar ?? '1H'
+  const bar = search.bar ?? DEFAULT_BAR
   const fromInput = search.from ?? toLocalInput(startOfDay(Date.now() - 30 * DAY))
   const from = new Date(fromInput).getTime()
   const exchange = MARKET_EXCHANGE
-  const options = symbols.includes(symbol) ? symbols : [symbol, ...symbols]
 
   const shuffle = () => {
     // anywhere from two years back to two weeks ago, on the hour
@@ -114,18 +103,7 @@ function Replay() {
     <div className="flex h-svh flex-col overflow-hidden">
       <div className="flex h-12 shrink-0 items-center gap-1.5 border-b border-border px-2 sm:gap-3 sm:px-4">
         <span className="hidden label sm:inline">Replay</span>
-        <Select value={symbol} onValueChange={(v) => set({ symbol: v })}>
-          <SelectTrigger size="sm" className="w-28 num sm:w-48" aria-label="Instrument">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="max-h-80">
-            {options.map((s) => (
-              <SelectItem key={s} value={s} className="num">
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <InstrumentSelect value={symbol} onChange={(v) => set({ symbol: v })} className="w-28 sm:w-48" />
         <IntervalBar value={bar} onChange={(v) => set({ bar: v })} className="hidden md:flex" />
         <label className="flex items-center gap-2">
           <span className="hidden label lg:inline">Start</span>
@@ -212,11 +190,7 @@ function ReplaySession({
   const q = useInfiniteQuery(replayCandlesQuery(exchange, symbol, bar, view.anchor - BAR_MS[bar]))
   // First load and interval switches show a spinner over the (blurred) chart; stepping and orders wait for it.
   const loading = q.isPending || q.isPlaceholderData
-  const candles = useMemo(() => {
-    const byTime = new Map<number, Candle>()
-    for (const page of q.data?.pages ?? []) for (const k of page) byTime.set(k.time, k)
-    return [...byTime.values()].sort((a, b) => a.time - b.time)
-  }, [q.data])
+  const candles = useMemo(() => mergeCandles(q.data?.pages ?? []), [q.data])
   // A candle closes when the next one opens (or one bar length later at the edge of what is loaded).
   const closesAt = (i: number) => candles[i + 1]?.time ?? candles[i].time + BAR_MS[bar]
   // The last candle that has fully closed by the clock. A higher interval's forming candle stays hidden: its
@@ -251,9 +225,7 @@ function ReplaySession({
   const higher = useMemo(() => {
     if (!higherBar || !hq.data || hq.isPlaceholderData) return null
     const ms = BAR_MS[higherBar]
-    const byTime = new Map<number, Candle>()
-    for (const page of hq.data.pages) for (const k of page) byTime.set(k.time, k)
-    const all = [...byTime.values()].sort((a, b) => a.time - b.time)
+    const all = mergeCandles(hq.data.pages)
     // closed bars only: a forming higher bar would let the bias change inside it
     const closed = all.filter((k, i) => (all[i + 1]?.time ?? k.time + ms) <= state.now)
     return { bar: higherBar, candles: closed, loadedTo: all.at(-1)?.time ?? 0 }

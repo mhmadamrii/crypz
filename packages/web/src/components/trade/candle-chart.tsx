@@ -4,14 +4,16 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { latestCandlesQuery, olderCandlesQuery } from '@/lib/queries'
 import { cn } from '@/lib/utils'
-import { fmtPrice, fmtSigned } from '@/lib/format'
+import { fmtSigned } from '@/lib/format'
+import { mergeCandles } from '@/lib/candles'
 import { useTicker } from '@/lib/okx-ws'
 import { useIndicators } from '@/lib/indicators/store'
 import { attachDrawingLayer, createMapper } from '@/components/drawings/layer'
 import { attachIndicators } from '@/components/indicators/attach'
+import { OhlcReadout } from './ohlc-readout'
 import { BiasReadout } from '@/components/indicators/bias-readout'
 import { useBias } from '@/components/indicators/use-bias'
-import { createMosaicChart, palette, precisionFor, toBar, toChart, type Palette } from './chart-kit'
+import { createMosaicChart, palette, precisionFor, snapToChart, toBar, toChart, type Palette } from './chart-kit'
 
 import type {
   IChartApi,
@@ -40,8 +42,6 @@ type Chart = {
   refreshIndicators: () => void
 }
 
-type Readout = Candle & { change: number }
-
 // The ticker can open the next bar before REST has it, so the series may already end past `k`. update() throws on a
 // bar older than the series' last ("Cannot update oldest data"), so skip those; the poll catches up on its own.
 function pushBar(series: ISeriesApi<'Candlestick'>, k: Candle) {
@@ -54,12 +54,10 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
   // Data: Query owns fetching, the 10s live poll, caching and history paging.
   const latest = useQuery(latestCandlesQuery(exchange, symbol, bar))
   const older = useInfiniteQuery(olderCandlesQuery(exchange, symbol, bar, latest.data?.[0]?.time))
-  const candles = useMemo(() => {
-    const byTime = new Map<number, Candle>()
-    for (const page of older.data?.pages ?? []) for (const k of page) byTime.set(k.time, k)
-    for (const k of latest.data ?? []) byTime.set(k.time, k)
-    return [...byTime.values()].sort((a, b) => a.time - b.time)
-  }, [older.data, latest.data])
+  const candles = useMemo(
+    () => mergeCandles([...(older.data?.pages ?? []), latest.data ?? []]),
+    [older.data, latest.data],
+  )
 
   // One live price for every timeframe. Between REST polls (and on a cached timeframe you just switched to) the
   // forming candle follows OKX's ticker, so 15m and 1W end on the same last price. A tick past the bar's end opens
@@ -234,7 +232,6 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
     liveBar ??
     candles.at(-1) ??
     null
-  const readout: Readout | null = shownBar && { ...shownBar, change: (shownBar.close - shownBar.open) / shownBar.open }
 
   // 2c. Indicators: redraw from the candles and bias on screen (the layers follow pan and zoom on their own).
   useEffect(() => {
@@ -258,25 +255,7 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
 
   return (
     <div className={cn('relative flex min-h-80 flex-col', className)}>
-      <div className="pointer-events-none absolute top-2 left-3 z-10 flex flex-wrap gap-x-3 gap-y-0.5 num text-[11px] text-muted-foreground">
-        {readout && (
-          <>
-            <span>
-              O <span className="text-foreground">{fmtPrice(readout.open)}</span>
-            </span>
-            <span>
-              H <span className="text-foreground">{fmtPrice(readout.high)}</span>
-            </span>
-            <span>
-              L <span className="text-foreground">{fmtPrice(readout.low)}</span>
-            </span>
-            <span>
-              C <span className="text-foreground">{fmtPrice(readout.close)}</span>
-            </span>
-            <span className="text-foreground">{fmtSigned(readout.change * 100)}%</span>
-          </>
-        )}
-      </div>
+      {shownBar && <OhlcReadout k={shownBar} />}
       {bias && <BiasReadout bias={bias} chartLabel={bar} higherLabel={higher?.bar ?? null} />}
       <div ref={box} className="relative min-h-0 flex-1 [&[data-cursor]_*]:cursor-[inherit]!" />
       {!latest.isSuccess && (
@@ -293,17 +272,7 @@ function buildMarkers(candles: Candle[], positions: Position[], bar: Bar, p: Pal
   if (!candles.length) return []
   const first = candles[0].time
   const span = BAR_MS[bar]
-  // snap a timestamp to the candle that contains it
-  const snap = (ms: number) => {
-    let lo = 0
-    let hi = candles.length - 1
-    while (lo < hi) {
-      const mid = (lo + hi + 1) >> 1
-      if (candles[mid].time <= ms) lo = mid
-      else hi = mid - 1
-    }
-    return toChart(candles[lo].time)
-  }
+  const snap = (ms: number) => snapToChart(candles, ms)
   const out: (SeriesMarker<Time> & { time: UTCTimestamp })[] = []
   for (const pos of positions) {
     if (pos.closedAt < first) continue

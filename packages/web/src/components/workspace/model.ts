@@ -1,4 +1,5 @@
 import type { WorkspaceStateT } from '@crypz/api'
+import { DEFAULT_SYMBOL } from '@/lib/market'
 
 // A workspace is a list of widgets, where each sits on a 24-column grid, and what each link group is watching.
 // Widgets in the same link group follow one symbol (like TradingView's link colours, numbered here: the world has
@@ -25,8 +26,6 @@ export type WidgetKind =
 export const COLS = 24
 export const ROW = 28
 export const GAP = 8
-
-export const DEFAULT_SYMBOL = 'BTC-USDT-SWAP'
 
 export const newWidgetId = () => `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
 

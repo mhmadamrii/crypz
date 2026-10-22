@@ -2,14 +2,11 @@ import { infiniteQueryOptions, keepPreviousData, queryOptions, useSuspenseQuery 
 import { useMemo } from 'react'
 import { BAR_MS, type Bar, type Candle, type ExchangeId, type LongShortKind, type StatBar } from '@crypz/exchanges'
 
-const getCandles = ({ data: q }: { data: { exchange: ExchangeId; symbol: string; bar: Bar; before?: number } }) =>
-  unwrap(
-    api.market.candles.$get({
-      query: { exchange: q.exchange, symbol: q.symbol, bar: q.bar, ...(q.before ? { before: String(q.before) } : {}) },
-    }),
-  )
 import { api, unwrap } from './api'
 import { DEFAULT_STATE } from '@/components/workspace/model'
+
+const getCandles = (exchange: ExchangeId, symbol: string, bar: Bar, before?: number) =>
+  unwrap(api.market.candles.$get({ query: { exchange, symbol, bar, ...(before ? { before: String(before) } : {}) } }))
 
 // Every server read goes through these, so caching, polling and dedupe live in one place.
 
@@ -31,7 +28,7 @@ export const tickerQuery = (exchange: ExchangeId, symbol: string) =>
 export const latestCandlesQuery = (exchange: ExchangeId, symbol: string, bar: Bar) =>
   queryOptions({
     queryKey: ['candles', exchange, symbol, bar, 'latest'],
-    queryFn: () => getCandles({ data: { exchange, symbol, bar } }),
+    queryFn: () => getCandles(exchange, symbol, bar),
     refetchInterval: 10_000,
     staleTime: 5_000,
   })
@@ -43,7 +40,7 @@ export const latestCandlesQuery = (exchange: ExchangeId, symbol: string, bar: Ba
 export const olderCandlesQuery = (exchange: ExchangeId, symbol: string, bar: Bar, before: number | undefined) =>
   infiniteQueryOptions({
     queryKey: ['candles', exchange, symbol, bar, 'older'],
-    queryFn: ({ pageParam }) => getCandles({ data: { exchange, symbol, bar, before: pageParam } }),
+    queryFn: ({ pageParam }) => getCandles(exchange, symbol, bar, pageParam),
     initialPageParam: before ?? 0,
     getNextPageParam: (page) => (page.length ? page[0].time : undefined),
     enabled: before !== undefined,
@@ -60,7 +57,7 @@ export const replayCandlesQuery = (exchange: ExchangeId, symbol: string, bar: Ba
   infiniteQueryOptions({
     queryKey: ['replay', exchange, symbol, bar, from],
     queryFn: async ({ pageParam }): Promise<Candle[]> => {
-      const get = (before: number) => getCandles({ data: { exchange, symbol, bar, before } })
+      const get = (before: number) => getCandles(exchange, symbol, bar, before)
       if (pageParam !== null) return get(pageParam)
       const recent = await get(from + 1)
       const [older, ahead] = await Promise.all([
@@ -211,7 +208,7 @@ export const replayFineQuery = (exchange: ExchangeId, symbol: string, fine: Bar,
       let cut = before
       // at most 300 candles (fineBar's budget), 100 per call
       for (let page = 0; page < 3; page++) {
-        const got = await getCandles({ data: { exchange, symbol, bar: fine, before: cut } })
+        const got = await getCandles(exchange, symbol, fine, cut)
         out.unshift(...got)
         if (!got.length || got[0].time <= open) break
         cut = got[0].time

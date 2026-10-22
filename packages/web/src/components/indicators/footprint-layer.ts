@@ -1,6 +1,6 @@
 import type { IChartApi, ISeriesApi } from 'lightweight-charts'
-import type { Palette } from '@/components/trade/chart-kit'
-import { fmtSize } from '@/components/workspace/kit'
+import { withAlpha, type Palette } from '@/components/trade/chart-kit'
+import { fmtSize } from '@/lib/format'
 import {
   absorptionsOf,
   columnsAt,
@@ -38,8 +38,6 @@ export type FootprintData = {
   step: number
   now: number
 }
-
-const alpha = (rgba: string, a: number) => rgba.replace(/,\s*[\d.]+\)$/, `,${a})`)
 
 export function attachFootprintLayer(opts: {
   chart: IChartApi
@@ -140,7 +138,7 @@ export function attachFootprintLayer(opts: {
       for (const [k, [b, s]] of col.cells) {
         const box = rowBox(k, r.step)
         if (!box) continue
-        ctx.fillStyle = alpha(p.fg, density(b + s, peak))
+        ctx.fillStyle = withAlpha(p.fg, density(b + s, peak))
         ctx.fillRect(left, box.top, w, box.h)
       }
     }
@@ -181,12 +179,12 @@ export function attachFootprintLayer(opts: {
           if (bars) {
             // sell grows left from the cell's middle, buy right, on one scale
             const half = (w - 6) / 2
-            ctx.fillStyle = alpha(p.down, BAR_ALPHA)
+            ctx.fillStyle = withAlpha(p.down, BAR_ALPHA)
             ctx.fillRect(Math.round(mid - (s / sidePeak) * half), box.top, Math.round((s / sidePeak) * half), box.h)
-            ctx.fillStyle = alpha(p.up, BAR_ALPHA)
+            ctx.fillStyle = withAlpha(p.up, BAR_ALPHA)
             ctx.fillRect(Math.round(mid), box.top, Math.round((b / sidePeak) * half), box.h)
           } else {
-            ctx.fillStyle = alpha(p.fg, density(b + s, peak))
+            ctx.fillStyle = withAlpha(p.fg, density(b + s, peak))
             ctx.fillRect(left + 6, box.top, w - 6, box.h)
           }
           const side = imb.get(k)?.side

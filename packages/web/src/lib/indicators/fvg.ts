@@ -62,26 +62,17 @@ export function findGaps(candles: Candle[], minAtr = 0): Gap[] {
     }
     const a = candles[i - 2]
     const size = range ? range[i] * minAtr : 0
-    if (a.high < c.low && c.low - a.high >= size && !Number.isNaN(size)) {
+    const bull = a.high < c.low && c.low - a.high >= size
+    if (bull || (a.low > c.high && a.low - c.high >= size)) {
+      const top = bull ? c.low : a.low
+      const bottom = bull ? a.high : c.high
       const g: Gap = {
-        side: 'bull',
+        side: bull ? 'bull' : 'bear',
         start: candles[i - 1].time,
-        top: c.low,
-        bottom: a.high,
-        openTop: c.low,
-        openBottom: a.high,
-        filledAt: null,
-      }
-      gaps.push(g)
-      open.push(g)
-    } else if (a.low > c.high && a.low - c.high >= size && !Number.isNaN(size)) {
-      const g: Gap = {
-        side: 'bear',
-        start: candles[i - 1].time,
-        top: a.low,
-        bottom: c.high,
-        openTop: a.low,
-        openBottom: c.high,
+        top,
+        bottom,
+        openTop: top,
+        openBottom: bottom,
         filledAt: null,
       }
       gaps.push(g)

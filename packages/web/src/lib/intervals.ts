@@ -3,7 +3,7 @@ import { BARS, type Bar } from '@crypz/exchanges'
 
 // Which intervals the timeframe bar shows. A per-browser preference, so it lives in localStorage.
 
-export const DEFAULT_INTERVALS: readonly Bar[] = ['15m', '1H', '4H', '1D']
+const DEFAULT_INTERVALS: readonly Bar[] = ['15m', '1H', '4H', '1D']
 
 const KEY = 'crypz-intervals'
 const listeners = new Set<() => void>()

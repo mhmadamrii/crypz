@@ -32,7 +32,7 @@ export type Bias = {
 }
 
 /** Exponential moving average of closes; NaN until `period` bars exist. */
-export function ema(candles: Candle[], period: number) {
+function ema(candles: Candle[], period: number) {
   const out = new Array<number>(candles.length).fill(Number.NaN)
   const k = 2 / (period + 1)
   let value = 0

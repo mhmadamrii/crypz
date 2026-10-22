@@ -1,4 +1,5 @@
 import type { Candle } from '@crypz/exchanges'
+import { candleIndexAt } from '@/lib/candles'
 import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts'
 
 // Shared setup for every lightweight-charts surface: colours from the world tokens, hollow candles, theme follow.
@@ -35,6 +36,12 @@ function resolveColor(expr: string, alpha = 1) {
   return `rgba(${r},${g},${b},${alpha})`
 }
 
+/** The same colour at another opacity; `rgba` is one of the palette's `rgba(r,g,b,a)` strings. */
+export const withAlpha = (rgba: string, a: number) => rgba.replace(/,\s*[\d.]+\)$/, `,${a})`)
+
+/** The page's mono face, for canvas text and chart labels (canvas cannot read a CSS variable). */
+export const monoFont = () => getComputedStyle(document.body).getPropertyValue('--font-mono') || 'monospace'
+
 export function palette() {
   return {
     bg: resolveColor('var(--background)'),
@@ -53,6 +60,10 @@ export function palette() {
 }
 
 export type Palette = ReturnType<typeof palette>
+
+/** The chart time of the candle containing `ms` (the first candle for a time before them all). */
+export const snapToChart = (candles: Candle[], ms: number) =>
+  candles.length ? toChart(candles[candleIndexAt(candles, ms)].time) : toChart(ms)
 
 export const toBar = (k: Candle) => ({ time: toChart(k.time), open: k.open, high: k.high, low: k.low, close: k.close })
 
@@ -98,7 +109,7 @@ export function createMosaicChart(lw: LW, el: HTMLElement, onTheme?: (p: Palette
     autoSize: true,
     layout: {
       ...t.chart.layout,
-      fontFamily: getComputedStyle(document.body).getPropertyValue('--font-mono') || 'monospace',
+      fontFamily: monoFont(),
       fontSize: 11,
       attributionLogo: true,
     },

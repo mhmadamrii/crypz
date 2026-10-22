@@ -1,7 +1,7 @@
 import type { AccountSnapshot, Stats } from '@crypz/exchanges'
 import { RollingNumber } from '@/components/rolling-number'
 import { cn } from '@/lib/utils'
-import { fmtNum, fmtSigned, tone } from '@/lib/format'
+import { fmtNum, fmtPct, fmtSigned, tone } from '@/lib/format'
 
 function Cell({
   label,
@@ -77,7 +77,7 @@ export function StatStrip({ accounts, stats }: { accounts: AccountSnapshot[]; st
           </span>
         }
       >
-        <RollingNumber value={`${(stats.winRate * 100).toFixed(1)}%`} />
+        <RollingNumber value={fmtPct(stats.winRate)} />
       </Cell>
       <Cell
         label="Profit factor"

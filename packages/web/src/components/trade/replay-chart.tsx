@@ -2,16 +2,16 @@ import type { Bar, Candle } from '@crypz/exchanges'
 import type { IPriceLine, ISeriesApi, ISeriesMarkersPluginApi, SeriesMarker, Time } from 'lightweight-charts'
 import type { OpenPosition, ReplayTrade } from '@/lib/replay'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
-import { fmtPrice, fmtSigned, tone } from '@/lib/format'
-import { fmtSize, signedSize } from '@/components/workspace/kit'
+import { fmtPrice, fmtSigned, fmtSize, signedSize, tone } from '@/lib/format'
 import { attachDrawingLayer, createMapper } from '@/components/drawings/layer'
 import { attachIndicators } from '@/components/indicators/attach'
+import { OhlcReadout } from './ohlc-readout'
 import { BiasReadout } from '@/components/indicators/bias-readout'
 import type { FootprintData } from '@/components/indicators/footprint-layer'
 import { useBias } from '@/components/indicators/use-bias'
-import { createMosaicChart, palette, precisionFor, toBar, toChart, type Palette } from './chart-kit'
+import { createMosaicChart, palette, precisionFor, snapToChart, toBar, toChart, type Palette } from './chart-kit'
 
 type Props = {
   /** Only the revealed candles; the chart never sees the future. */
@@ -142,10 +142,10 @@ export function ReplayChart({
     const prev = shown.current
     const first = candles[0].time
     const last = candles[candles.length - 1]
-    if (prev.first === first && candles.length === prev.length + 1) c.candles.update(toBar(last))
-    // the forming candle grew, or a step closed it: same count, the last bar changed in place
-    else if (prev.first === first && candles.length === prev.length) c.candles.update(toBar(last))
-    else if (prev.first !== first || candles.length !== prev.length) {
+    // a step appended one bar, or the forming candle grew or closed in place: the last bar is all that changed
+    if (prev.first === first && (candles.length === prev.length || candles.length === prev.length + 1))
+      c.candles.update(toBar(last))
+    else {
       c.candles.applyOptions({ priceFormat: precisionFor(candles[candles.length - 1].close) })
       c.candles.setData(candles.map(toBar))
       if (prev.first !== first) c.setView(candles.length)
@@ -165,17 +165,7 @@ export function ReplayChart({
     if (!c) return
     const p = c.palette
     // orders placed on another interval land on the candle that contains them
-    const snap = (ms: number) => {
-      let lo = 0
-      let hi = candles.length - 1
-      if (hi < 0) return toChart(ms)
-      while (lo < hi) {
-        const mid = (lo + hi + 1) >> 1
-        if (candles[mid].time <= ms) lo = mid
-        else hi = mid - 1
-      }
-      return toChart(candles[lo].time)
-    }
+    const snap = (ms: number) => snapToChart(candles, ms)
     const marks: SeriesMarker<Time>[] = []
     for (const t of trades) {
       marks.push(entryMark(t, p, snap), {
@@ -209,20 +199,7 @@ export function ReplayChart({
   return (
     <div className={cn('relative min-h-0', className)}>
       {k && (
-        <div className="pointer-events-none absolute top-2 left-3 z-10 flex flex-wrap gap-x-3 gap-y-0.5 num text-[11px] text-muted-foreground">
-          <span>
-            O <span className="text-foreground">{fmtPrice(k.open)}</span>
-          </span>
-          <span>
-            H <span className="text-foreground">{fmtPrice(k.high)}</span>
-          </span>
-          <span>
-            L <span className="text-foreground">{fmtPrice(k.low)}</span>
-          </span>
-          <span>
-            C <span className="text-foreground">{fmtPrice(k.close)}</span>
-          </span>
-          <span className="text-foreground">{fmtSigned(((k.close - k.open) / k.open) * 100)}%</span>
+        <OhlcReadout k={k}>
           {fp && (
             <>
               <span>
@@ -239,7 +216,7 @@ export function ReplayChart({
               )}
             </>
           )}
-        </div>
+        </OhlcReadout>
       )}
       {bias && <BiasReadout bias={bias} chartLabel={barLabel} higherLabel={higher?.bar ?? null} />}
       <div ref={box} className="absolute inset-0 [&[data-cursor]_*]:cursor-[inherit]!" />

@@ -182,7 +182,7 @@ export const FIRST_HISTORY_DAY = '2021-11-01'
 const UTC8 = 8 * 3_600_000
 
 /** The OKX day (UTC+8 calendar date) a moment falls in. */
-export const okxDay = (ms: number) => new Date(ms + UTC8).toISOString().slice(0, 10)
+const okxDay = (ms: number) => new Date(ms + UTC8).toISOString().slice(0, 10)
 
 /** Every OKX day from the one holding `from` to the one holding `to`, oldest first. */
 export function okxDays(from: number, to: number) {

@@ -1,7 +1,7 @@
 import { Moon, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-export const THEME_KEY = 'crypz-theme'
+const THEME_KEY = 'crypz-theme'
 
 // Runs before paint so the stored theme never flashes. Dark is the default.
 export const themeScript = `try{var t=localStorage.getItem('${THEME_KEY}');document.documentElement.classList.toggle('dark',t!=='light')}catch(e){}`

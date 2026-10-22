@@ -99,31 +99,24 @@ const set = (next: IndicatorState) => {
   for (const fn of listeners) fn()
 }
 
+const patch = <K extends keyof IndicatorState>(key: K, p: Partial<IndicatorState[K]>) =>
+  set({ ...get(), [key]: { ...get()[key], ...p } })
+
 export const indicators = {
   get,
   subscribe: (fn: () => void) => {
     listeners.add(fn)
     return () => listeners.delete(fn)
   },
-  setSessions: (patch: Partial<IndicatorState['sessions']>) =>
-    set({ ...get(), sessions: { ...get().sessions, ...patch } }),
-  setFvg: (patch: Partial<IndicatorState['fvg']>) => set({ ...get(), fvg: { ...get().fvg, ...patch } }),
-  setStructure: (patch: Partial<IndicatorState['structure']>) =>
-    set({ ...get(), structure: { ...get().structure, ...patch } }),
-  setBias: (patch: Partial<IndicatorState['bias']>) => set({ ...get(), bias: { ...get().bias, ...patch } }),
-  setOrderBlocks: (patch: Partial<IndicatorState['orderBlocks']>) =>
-    set({ ...get(), orderBlocks: { ...get().orderBlocks, ...patch } }),
-  setFootprint: (patch: Partial<IndicatorState['footprint']>) =>
-    set({ ...get(), footprint: { ...get().footprint, ...patch } }),
+  setSessions: (p: Partial<IndicatorState['sessions']>) => patch('sessions', p),
+  setFvg: (p: Partial<IndicatorState['fvg']>) => patch('fvg', p),
+  setStructure: (p: Partial<IndicatorState['structure']>) => patch('structure', p),
+  setBias: (p: Partial<IndicatorState['bias']>) => patch('bias', p),
+  setOrderBlocks: (p: Partial<IndicatorState['orderBlocks']>) => patch('orderBlocks', p),
+  setFootprint: (p: Partial<IndicatorState['footprint']>) => patch('footprint', p),
 }
 
 /** How many indicators are on, for the toolbar button. */
-export const activeCount = (s: IndicatorState) =>
-  Number(s.sessions.on) +
-  Number(s.fvg.on) +
-  Number(s.structure.on) +
-  Number(s.bias.on) +
-  Number(s.orderBlocks.on) +
-  Number(s.footprint.on)
+export const activeCount = (s: IndicatorState) => Object.values(s).filter((i) => i.on).length
 
 export const useIndicators = () => useSyncExternalStore(indicators.subscribe, indicators.get, () => DEFAULTS)

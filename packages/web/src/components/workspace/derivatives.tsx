@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { LONG_SHORT_KINDS, STAT_BARS, type LongShortKind } from '@crypz/exchanges'
-import { fmtNum, fmtPrice, fmtSigned, tone } from '@/lib/format'
+import { fmtNum, fmtPrice, fmtSigned, fmtSize, fmtUsd, signedUsd, tone } from '@/lib/format'
 import { MARKET_EXCHANGE } from '@/lib/market'
 import {
   latestCandlesQuery,
@@ -14,7 +14,7 @@ import {
 import { useFunding, useIndexPrice, useLiquidationFeed, useTicker } from '@/lib/okx-ws'
 import { cn } from '@/lib/utils'
 import { IndicatorChart, Readout, within, type Bar } from './indicator-chart'
-import { Segmented, Waiting, clockTime, eventTime, fmtSize, fmtUsd, periodLabel, pick, signedUsd } from './kit'
+import { SplitBar, StripControl, Waiting, clockTime, eventTime, p90, periodLabel, pick } from './kit'
 import type { WidgetProps } from './widgets'
 
 // Derivatives positioning: who is in (open interest), which way the crowd leans (long/short), who is aggressing
@@ -117,19 +117,15 @@ export function LongShortBody({ symbol, settings, set }: WidgetProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-hairline px-2 py-0.5">
-        <span className="truncate label" title={KIND_HINT[kind]}>
-          Ratio of
-        </span>
-        <Segmented
-          label="Whose positioning"
-          options={LONG_SHORT_KINDS}
-          value={kind}
-          onChange={(k) => set({ kind: k })}
-          format={(k) => KIND_LABEL[k]}
-          size="strip"
-        />
-      </div>
+      <StripControl
+        text="Ratio of"
+        hint={KIND_HINT[kind]}
+        label="Whose positioning"
+        options={LONG_SHORT_KINDS}
+        value={kind}
+        onChange={(k) => set({ kind: k })}
+        format={(k) => KIND_LABEL[k]}
+      />
       <div className="min-h-0 flex-1">
         <IndicatorChart
           frameKey={`${symbol}:${period}:${kind}`}
@@ -301,10 +297,7 @@ export function LiquidationsBody({ symbol }: WidgetProps) {
   }, [feed, history.data, symbol, ct])
 
   // the biggest tenth of what is listed gets weight, like the trades tape
-  const big = useMemo(() => {
-    const sizes = events.map((e) => e.usd).sort((a, b) => a - b)
-    return sizes[Math.floor(sizes.length * 0.9)] ?? Infinity
-  }, [events])
+  const big = useMemo(() => p90(events.map((e) => e.usd)), [events])
 
   if (!history.data && !events.length)
     return <Waiting what={history.isError ? 'Could not load liquidations. Retrying…' : undefined} />
@@ -347,9 +340,7 @@ export function LiquidationsBody({ symbol }: WidgetProps) {
           <span className="text-muted-foreground">since {clockTime(events.at(-1)!.time)}</span>
           <span className="text-up">Shorts {fmtUsd(shorts)}</span>
         </div>
-        <div className="flex h-1 bg-up/50">
-          <i className="h-full bg-down/70" style={{ width: `${longShare * 100}%` }} />
-        </div>
+        <SplitBar share={longShare} fill="down" />
       </div>
     </div>
   )

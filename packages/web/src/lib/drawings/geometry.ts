@@ -12,11 +12,11 @@ export type Mapper = {
 export type Handle = { key: string; x: number; y: number; cursor: string }
 export type Hit = { part: string; cursor: string }
 
-export const HIT_PX = 6
+const HIT_PX = 6
 
 const shift = (p: Point, dt: number, dp: number): Point => ({ time: p.time + dt, price: p.price + dp })
 
-export function distToSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number) {
+function distToSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number) {
   const dx = bx - ax
   const dy = by - ay
   const len = dx * dx + dy * dy

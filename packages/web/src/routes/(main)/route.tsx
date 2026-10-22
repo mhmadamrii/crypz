@@ -38,10 +38,11 @@ export const Route = createFileRoute('/(main)')({
 function AppLayout() {
   const { exchanges } = usePortfolio()
   const { user } = Route.useRouteContext()
-  console.log('exchanges', exchanges)
   // Decide from the matches being rendered, not the URL: the URL flips first, while the previous page (whose header
   // has a SidebarTrigger) is still on screen, and that page would then render outside the provider.
-  const replay = useRouterState({ select: (s) => s.matches.some((m) => m.routeId === '/(main)/(market)/trade_/replay') })
+  const replay = useRouterState({
+    select: (s) => s.matches.some((m) => m.routeId === '/(main)/(market)/trade_/replay'),
+  })
   // Replay is a focus mode: no sidebar at all, its header carries the way out.
   const [open, setOpen] = useState(true)
   if (replay) return <Outlet />

@@ -4,10 +4,11 @@ import { CandleChart } from '@/components/trade/candle-chart'
 import { useIntervals } from '@/lib/intervals'
 import { MARKET_EXCHANGE } from '@/lib/market'
 import { useBook, useFunding, useMarkPrice, useTicker, useTrades } from '@/lib/okx-ws'
-import { fmtDuration, fmtNum, fmtPrice, fmtSigned, tone } from '@/lib/format'
+import { fmtDuration, fmtNum, fmtQty, fmtPrice, fmtSigned, tone } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { BasisBody, LiquidationsBody, LongShortBody, OpenInterestBody, TakerBody } from './derivatives'
-import { Segmented, Waiting, decimalsOf, stepsFor } from './kit'
+import { Segmented } from '@/components/segmented'
+import { SplitBar, StripControl, Waiting, decimalsOf, p90, stepsFor } from './kit'
 import type { WidgetKind } from './model'
 import {
   CvdBody,
@@ -98,6 +99,32 @@ function group(levels: Map<string, string>, step: number, side: 'bid' | 'ask') {
   })
 }
 
+/** Module scope on purpose: declared inside BookBody it would remount every level on each book update. */
+function BookRow({
+  l,
+  side,
+  max,
+  dp,
+}: {
+  l: { px: number; sz: number; cum: number }
+  side: 'bid' | 'ask'
+  max: number
+  dp: number
+}) {
+  return (
+    <div className="relative grid h-[18px] shrink-0 grid-cols-3 items-center px-2 num text-[11px]">
+      <i
+        aria-hidden
+        className={cn('absolute inset-y-0 right-0', side === 'bid' ? 'bg-up/12' : 'bg-down/12')}
+        style={{ width: `${(l.cum / max) * 100}%` }}
+      />
+      <span className={cn('relative', side === 'bid' ? 'text-up' : 'text-down')}>{fmtNum(l.px, dp)}</span>
+      <span className="relative text-right">{fmtQty(l.sz)}</span>
+      <span className="relative text-right text-muted-foreground">{fmtNum(l.cum, 0)}</span>
+    </div>
+  )
+}
+
 function BookBody({ symbol, settings, set }: WidgetProps) {
   const book = useBook(symbol)
   const bestBid = Math.max(...[...book.bids.keys()].map(Number), 0)
@@ -116,32 +143,16 @@ function BookBody({ symbol, settings, set }: WidgetProps) {
   const askDepth = asks.slice(0, 20).reduce((s, l) => s + l.sz, 0)
   const bidShare = bidDepth / (bidDepth + askDepth || 1)
 
-  const Row = ({ l, side }: { l: { px: number; sz: number; cum: number }; side: 'bid' | 'ask' }) => (
-    <div className="relative grid h-[18px] shrink-0 grid-cols-3 items-center px-2 num text-[11px]">
-      <i
-        aria-hidden
-        className={cn('absolute inset-y-0 right-0', side === 'bid' ? 'bg-up/12' : 'bg-down/12')}
-        style={{ width: `${(l.cum / max) * 100}%` }}
-      />
-      <span className={cn('relative', side === 'bid' ? 'text-up' : 'text-down')}>{fmtNum(l.px, dp)}</span>
-      <span className="relative text-right">{fmtNum(l.sz, l.sz < 10 ? 2 : 0)}</span>
-      <span className="relative text-right text-muted-foreground">{fmtNum(l.cum, 0)}</span>
-    </div>
-  )
-
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-hairline px-2 py-0.5">
-        <span className="label">Group</span>
-        <Segmented
-          label="Price grouping"
-          options={stepsFor(mid)}
-          value={step}
-          onChange={(s) => set({ step: stepsFor(mid).indexOf(s) })}
-          format={(s) => fmtNum(s, decimalsOf(s))}
-          size="strip"
-        />
-      </div>
+      <StripControl
+        text="Group"
+        label="Price grouping"
+        options={stepsFor(mid)}
+        value={step}
+        onChange={(s) => set({ step: stepsFor(mid).indexOf(s) })}
+        format={(s) => fmtNum(s, decimalsOf(s))}
+      />
       <div className="grid shrink-0 grid-cols-3 px-2 py-1 label">
         <span>Price</span>
         <span className="text-right">Size</span>
@@ -150,7 +161,7 @@ function BookBody({ symbol, settings, set }: WidgetProps) {
       {/* asks run upward from the spread; overflow is clipped at the far end, never at the spread */}
       <div className="flex min-h-0 flex-1 flex-col-reverse overflow-hidden">
         {asks.map((l) => (
-          <Row key={l.px} l={l} side="ask" />
+          <BookRow key={l.px} l={l} side="ask" max={max} dp={dp} />
         ))}
       </div>
       <div className="flex shrink-0 items-baseline justify-between border-y border-hairline px-2 py-1.5">
@@ -161,14 +172,12 @@ function BookBody({ symbol, settings, set }: WidgetProps) {
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {bids.map((l) => (
-          <Row key={l.px} l={l} side="bid" />
+          <BookRow key={l.px} l={l} side="bid" max={max} dp={dp} />
         ))}
       </div>
       <div className="flex shrink-0 items-center gap-2 border-t border-hairline px-2 py-1.5" title="Top 20 levels">
         <span className="num text-[11px] text-up">{fmtNum(bidShare * 100, 0)}%</span>
-        <div className="flex h-1 flex-1 bg-down/50">
-          <i className="h-full bg-up/70" style={{ width: `${bidShare * 100}%` }} />
-        </div>
+        <SplitBar share={bidShare} fill="up" className="flex-1" />
         <span className="num text-[11px] text-down">{fmtNum((1 - bidShare) * 100, 0)}%</span>
       </div>
     </div>
@@ -180,10 +189,7 @@ function BookBody({ symbol, settings, set }: WidgetProps) {
 function TradesBody({ symbol }: WidgetProps) {
   const trades = useTrades(symbol)
   // the biggest tenth of what is on the tape gets weight, so size jumps out without a fixed threshold
-  const big = useMemo(() => {
-    const sizes = trades.map((t) => Number(t.sz)).sort((a, b) => a - b)
-    return sizes[Math.floor(sizes.length * 0.9)] ?? Infinity
-  }, [trades])
+  const big = useMemo(() => p90(trades.map((t) => Number(t.sz))), [trades])
   if (!trades.length) return <Waiting />
   const buys = trades.reduce((s, t) => s + (t.side === 'buy' ? Number(t.sz) : 0), 0)
   const all = trades.reduce((s, t) => s + Number(t.sz), 0)
@@ -204,7 +210,7 @@ function TradesBody({ symbol }: WidgetProps) {
             )}
           >
             <span className={t.side === 'buy' ? 'text-up' : 'text-down'}>{fmtPrice(Number(t.px))}</span>
-            <span className="text-right">{fmtNum(Number(t.sz), Number(t.sz) < 10 ? 2 : 0)}</span>
+            <span className="text-right">{fmtQty(Number(t.sz))}</span>
             <span className="text-right text-muted-foreground">
               {new Date(Number(t.ts)).toLocaleTimeString('en-GB', { hour12: false })}
             </span>

@@ -1,6 +1,6 @@
 import type { Candle } from '@crypz/exchanges'
 import type { IChartApi, ISeriesApi } from 'lightweight-charts'
-import type { Palette } from '@/components/trade/chart-kit'
+import { withAlpha, type Palette } from '@/components/trade/chart-kit'
 import { findZones, type Zone } from '@/lib/indicators/order-blocks'
 import { indicators } from '@/lib/indicators/store'
 import { attachPaneLayer } from './pane-layer'
@@ -16,8 +16,6 @@ const SPENT_FILL = 0.04
 const EDGE = 0.6
 /** Older zones beyond this many are left off. */
 const MAX_SHOWN = 40
-
-const alpha = (rgba: string, a: number) => rgba.replace(/,\s*[\d.]+\)$/, `,${a})`)
 
 export function attachOrderBlocksLayer(opts: {
   chart: IChartApi
@@ -73,10 +71,10 @@ export function attachOrderBlocksLayer(opts: {
       const h = Math.max(1, Math.round(Math.abs(yb - ya)))
       const hue = z.side === 'demand' ? p.up : p.down
 
-      ctx.fillStyle = alpha(hue, spent ? SPENT_FILL : z.taps ? TAPPED_FILL : FRESH_FILL)
+      ctx.fillStyle = withAlpha(hue, spent ? SPENT_FILL : z.taps ? TAPPED_FILL : FRESH_FILL)
       ctx.fillRect(left, top, right - left, h)
       if (spent) continue
-      ctx.strokeStyle = alpha(hue, EDGE)
+      ctx.strokeStyle = withAlpha(hue, EDGE)
       ctx.setLineDash(z.taps ? [4, 3] : [])
       ctx.strokeRect(left + 0.5, top + 0.5, right - left - 1, h - 1)
       ctx.setLineDash([])

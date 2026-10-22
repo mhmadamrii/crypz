@@ -6,7 +6,7 @@ export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 
 export const api = hc<AppType>(API_URL, { init: { credentials: 'include' } })
 
-export class ApiError extends Error {
+class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,

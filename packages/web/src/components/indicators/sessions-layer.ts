@@ -1,6 +1,6 @@
 import type { Candle } from '@crypz/exchanges'
 import type { IChartApi, ISeriesApi } from 'lightweight-charts'
-import type { Palette } from '@/components/trade/chart-kit'
+import { withAlpha, type Palette } from '@/components/trade/chart-kit'
 import { indicators } from '@/lib/indicators/store'
 import { attachPaneLayer } from './pane-layer'
 import { sessionsBetween } from '@/lib/indicators/sessions'
@@ -19,8 +19,6 @@ export const SESSION_MAX_BAR = 2 * 3_600_000
 
 /** The OHLC readout's band at the top of the chart (two lines on a phone); a label above a box that high would sit under it. */
 const LABEL_CLEAR = 44
-
-const alpha = (rgba: string, a: number) => rgba.replace(/,\s*[\d.]+\)$/, `,${a})`)
 
 /** Index of the first candle at or after `t`. */
 function firstAtOrAfter(candles: Candle[], t: number) {
@@ -87,9 +85,9 @@ export function attachSessionsLayer(opts: {
       const height = Math.max(1, Math.round(yb - ya))
 
       const hue = p.session[span.id]
-      ctx.fillStyle = alpha(hue, FILL)
+      ctx.fillStyle = withAlpha(hue, FILL)
       ctx.fillRect(left, top, right - left, height)
-      ctx.strokeStyle = alpha(hue, FRAME)
+      ctx.strokeStyle = withAlpha(hue, FRAME)
       ctx.lineWidth = 1
       ctx.strokeRect(left + 0.5, top + 0.5, right - left - 1, height - 1)
       // above the box, or tucked inside it near the chart top where the OHLC readout lives

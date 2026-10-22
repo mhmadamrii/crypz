@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { BAR_MS, type Bar as Interval, type Candle } from '@crypz/exchanges'
 import type { IChartApi, IPriceLine, ISeriesApi, PriceFormat } from 'lightweight-charts'
-import { createMosaicChart, palette, precisionFor, toBar, toChart } from '@/components/trade/chart-kit'
+import { createMosaicChart, palette, precisionFor, toBar, toChart, withAlpha } from '@/components/trade/chart-kit'
 
 // Price on top, one statistic under it, and optionally its per-period bars at the bottom: the shape CVD, open
 // interest, long/short, taker flow and basis all share. The statistic is ink; bars carry up/down because each is a
@@ -55,8 +55,6 @@ const formatOf = (f: Format, digits = 2): PriceFormat =>
       : { type: 'price', precision: 2, minMove: 0.01 }
 
 const NO_BARS: Bar[][] = []
-
-const fade = (rgba: string, alpha: number) => rgba.replace(/,[\d.]+\)$/, `,${alpha})`)
 
 export function IndicatorChart({
   frameKey,
@@ -157,7 +155,7 @@ export function IndicatorChart({
         (bars[i] ?? []).map((b) => ({
           time: toChart(b.time),
           value: b.value,
-          color: fade(b.tone === 'up' ? p.up : p.down, 0.6),
+          color: withAlpha(b.tone === 'up' ? p.up : p.down, 0.6),
         })),
       ),
     )

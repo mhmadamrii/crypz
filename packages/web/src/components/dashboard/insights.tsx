@@ -6,7 +6,7 @@ import type { Insight } from '@crypz/exchanges'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Segmented } from '@/components/workspace/kit'
+import { Segmented } from '@/components/segmented'
 import { insightsQuery, insightsStatusQuery, type InsightsScope } from '@/lib/queries'
 import { cn } from '@/lib/utils'
 
@@ -201,4 +201,3 @@ function AiView({ query, onRetry }: { query: UseQueryResult<InsightsResult>; onR
     </div>
   )
 }
-

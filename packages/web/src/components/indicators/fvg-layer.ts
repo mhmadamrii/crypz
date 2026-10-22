@@ -1,6 +1,6 @@
 import type { Candle } from '@crypz/exchanges'
 import type { IChartApi, ISeriesApi } from 'lightweight-charts'
-import type { Palette } from '@/components/trade/chart-kit'
+import { withAlpha, type Palette } from '@/components/trade/chart-kit'
 import { findGaps, type Gap } from '@/lib/indicators/fvg'
 import { indicators } from '@/lib/indicators/store'
 import { attachPaneLayer } from './pane-layer'
@@ -15,8 +15,6 @@ const OPEN_EDGE = 0.55
 const FILLED_FILL = 0.05
 /** Older gaps beyond this many are left off; an unfilled one from months back says little about this bar. */
 const MAX_SHOWN = 60
-
-const alpha = (rgba: string, a: number) => rgba.replace(/,\s*[\d.]+\)$/, `,${a})`)
 
 export function attachFvgLayer(opts: {
   chart: IChartApi
@@ -61,11 +59,11 @@ export function attachFvgLayer(opts: {
       const y = Math.round(Math.min(ya, yb))
       const h = Math.max(1, Math.round(Math.abs(yb - ya)))
 
-      ctx.fillStyle = alpha(hue, filled ? FILLED_FILL : OPEN_FILL)
+      ctx.fillStyle = withAlpha(hue, filled ? FILLED_FILL : OPEN_FILL)
       ctx.fillRect(left, y, right - left, h)
       if (filled) continue
       // the open edge, the one price would reach first, gets a hairline; the midpoint is dotted
-      ctx.strokeStyle = alpha(hue, OPEN_EDGE)
+      ctx.strokeStyle = withAlpha(hue, OPEN_EDGE)
       ctx.lineWidth = 1
       ctx.setLineDash([])
       const edge = Math.round(g.side === 'bull' ? Math.min(ya, yb) : Math.max(ya, yb)) + 0.5

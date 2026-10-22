@@ -1,6 +1,6 @@
 import type { Candle } from '@crypz/exchanges'
 import type { IChartApi, ISeriesApi } from 'lightweight-charts'
-import type { Palette } from '@/components/trade/chart-kit'
+import { withAlpha, type Palette } from '@/components/trade/chart-kit'
 import type { Bias } from '@/lib/indicators/bias'
 import { fmtPrice } from '@/lib/format'
 import { attachPaneLayer } from './pane-layer'
@@ -9,8 +9,6 @@ import { attachPaneLayer } from './pane-layer'
 // direction (up for bullish, down for bearish) from the swing that defines it to the newest bar, labelled at its
 // right end. A bias already broken keeps a dashed trace up to the candle that closed through it, marked there with
 // a hollow square (the world's sign for a loss of standing).
-
-const alpha = (rgba: string, a: number) => rgba.replace(/,\s*[\d.]+\)$/, `,${a})`)
 
 export function attachBiasLayer(opts: {
   chart: IChartApi
@@ -40,7 +38,7 @@ export function attachBiasLayer(opts: {
         const row = Math.round(y) + 0.5
         const hue = v.side === 'bull' ? p.up : p.down
         ctx.setLineDash([3, 3])
-        ctx.strokeStyle = alpha(hue, 0.5)
+        ctx.strokeStyle = withAlpha(hue, 0.5)
         ctx.beginPath()
         ctx.moveTo(xa, row)
         ctx.lineTo(xb, row)
@@ -82,7 +80,7 @@ export function attachBiasLayer(opts: {
         return
       }
       const row = Math.round(y) + 0.5
-      ctx.strokeStyle = alpha(hue, 0.9)
+      ctx.strokeStyle = withAlpha(hue, 0.9)
       ctx.beginPath()
       ctx.moveTo(Math.max(0, xa), row)
       ctx.lineTo(right, row)

@@ -1,29 +1,26 @@
 import { useMemo, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { MARKET_EXCHANGE, MARKET_EXCHANGE_NAME } from '@/lib/market'
+import { DEFAULT_BAR, DEFAULT_SYMBOL, MARKET_EXCHANGE, MARKET_EXCHANGE_NAME, symbolBarSearch } from '@/lib/market'
 import { useTicker } from '@/lib/okx-ws'
-import { tickerQuery, useInstruments, usePortfolio } from '@/lib/queries'
+import { tickerQuery, usePortfolio } from '@/lib/queries'
 import { ArrowUpRight, Rewind } from 'lucide-react'
-import { BAR_MS, BARS, type Bar, type Position, type Ticker } from '@crypz/exchanges'
+import { BAR_MS, type Bar, type Position, type Ticker } from '@crypz/exchanges'
 import { PageHeader } from '@/components/app/page-header'
 import { DrawingToolbar } from '@/components/drawings/toolbar'
 import { IndicatorMenu } from '@/components/indicators/menu'
 import { CandleChart } from '@/components/trade/candle-chart'
+import { InstrumentSelect } from '@/components/trade/instrument-select'
 import { IntervalBar, useIntervalHotkeys } from '@/components/trade/interval-bar'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { fmtDate, fmtDuration, fmtNum, fmtPct, fmtPrice, fmtSigned, tone } from '@/lib/format'
 
 type Search = { symbol?: string; bar?: Bar; trade?: string }
 
-const DEFAULT_SYMBOL = 'BTC-USDT-SWAP'
-
 export const Route = createFileRoute('/(main)/(market)/trade')({
   validateSearch: (s: Record<string, unknown>): Search => ({
-    symbol: typeof s.symbol === 'string' ? s.symbol.toUpperCase() : undefined,
-    bar: typeof s.bar === 'string' && (BARS as readonly string[]).includes(s.bar) ? (s.bar as Bar) : undefined,
+    ...symbolBarSearch(s),
     trade: typeof s.trade === 'string' ? s.trade : undefined,
   }),
   head: () => ({ meta: [{ title: 'Trade · crypz' }] }),
@@ -37,11 +34,8 @@ function Trade() {
   const set = (patch: Search) => navigate({ search: (s) => ({ ...s, ...patch }), replace: true })
   useIntervalHotkeys((b) => set({ bar: b }))
 
-  const symbols = useInstruments()
-
   const symbol = search.symbol ?? data.positions[0]?.symbol ?? DEFAULT_SYMBOL
-  const bar = search.bar ?? '1H'
-  const options = symbols.includes(symbol) ? symbols : [symbol, ...symbols]
+  const bar = search.bar ?? DEFAULT_BAR
   // your own trades are an optional overlay: only the account on the market's venue, and only when connected
   const connected = data.exchanges.some((e) => e.id === MARKET_EXCHANGE && e.configured)
   const mine = useMemo(
@@ -70,18 +64,11 @@ function Trade() {
   return (
     <>
       <PageHeader title="Trade" source={`${MARKET_EXCHANGE_NAME} data`}>
-        <Select value={symbol} onValueChange={(v) => set({ symbol: v, trade: undefined })}>
-          <SelectTrigger size="sm" className="w-40 num sm:w-52" aria-label="Instrument">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="max-h-80">
-            {options.map((s) => (
-              <SelectItem key={s} value={s} className="num">
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <InstrumentSelect
+          value={symbol}
+          onChange={(v) => set({ symbol: v, trade: undefined })}
+          className="w-40 sm:w-52"
+        />
         <IntervalBar value={bar} onChange={(v) => set({ bar: v })} className="hidden sm:flex" />
         <IndicatorMenu barMs={BAR_MS[bar]} footprint={false} className="hidden lg:inline-flex" />
       </PageHeader>

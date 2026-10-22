@@ -8,7 +8,7 @@ import type {
   Logical,
   Time,
 } from 'lightweight-charts'
-import type { Palette } from '@/components/trade/chart-kit'
+import { monoFont, withAlpha, type Palette } from '@/components/trade/chart-kit'
 import { drag, handles, hitTest, type Mapper } from '@/lib/drawings/geometry'
 import { FIB_LEVELS, fibPrice, newId, positionStats, type Drawing, type Point } from '@/lib/drawings/model'
 import { drawings as store } from '@/lib/drawings/store'
@@ -74,7 +74,6 @@ export function createMapper(
 
 type DrawMapper = ReturnType<typeof createMapper>
 
-const alpha = (rgba: string, a: number) => rgba.replace(/,\s*[\d.]+\)$/, `,${a})`)
 const crisp = (v: number) => Math.round(v) + 0.5
 
 type Look = { p: Palette; font: string }
@@ -114,9 +113,9 @@ function render(ctx: Ctx, d: Drawing, m: Mapper, look: Look, selected: boolean) 
       const y = crisp(Math.min(a.y, b.y))
       const w = Math.round(Math.abs(b.x - a.x))
       const h = Math.round(Math.abs(b.y - a.y))
-      ctx.fillStyle = alpha(p.fg, 0.07)
+      ctx.fillStyle = withAlpha(p.fg, 0.07)
       ctx.fillRect(x, y, w, h)
-      ctx.strokeStyle = alpha(p.fg, 0.75)
+      ctx.strokeStyle = withAlpha(p.fg, 0.75)
       ctx.lineWidth = 1
       ctx.strokeRect(x, y, w, h)
       break
@@ -157,11 +156,11 @@ function render(ctx: Ctx, d: Drawing, m: Mapper, look: Look, selected: boolean) 
       if (x1 === null || x2 === null || ye === null || yt === null || ys === null) return
       const left = Math.round(x1)
       const w = Math.max(1, Math.round(x2 - x1))
-      ctx.fillStyle = alpha(p.up, 0.14)
+      ctx.fillStyle = withAlpha(p.up, 0.14)
       ctx.fillRect(left, Math.min(ye, yt), w, Math.abs(yt - ye))
-      ctx.fillStyle = alpha(p.down, 0.14)
+      ctx.fillStyle = withAlpha(p.down, 0.14)
       ctx.fillRect(left, Math.min(ye, ys), w, Math.abs(ys - ye))
-      ctx.strokeStyle = alpha(p.fg, 0.8)
+      ctx.strokeStyle = withAlpha(p.fg, 0.8)
       ctx.lineWidth = 1
       line(left, crisp(ye), left + w, crisp(ye))
 
@@ -225,7 +224,7 @@ export function attachDrawingLayer(opts: {
   const { chart, series, el, symbol, mapper: m } = opts
   const look: Look = {
     p: opts.palette,
-    font: getComputedStyle(document.body).getPropertyValue('--font-mono') || 'monospace',
+    font: monoFont(),
   }
   let draft: Draft | null = null
   let dragging: Drag | null = null

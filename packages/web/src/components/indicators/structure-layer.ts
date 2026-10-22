@@ -1,6 +1,6 @@
 import type { Candle } from '@crypz/exchanges'
 import type { IChartApi, ISeriesApi } from 'lightweight-charts'
-import type { Palette } from '@/components/trade/chart-kit'
+import { withAlpha, type Palette } from '@/components/trade/chart-kit'
 import { marketStructure, type Structure } from '@/lib/indicators/structure'
 import { indicators } from '@/lib/indicators/store'
 import { attachPaneLayer } from './pane-layer'
@@ -9,8 +9,6 @@ import { attachPaneLayer } from './pane-layer'
 // it, in the direction it broke (up / down, as in order flow): dashed for a BOS, solid for a CHoCH, named at its
 // middle. Swing labels (HH, LH, HL, LL) are muted ink just beyond the wick. The two swings still unbroken, where the
 // next break would come from, are dotted ink lines running to the right edge.
-
-const alpha = (rgba: string, a: number) => rgba.replace(/,\s*[\d.]+\)$/, `,${a})`)
 
 export function attachStructureLayer(opts: {
   chart: IChartApi
@@ -42,7 +40,7 @@ export function attachStructureLayer(opts: {
 
     // the levels the next break would come from
     ctx.setLineDash([1, 3])
-    ctx.strokeStyle = alpha(p.fg, 0.4)
+    ctx.strokeStyle = withAlpha(p.fg, 0.4)
     for (const sw of [st.lastHigh, st.lastLow]) {
       if (!sw) continue
       const xa = opts.x(sw.time)
@@ -63,7 +61,7 @@ export function attachStructureLayer(opts: {
       const hue = b.dir === 'up' ? p.up : p.down
       const row = Math.round(ya) + 0.5
       ctx.setLineDash(b.type === 'BOS' ? [4, 3] : [])
-      ctx.strokeStyle = alpha(hue, 0.85)
+      ctx.strokeStyle = withAlpha(hue, 0.85)
       ctx.beginPath()
       ctx.moveTo(xa, row)
       ctx.lineTo(xb, row)

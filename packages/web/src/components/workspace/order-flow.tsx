@@ -1,14 +1,15 @@
 import { useMemo, useState, type PointerEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { STAT_BARS, type Candle } from '@crypz/exchanges'
-import { fmtNum, fmtPrice, fmtSigned, tone } from '@/lib/format'
+import { fmtNum, fmtPrice, fmtSigned, fmtSize, signedSize, tone } from '@/lib/format'
 import { MARKET_EXCHANGE } from '@/lib/market'
 import { latestCandlesQuery, takerFlowQuery } from '@/lib/queries'
 import { absorptionsOf, columnsOf, imbalancesOf, rowOf, type Absorption, type ImbalanceMode } from '@/lib/footprint'
 import { useBook, useFootprint, useTicker } from '@/lib/okx-ws'
 import { cn } from '@/lib/utils'
 import { IndicatorChart, Readout, within, type Bar } from './indicator-chart'
-import { Segmented, Waiting, clockTime, decimalsOf, fmtSize, periodLabel, pick, signedSize, stepsFor } from './kit'
+import { StripControl, Waiting, clockTime, decimalsOf, periodLabel, pick, stepsFor } from './kit'
+import { Segmented } from '@/components/segmented'
 import type { WidgetProps } from './widgets'
 
 // Order flow beyond the ladder and the tape. As everywhere in order flow, up/down colour means direction (bids and
@@ -315,10 +316,7 @@ export function ProfileBody({ symbol, settings, set }: WidgetProps) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* the span lives here, not in the header: the widget is narrow and the title has to survive */}
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-hairline px-2 py-0.5">
-        <span className="label">Span</span>
-        <Segmented label="Span" options={SPAN_KEYS} value={span} onChange={(v) => set({ span: v })} size="strip" />
-      </div>
+      <StripControl text="Span" label="Span" options={SPAN_KEYS} value={span} onChange={(v) => set({ span: v })} />
       <div className="flex h-6 shrink-0 items-center justify-between gap-2 border-b border-hairline px-2 num text-[11px] text-muted-foreground">
         {hover === null ? (
           <>

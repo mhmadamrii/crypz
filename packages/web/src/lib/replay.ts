@@ -84,7 +84,7 @@ function settle(state: ReplayState, exit: number, exitTime: number, reason: Exit
  * target is scored as the adverse one: the candle alone cannot say which came first, so assume the worse.
  * A gap through the stop fills at the bar's open; liquidation always costs exactly the margin.
  */
-export function exitOn(p: OpenPosition, k: Candle): { price: number; reason: ExitReason } | null {
+function exitOn(p: OpenPosition, k: Candle): { price: number; reason: ExitReason } | null {
   const d = dir(p.side)
   const stopFirst = p.stop !== null && d * (p.stop - p.liq) > 0
   const adverse = stopFirst ? p.stop! : p.liq

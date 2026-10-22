@@ -97,7 +97,7 @@ class OkxPublic {
   }
 }
 
-export const okxPublic = new OkxPublic()
+const okxPublic = new OkxPublic()
 
 export const useFeedStatus = () =>
   useSyncExternalStore(
@@ -162,9 +162,8 @@ function feed<T>(
   reduce: (prev: T, push: Push, f: { resync: () => void }) => T,
   name = keyOf(arg),
 ) {
-  const key = name
-  if (!feeds.has(key)) feeds.set(key, new Feed(arg, initial, reduce) as Feed<unknown>)
-  return feeds.get(key) as Feed<T>
+  if (!feeds.has(name)) feeds.set(name, new Feed(arg, initial, reduce) as Feed<unknown>)
+  return feeds.get(name) as Feed<T>
 }
 
 function useFeed<T>(f: Feed<T>, server: T) {

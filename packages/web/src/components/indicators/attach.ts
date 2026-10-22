@@ -2,7 +2,7 @@ import type { IChartApi, ISeriesApi } from 'lightweight-charts'
 import type { Candle } from '@crypz/exchanges'
 import type { Bias } from '@/lib/indicators/bias'
 import type { createMapper } from '@/components/drawings/layer'
-import type { Palette } from '@/components/trade/chart-kit'
+import { monoFont, type Palette } from '@/components/trade/chart-kit'
 import { attachBiasLayer } from './bias-layer'
 import { attachFootprintLayer, type FootprintData } from './footprint-layer'
 import { attachFvgLayer } from './fvg-layer'
@@ -27,7 +27,7 @@ export function attachIndicators(opts: {
   palette: Palette
 }) {
   const { chart, series, x, candles, barMs, bias, footprint, palette } = opts
-  const font = getComputedStyle(document.body).getPropertyValue('--font-mono') || 'monospace'
+  const font = monoFont()
   // the footprint's heat sits lowest and its cell columns replace the candles when zoomed in, so every other
   // indicator draws over it
   const footprintLayer = footprint
