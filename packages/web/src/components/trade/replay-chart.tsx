@@ -3,19 +3,14 @@ import type { IPriceLine, ISeriesApi, ISeriesMarkersPluginApi, SeriesMarker, Tim
 import type { OpenPosition, ReplayTrade } from '@/lib/replay'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { computeBias, type Bias } from '@/lib/indicators/bias'
-import { useIndicators } from '@/lib/indicators/store'
 import { cn } from '@/lib/utils'
 import { fmtPrice, fmtSigned, tone } from '@/lib/format'
 import { fmtSize, signedSize } from '@/components/workspace/kit'
 import { attachDrawingLayer, createMapper } from '@/components/drawings/layer'
-import { attachBiasLayer } from '@/components/indicators/bias-layer'
+import { attachIndicators } from '@/components/indicators/attach'
 import { BiasReadout } from '@/components/indicators/bias-readout'
-import { attachFootprintLayer, type FootprintData } from '@/components/indicators/footprint-layer'
-import { attachFvgLayer } from '@/components/indicators/fvg-layer'
-import { attachOrderBlocksLayer } from '@/components/indicators/order-blocks-layer'
-import { attachSessionsLayer } from '@/components/indicators/sessions-layer'
-import { attachStructureLayer } from '@/components/indicators/structure-layer'
+import type { FootprintData } from '@/components/indicators/footprint-layer'
+import { useBias } from '@/components/indicators/use-bias'
 import { createMosaicChart, palette, precisionFor, toBar, toChart, type Palette } from './chart-kit'
 
 type Props = {
@@ -47,7 +42,7 @@ type Handles = {
   lines: IPriceLine[]
   dashed: number
   refreshIndicators: (p?: Palette) => void
-  footprintAt: ReturnType<typeof attachFootprintLayer>['at']
+  footprintAt: ReturnType<typeof attachIndicators>['footprintAt']
 }
 
 export function ReplayChart({
@@ -67,21 +62,7 @@ export function ReplayChart({
   const [ready, setReady] = useState(false)
   const [hover, setHover] = useState<Candle | null>(null)
   const [theme, setTheme] = useState(0)
-  const ind = useIndicators()
-  // the bias is plain data from the revealed candles: the readout renders it, the layer draws its invalidation
-  const bias = useMemo<Bias | null>(
-    () =>
-      ind.bias.on && candles.length
-        ? computeBias({
-            chart: candles,
-            chartLabel: barLabel,
-            higher: higher?.candles ?? null,
-            higherLabel: higher?.bar ?? null,
-            length: ind.structure.length,
-          })
-        : null,
-    [ind.bias.on, ind.structure.length, candles, barLabel, higher],
-  )
+  const bias = useBias(candles, barLabel, higher)
   const live = useRef({ candles, barMs, bias, footprint })
   live.current = { candles, barMs, bias, footprint }
 
@@ -95,11 +76,7 @@ export function ReplayChart({
       const made = createMosaicChart(lw, box.current, (q) => {
         if (ref.current) ref.current.palette = q
         layer.setPalette(q)
-        footprintLayer.refresh(q)
-        sessions.refresh(q)
-        fvg.refresh(q)
-        structure.refresh(q)
-        biasLayer.refresh(q)
+        indicators.refresh(q)
         setTheme((n) => n + 1)
       })
       const mapper = createMapper(
@@ -108,61 +85,16 @@ export function ReplayChart({
         () => live.current.candles,
         () => live.current.barMs,
       )
-      // the footprint's heat sits lowest and its cell columns replace the candles when zoomed in, so every other
-      // indicator draws over it
-      const footprintLayer = attachFootprintLayer({
-        chart: made.chart,
-        series: made.candles,
-        x: mapper.x,
-        data: () => live.current.footprint,
-        barMs: () => live.current.barMs,
-        palette: palette(),
-        font: getComputedStyle(document.body).getPropertyValue('--font-mono') || 'monospace',
-      })
       // indicators sit under the candles; drawings above them
-      const sessions = attachSessionsLayer({
+      const indicators = attachIndicators({
         chart: made.chart,
         series: made.candles,
         x: mapper.x,
         candles: () => live.current.candles,
         barMs: () => live.current.barMs,
-        palette: palette(),
-        font: getComputedStyle(document.body).getPropertyValue('--font-mono') || 'monospace',
-      })
-      // gaps draw over the session boxes: they are narrower and nearer to price
-      const fvg = attachFvgLayer({
-        chart: made.chart,
-        series: made.candles,
-        x: mapper.x,
-        candles: () => live.current.candles,
-        palette: palette(),
-      })
-      // order blocks draw over the gaps: a zone is the base the gap was left from
-      const orderBlocks = attachOrderBlocksLayer({
-        chart: made.chart,
-        series: made.candles,
-        x: mapper.x,
-        candles: () => live.current.candles,
-        palette: palette(),
-        font: getComputedStyle(document.body).getPropertyValue('--font-mono') || 'monospace',
-      })
-      // structure labels and break lines sit over the candles, under the drawings
-      const structure = attachStructureLayer({
-        chart: made.chart,
-        series: made.candles,
-        x: mapper.x,
-        candles: () => live.current.candles,
-        palette: palette(),
-        font: getComputedStyle(document.body).getPropertyValue('--font-mono') || 'monospace',
-      })
-      const biasLayer = attachBiasLayer({
-        chart: made.chart,
-        series: made.candles,
-        x: mapper.x,
-        candles: () => live.current.candles,
         bias: () => live.current.bias,
+        footprint: () => live.current.footprint,
         palette: palette(),
-        font: getComputedStyle(document.body).getPropertyValue('--font-mono') || 'monospace',
       })
       const layer = attachDrawingLayer({
         chart: made.chart,
@@ -174,12 +106,7 @@ export function ReplayChart({
       })
       dispose = () => {
         layer.dispose()
-        footprintLayer.dispose()
-        sessions.dispose()
-        fvg.dispose()
-        orderBlocks.dispose()
-        structure.dispose()
-        biasLayer.dispose()
+        indicators.dispose()
         made.dispose()
       }
       ref.current = {
@@ -190,15 +117,8 @@ export function ReplayChart({
         palette: palette(),
         lines: [],
         dashed: lw.LineStyle.Dashed,
-        refreshIndicators: (q) => {
-          footprintLayer.refresh(q)
-          sessions.refresh(q)
-          fvg.refresh(q)
-          orderBlocks.refresh(q)
-          structure.refresh(q)
-          biasLayer.refresh(q)
-        },
-        footprintAt: footprintLayer.at,
+        refreshIndicators: indicators.refresh,
+        footprintAt: indicators.footprintAt,
       }
       made.chart.subscribeCrosshairMove((param) => {
         const k = param.time ? live.current.candles.find((c) => toChart(c.time) === param.time) : undefined
@@ -285,7 +205,7 @@ export function ReplayChart({
   }, [ready, theme, trades, position, candles])
 
   const k = hover ?? candles[candles.length - 1]
-  const fp = k && footprint ? ref.current?.footprintAt(k.time) : null
+  const fp = k && footprint ? ref.current?.footprintAt?.(k.time) : null
   return (
     <div className={cn('relative min-h-0', className)}>
       {k && (

@@ -63,9 +63,18 @@ function Switch({
   )
 }
 
-export function IndicatorMenu({ barMs, className }: { barMs: number; className?: string }) {
+export function IndicatorMenu({
+  barMs,
+  footprint = true,
+  className,
+}: {
+  barMs: number
+  /** False on charts with no footprint history to draw (the live trade chart): hides its section and its count. */
+  footprint?: boolean
+  className?: string
+}) {
   const s = useIndicators()
-  const count = activeCount(s)
+  const count = activeCount(s) - Number(!footprint && s.footprint.on)
   const tooLong = barMs > SESSION_MAX_BAR
   const footprintTooLong = barMs > FOOTPRINT_MAX_BAR
 
@@ -271,94 +280,96 @@ export function IndicatorMenu({ barMs, className }: { barMs: number; className?:
             </p>
           </div>
         </div>
-        <div className="mt-1 border-t border-hairline pt-1">
-          <Switch
-            on={s.footprint.on}
-            onToggle={() => indicators.setFootprint({ on: !s.footprint.on })}
-            label="Footprint"
-          >
-            <span className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-sm font-medium">Footprint</span>
-              <span className="text-xs text-pretty text-muted-foreground">
-                Taker sell × buy at each price inside every bar, with diagonal imbalances and absorption, from OKX trade
-                history.
-              </span>
-            </span>
-          </Switch>
-          <div className={cn('flex flex-col gap-1 pb-2 pl-5', !s.footprint.on && 'opacity-50')}>
-            <div className="flex items-center justify-between gap-3 px-3 py-1">
-              <span
-                className="text-sm"
-                title="Bars: sell grows left and buy right from the cell's middle. Volume: one grey, darker the busier the row. Zoomed out, rows are always grey."
-              >
-                Cells
-              </span>
-              <Segmented
-                label="How a cell shows its size"
-                options={FOOTPRINT_CELLS}
-                value={s.footprint.cells}
-                onChange={(cells) => indicators.setFootprint({ cells, on: true })}
-                format={(v) => (v === 'bars' ? 'Bars' : 'Volume')}
-                size="strip"
-              />
-            </div>
-            <div className="flex items-center justify-between gap-3 px-3 py-1">
-              <span
-                className="text-sm"
-                title="Diagonal: buying at a price against selling one row below it (the two sides of the spread, who faced each other), selling against buying one row above. One row: buy against sell at the same price. Bold number at 3:1; three in a row add a rail."
-              >
-                Imbalance
-              </span>
-              <Segmented
-                label="What an imbalance weighs a row against"
-                options={FOOTPRINT_IMBALANCE}
-                value={s.footprint.imbalance}
-                onChange={(imbalance) => indicators.setFootprint({ imbalance, on: true })}
-                format={(v) => (v === 'diagonal' ? 'Diagonal' : v === 'row' ? 'One row' : 'Off')}
-                size="strip"
-              />
-            </div>
-            <div className="flex items-center justify-between gap-3 px-3 py-1">
-              <span className="text-sm" title="Price row size, over the finest row (BTC: $1, $10, $100)">
-                Rows
-              </span>
-              <Segmented
-                label="Price row size, over the finest row"
-                options={FOOTPRINT_ROWS}
-                value={s.footprint.rows}
-                onChange={(rows) => indicators.setFootprint({ rows, on: true })}
-                format={(v) => (v ? `${10 ** v}×` : 'Fine')}
-                size="strip"
-              />
-            </div>
-            <div className="flex items-center justify-between gap-3 px-3 py-1">
-              <span
-                className="text-sm"
-                title="Aggressive size into the top or bottom third of a bar, in multiples of its median row, that the bar closed back out of and the next bar did not trade past"
-              >
-                Absorption
-              </span>
-              <Segmented
-                label="Absorption threshold, times the bar's median row"
-                options={FOOTPRINT_ABSORB}
-                value={s.footprint.absorb}
-                onChange={(absorb) => indicators.setFootprint({ absorb, on: true })}
-                format={(v) => (v ? `${v}×` : 'Off')}
-                size="strip"
-              />
-            </div>
-            <p
-              className={cn(
-                'px-3 text-xs text-pretty text-muted-foreground',
-                footprintTooLong && s.footprint.on && 'text-foreground',
-              )}
+        {footprint && (
+          <div className="mt-1 border-t border-hairline pt-1">
+            <Switch
+              on={s.footprint.on}
+              onToggle={() => indicators.setFootprint({ on: !s.footprint.on })}
+              label="Footprint"
             >
-              {footprintTooLong && s.footprint.on
-                ? 'Switch to 1H or shorter to see it.'
-                : 'Each OKX day is built on first use, in a few seconds. Zoom in to read the numbers; absorption is marked once the next bar closes.'}
-            </p>
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="text-sm font-medium">Footprint</span>
+                <span className="text-xs text-pretty text-muted-foreground">
+                  Taker sell × buy at each price inside every bar, with diagonal imbalances and absorption, from OKX
+                  trade history.
+                </span>
+              </span>
+            </Switch>
+            <div className={cn('flex flex-col gap-1 pb-2 pl-5', !s.footprint.on && 'opacity-50')}>
+              <div className="flex items-center justify-between gap-3 px-3 py-1">
+                <span
+                  className="text-sm"
+                  title="Bars: sell grows left and buy right from the cell's middle. Volume: one grey, darker the busier the row. Zoomed out, rows are always grey."
+                >
+                  Cells
+                </span>
+                <Segmented
+                  label="How a cell shows its size"
+                  options={FOOTPRINT_CELLS}
+                  value={s.footprint.cells}
+                  onChange={(cells) => indicators.setFootprint({ cells, on: true })}
+                  format={(v) => (v === 'bars' ? 'Bars' : 'Volume')}
+                  size="strip"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3 px-3 py-1">
+                <span
+                  className="text-sm"
+                  title="Diagonal: buying at a price against selling one row below it (the two sides of the spread, who faced each other), selling against buying one row above. One row: buy against sell at the same price. Bold number at 3:1; three in a row add a rail."
+                >
+                  Imbalance
+                </span>
+                <Segmented
+                  label="What an imbalance weighs a row against"
+                  options={FOOTPRINT_IMBALANCE}
+                  value={s.footprint.imbalance}
+                  onChange={(imbalance) => indicators.setFootprint({ imbalance, on: true })}
+                  format={(v) => (v === 'diagonal' ? 'Diagonal' : v === 'row' ? 'One row' : 'Off')}
+                  size="strip"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3 px-3 py-1">
+                <span className="text-sm" title="Price row size, over the finest row (BTC: $1, $10, $100)">
+                  Rows
+                </span>
+                <Segmented
+                  label="Price row size, over the finest row"
+                  options={FOOTPRINT_ROWS}
+                  value={s.footprint.rows}
+                  onChange={(rows) => indicators.setFootprint({ rows, on: true })}
+                  format={(v) => (v ? `${10 ** v}×` : 'Fine')}
+                  size="strip"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3 px-3 py-1">
+                <span
+                  className="text-sm"
+                  title="Aggressive size into the top or bottom third of a bar, in multiples of its median row, that the bar closed back out of and the next bar did not trade past"
+                >
+                  Absorption
+                </span>
+                <Segmented
+                  label="Absorption threshold, times the bar's median row"
+                  options={FOOTPRINT_ABSORB}
+                  value={s.footprint.absorb}
+                  onChange={(absorb) => indicators.setFootprint({ absorb, on: true })}
+                  format={(v) => (v ? `${v}×` : 'Off')}
+                  size="strip"
+                />
+              </div>
+              <p
+                className={cn(
+                  'px-3 text-xs text-pretty text-muted-foreground',
+                  footprintTooLong && s.footprint.on && 'text-foreground',
+                )}
+              >
+                {footprintTooLong && s.footprint.on
+                  ? 'Switch to 1H or shorter to see it.'
+                  : 'Each OKX day is built on first use, in a few seconds. Zoom in to read the numbers; absorption is marked once the next bar closes.'}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
       </PopoverContent>
     </Popover>
   )

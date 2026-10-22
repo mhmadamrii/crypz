@@ -6,6 +6,11 @@ import { latestCandlesQuery, olderCandlesQuery } from '@/lib/queries'
 import { cn } from '@/lib/utils'
 import { fmtPrice, fmtSigned } from '@/lib/format'
 import { useTicker } from '@/lib/okx-ws'
+import { useIndicators } from '@/lib/indicators/store'
+import { attachDrawingLayer, createMapper } from '@/components/drawings/layer'
+import { attachIndicators } from '@/components/indicators/attach'
+import { BiasReadout } from '@/components/indicators/bias-readout'
+import { useBias } from '@/components/indicators/use-bias'
 import { createMosaicChart, palette, precisionFor, toBar, toChart, type Palette } from './chart-kit'
 
 import type {
@@ -32,9 +37,18 @@ type Chart = {
   chart: IChartApi
   candles: ISeriesApi<'Candlestick'>
   markers: ISeriesMarkersPluginApi<Time>
+  refreshIndicators: () => void
 }
 
 type Readout = Candle & { change: number }
+
+// The ticker can open the next bar before REST has it, so the series may already end past `k`. update() throws on a
+// bar older than the series' last ("Cannot update oldest data"), so skip those; the poll catches up on its own.
+function pushBar(series: ISeriesApi<'Candlestick'>, k: Candle) {
+  const last = series.data().at(-1)
+  if (last && toChart(k.time) < (last.time as number)) return
+  series.update(toBar(k))
+}
 
 export function CandleChart({ exchange, symbol, bar, positions = [], focus, className }: Props) {
   // Data: Query owns fetching, the 10s live poll, caching and history paging.
@@ -68,6 +82,25 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
     return { ...last, close: px, high: Math.max(last.high, px), low: Math.min(last.low, px) }
   }, [tick, candles, bar])
 
+  // The indicators read the forming candle too, so they move with the price instead of waiting for the next poll.
+  const shownCandles = useMemo(() => {
+    if (!liveBar) return candles
+    const last = candles.at(-1)
+    return last && last.time === liveBar.time ? [...candles.slice(0, -1), liveBar] : [...candles, liveBar]
+  }, [candles, liveBar])
+
+  // Top-down bias: the closed candles of its higher timeframe, fetched only while the bias is on and set above the chart's.
+  const ind = useIndicators()
+  const higherBar = ind.bias.on && BAR_MS[ind.bias.higher] > BAR_MS[bar] ? ind.bias.higher : null
+  const hq = useQuery({ ...latestCandlesQuery(exchange, symbol, higherBar ?? bar), enabled: !!higherBar })
+  const higher = useMemo(() => {
+    if (!higherBar || !hq.data) return null
+    const ms = BAR_MS[higherBar]
+    // closed bars only: a forming higher bar would let the bias change inside it
+    return { bar: higherBar, candles: hq.data.filter((k) => k.time + ms <= Date.now()) }
+  }, [higherBar, hq.data])
+  const bias = useBias(shownCandles, bar, higher)
+
   const box = useRef<HTMLDivElement>(null)
   const chartRef = useRef<Chart | null>(null)
   const [ready, setReady] = useState(false)
@@ -75,9 +108,11 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
   const [hovered, setHovered] = useState<number | null>(null)
 
   // What the chart's own event handlers read; refreshed every render so they never go stale.
-  const live = useRef({ candles, liveBar, positions, bar, loadOlder: () => {} })
+  const live = useRef({ candles, shownCandles, bias, liveBar, positions, bar, loadOlder: () => {} })
   live.current = {
     candles,
+    shownCandles,
+    bias,
     liveBar,
     positions,
     bar,
@@ -93,13 +128,44 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
     ;(async () => {
       const lw = await import('lightweight-charts')
       if (disposed || !box.current) return
-      const made = createMosaicChart(lw, box.current, (q) =>
-        markers.setMarkers(buildMarkers(live.current.candles, live.current.positions, live.current.bar, q)),
-      )
+      const made = createMosaicChart(lw, box.current, (q) => {
+        markers.setMarkers(buildMarkers(live.current.candles, live.current.positions, live.current.bar, q))
+        layer.setPalette(q)
+        indicators.refresh(q)
+      })
       const { chart, candles: candleSeries } = made
       const markers = lw.createSeriesMarkers(candleSeries, [])
-      chartRef.current = { chart, candles: candleSeries, markers }
-      dispose = made.dispose
+      const mapper = createMapper(
+        chart,
+        candleSeries,
+        () => live.current.shownCandles,
+        () => BAR_MS[live.current.bar],
+      )
+      // indicators sit under the candles; drawings above them. No footprint here: it needs trade history the
+      // live chart does not load.
+      const indicators = attachIndicators({
+        chart,
+        series: candleSeries,
+        x: mapper.x,
+        candles: () => live.current.shownCandles,
+        barMs: () => BAR_MS[live.current.bar],
+        bias: () => live.current.bias,
+        palette: palette(),
+      })
+      const layer = attachDrawingLayer({
+        chart,
+        series: candleSeries,
+        el: box.current,
+        symbol,
+        mapper,
+        palette: palette(),
+      })
+      chartRef.current = { chart, candles: candleSeries, markers, refreshIndicators: () => indicators.refresh() }
+      dispose = () => {
+        layer.dispose()
+        indicators.dispose()
+        made.dispose()
+      }
 
       chart.subscribeCrosshairMove((param) => {
         // also fires with no pointer at all; then nothing is hovered and the readout falls back to live
@@ -137,7 +203,7 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
     ) {
       // live poll: only the newest bars moved
       for (const k of candles.slice(Math.max(0, prev.length - 1))) {
-        c.candles.update(toBar(k))
+        pushBar(c.candles, k)
       }
     } else {
       c.candles.applyOptions({ priceFormat: precisionFor(candles[candles.length - 1].close) })
@@ -159,7 +225,7 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
 
   // 2b. Live tick: move the forming candle (runs after a data sync, so the poll's bar is never left stale on top).
   useEffect(() => {
-    if (liveBar) chartRef.current?.candles.update(toBar(liveBar))
+    if (liveBar && chartRef.current) pushBar(chartRef.current.candles, liveBar)
   }, [ready, liveBar])
 
   // the readout: the hovered candle (live if it is the forming one), else the live candle, else the last polled one
@@ -169,6 +235,11 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
     candles.at(-1) ??
     null
   const readout: Readout | null = shownBar && { ...shownBar, change: (shownBar.close - shownBar.open) / shownBar.open }
+
+  // 2c. Indicators: redraw from the candles and bias on screen (the layers follow pan and zoom on their own).
+  useEffect(() => {
+    chartRef.current?.refreshIndicators()
+  }, [ready, shownCandles, bias])
 
   // 3. Focus: page in history until the trade is covered, then frame it once.
   const framed = useRef<Props['focus']>(null)
@@ -206,7 +277,8 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
           </>
         )}
       </div>
-      <div ref={box} className="min-h-0 flex-1" />
+      {bias && <BiasReadout bias={bias} chartLabel={bar} higherLabel={higher?.bar ?? null} />}
+      <div ref={box} className="relative min-h-0 flex-1 [&[data-cursor]_*]:cursor-[inherit]!" />
       {!latest.isSuccess && (
         <div className="absolute inset-0 grid place-items-center bg-background/80 text-sm text-muted-foreground">
           {latest.isError ? `Could not load candles: ${latest.error.message}` : 'Loading candles…'}

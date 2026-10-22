@@ -5,8 +5,10 @@ import { MARKET_EXCHANGE, MARKET_EXCHANGE_NAME } from '@/lib/market'
 import { useTicker } from '@/lib/okx-ws'
 import { tickerQuery, useInstruments, usePortfolio } from '@/lib/queries'
 import { ArrowUpRight, Rewind } from 'lucide-react'
-import { BARS, type Bar, type Position, type Ticker } from '@crypz/exchanges'
+import { BAR_MS, BARS, type Bar, type Position, type Ticker } from '@crypz/exchanges'
 import { PageHeader } from '@/components/app/page-header'
+import { DrawingToolbar } from '@/components/drawings/toolbar'
+import { IndicatorMenu } from '@/components/indicators/menu'
 import { CandleChart } from '@/components/trade/candle-chart'
 import { IntervalBar, useIntervalHotkeys } from '@/components/trade/interval-bar'
 import { Button } from '@/components/ui/button'
@@ -81,23 +83,31 @@ function Trade() {
           </SelectContent>
         </Select>
         <IntervalBar value={bar} onChange={(v) => set({ bar: v })} className="hidden sm:flex" />
+        <IndicatorMenu barMs={BAR_MS[bar]} footprint={false} className="hidden lg:inline-flex" />
       </PageHeader>
 
-      <main className="flex w-full flex-col gap-6 px-4 py-6 sm:px-8">
-        <TickerStrip symbol={symbol} bar={bar} ticker={ticker} tradeUrl={tradeUrl} />
+      <main className="flex w-full flex-col px-4 sm:px-8">
+        {/* The first screen is the chart: it runs to the bottom of the window (the header is h-16), and your trades
+            sit below it. The floor keeps the chart usable on a short window. */}
+        <div className="flex h-[max(calc(100dvh-4rem),34rem)] flex-col gap-5 pt-6">
+          <TickerStrip symbol={symbol} bar={bar} ticker={ticker} tradeUrl={tradeUrl} />
 
-        <div className="flex flex-col gap-6">
-          <div ref={chartRef} className="flex scroll-mt-20 flex-col border border-border">
+          <div ref={chartRef} className="flex min-h-0 flex-1 scroll-mt-20 flex-col border border-border">
             <IntervalBar value={bar} onChange={(v) => set({ bar: v })} fill className="m-3 sm:hidden" />
-            <CandleChart
-              exchange={exchange}
-              symbol={symbol}
-              bar={bar}
-              positions={mine}
-              focus={focus}
-              className="h-[min(68dvh,640px)] min-h-[420px]"
-            />
-            <div className="flex flex-wrap gap-x-5 gap-y-1 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
+            <div className="flex min-h-0 flex-1">
+              <DrawingToolbar symbol={symbol} className="shrink-0 border-r border-border" />
+              {/* drawings are kept per instrument and bound when the chart is built, so a new symbol is a new chart */}
+              <CandleChart
+                key={symbol}
+                exchange={exchange}
+                symbol={symbol}
+                bar={bar}
+                positions={mine}
+                focus={focus}
+                className="min-w-0 flex-1"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <i className="size-2.5 bg-foreground" /> Close above open
               </span>
@@ -105,10 +115,13 @@ function Trade() {
                 <i className="size-2.5 shadow-[inset_0_0_0_1px_var(--foreground)]" /> Close below open
               </span>
               {connected && <span className="num">L / S = your entry · square = your exit, toned by result</span>}
+              <IndicatorMenu barMs={BAR_MS[bar]} footprint={false} className="ml-auto lg:hidden" />
             </div>
           </div>
+        </div>
 
-          {connected && (
+        {connected && (
+          <div className="py-6">
             <YourTrades
               symbol={symbol}
               positions={mine}
@@ -118,8 +131,8 @@ function Trade() {
                 chartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
               }}
             />
-          )}
-        </div>
+          </div>
+        )}
       </main>
     </>
   )
