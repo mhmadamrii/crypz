@@ -31,7 +31,6 @@ function Strategies() {
 }
 
 function StrategyBlock({ strategy: s }: { strategy: Strategy }) {
-  const { swing, tolerance, impulse } = s.params
   return (
     <section aria-labelledby={s.id}>
       <div className="flex items-start justify-between gap-4">
@@ -49,7 +48,7 @@ function StrategyBlock({ strategy: s }: { strategy: Strategy }) {
         </Button>
       </div>
       <p className="mt-3 num text-[11px] text-muted-foreground">
-        Bias from {s.biasFrame} · swing {swing} bars · equals within {tolerance} ATR · blocks {impulse} ATR with a gap
+        Reads {s.frames.join(' · ')} whatever the chart’s interval · {s.settings}
       </p>
       <h3 className="mt-6 border-b border-border pb-2 label">Rules, all of them</h3>
       <ul>

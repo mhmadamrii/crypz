@@ -1,7 +1,14 @@
-import type { Candle } from '@crypz/exchanges'
 import { fmtPrice } from '@/lib/format'
 import { sessionsBetween } from '@/lib/indicators/sessions'
-import type { Check, Ctx, Plan, Rule, Strategy } from './types'
+import { BAR_MS, type Candle } from '@crypz/exchanges'
+import { computeBias, type Bias, type Side } from '@/lib/indicators/bias'
+import { atr } from '@/lib/indicators/fvg'
+import { findLiquidity, type Liquidity } from '@/lib/indicators/liquidity'
+import { findZones, type Zone } from '@/lib/indicators/order-blocks'
+import { marketStructure, type Structure } from '@/lib/indicators/structure'
+import { defineStrategy, type Rule } from './define'
+import { ago, barsSince, newest } from './helpers'
+import type { Check, Plan } from './types'
 
 // Sweep and order block, reversal at 3R. With the higher timeframe's bias, wait for price to sweep a swing low (long)
 // or high (short) against it, alone or as a pool of equals, break structure back the bias's way, and leave an unmitigated order block
@@ -14,32 +21,34 @@ const MIN_REWARD = 3
 /** Stop distance past the block's far edge, in ATRs. */
 const STOP_BUFFER = 0.25
 
+const PARAMS = { swing: 5, tolerance: 0.1, minTouches: 1, impulse: 1.5 }
+const BIAS_FRAME = '4H'
+
+type Ctx = {
+  candles: Candle[]
+  /** Direction from the bias; null while there is none. */
+  side: Side | null
+  bias: Bias
+  /** The timeframe the bias was read from. */
+  biasLabel: string
+  structure: Structure
+  zones: Zone[]
+  liquidity: Liquidity
+  /** ATR at the last candle, or NaN while there are too few bars. */
+  atr: number
+}
+
 const WAIT: Check = { met: false, detail: 'Needs a bias' }
 const NO_SWEEP: Check = { met: false, detail: 'Needs a sweep' }
 
-/** Candles after the one opening at `time`. */
-function barsSince(candles: Candle[], time: number) {
-  let n = 0
-  for (let i = candles.length - 1; i >= 0 && candles[i].time > time; i--) n++
-  return n
-}
-
-/** The newest item that passes `test` (arrays here are oldest first). */
-function newest<T>(items: T[], test: (x: T) => boolean) {
-  for (let i = items.length - 1; i >= 0; i--) if (test(items[i])) return items[i]
-  return undefined
-}
-
 const label = (side: 'high' | 'low', touches: number) =>
   touches > 1 ? `${side === 'low' ? 'EQL' : 'EQH'} ${touches}` : side === 'low' ? 'Swing low' : 'Swing high'
-
-const ago = (n: number) => (n === 0 ? 'this bar' : n === 1 ? '1 bar ago' : `${n} bars ago`)
 
 /** The newest sweep of a pool against the bias, if it is still fresh. */
 function freshSweep(c: Ctx) {
   if (!c.side) return null
   const swept = c.side === 'bull' ? 'low' : 'high'
-  const w = newest(c.liquidity.sweeps, (s) => s.side === swept && s.level.swings.length >= c.params.minTouches)
+  const w = newest(c.liquidity.sweeps, (s) => s.side === swept && s.level.swings.length >= PARAMS.minTouches)
   if (!w) return null
   const age = barsSince(c.candles, w.time)
   return age <= SWEEP_WINDOW ? { sweep: w, age } : null
@@ -68,7 +77,7 @@ function planFor(c: Ctx): Plan | null {
   return { side: c.side, entry, stop, target, reward: Math.abs(target - entry) / Math.abs(entry - stop) }
 }
 
-const rules: Rule[] = [
+const rules: Rule<Ctx>[] = [
   {
     id: 'bias',
     label: 'Bias',
@@ -152,12 +161,39 @@ const rules: Rule[] = [
   },
 ]
 
-export const sweepOrderBlock: Strategy = {
+export const sweepOrderBlock = defineStrategy<Ctx>({
   id: 'sweep-ob',
   name: 'Sweep + order block',
   summary:
     'Trade the reversal after a liquidity grab, with the higher timeframe. Limit entry in the order block it leaves, at least 3R to the next swing.',
-  biasFrame: '4H',
-  params: { swing: 5, tolerance: 0.1, minTouches: 1, impulse: 1.5 },
+  frames: [BIAS_FRAME],
+  settings: `Bias from ${BIAS_FRAME} · swing ${PARAMS.swing} bars · equals within ${PARAMS.tolerance} ATR · blocks ${PARAMS.impulse} ATR with a gap`,
+  context: ({ candles, barLabel, series }) => {
+    if (!candles.length) return null
+    // a bias frame at or below the chart's own adds nothing: the bias reads the chart's structure then
+    const higher = BAR_MS[BIAS_FRAME] > BAR_MS[barLabel] ? (series[BIAS_FRAME] ?? null) : null
+    const bias = computeBias({
+      chart: candles,
+      chartLabel: barLabel,
+      higher,
+      higherLabel: higher ? BIAS_FRAME : null,
+      length: PARAMS.swing,
+    })
+    return {
+      candles,
+      side: bias.side,
+      bias,
+      biasLabel: higher ? BIAS_FRAME : barLabel,
+      structure: marketStructure(candles, PARAMS.swing),
+      zones: findZones(candles, {
+        strength: PARAMS.impulse,
+        imbalance: true,
+        withTrend: false,
+        swing: PARAMS.swing,
+      }),
+      liquidity: findLiquidity(candles, { tolerance: PARAMS.tolerance, swing: PARAMS.swing }),
+      atr: atr(candles).at(-1) ?? Number.NaN,
+    }
+  },
   rules,
-}
+})

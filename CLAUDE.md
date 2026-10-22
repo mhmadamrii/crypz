@@ -41,7 +41,7 @@ Done: fair value gaps (`lib/indicators/fvg.ts`, ATR helper there too) and swing 
 - [ ] Analytics, Risk pages
 - [ ] AI insights: the ask-a-question box (one-shot Gemini read is done, `api/src/insights.ts`); lesson loop once positions sync into the DB (journal note per trade, settled with realized PnL, recent lessons fed into the next read)
 - [ ] News: exchange announcements tab (OKX `/api/v5/support/announcements`, public, no key: listings, delistings, suspensions), flagging ones about coins you trade
-- [ ] Strategies: the list is static (`lib/strategies/`, one strategy, rules as code, run from the replay's Strategy menu, page at `/strategies`); move it to the DB and let rules be edited. Log each ready setup's outcome in R to measure the strategy from replay.
+- [ ] Strategies: the list is static (`lib/strategies/`: sweep-ob and jeafx, rules as code, each reads its own timeframes through `frames`, run from the replay's Strategy menu, page at `/strategies`); move it to the DB and let rules be edited. Log each ready setup's outcome in R to measure the strategy from replay.
 - [ ] Sync positions into the DB
 - [ ] Persist user prefs (interval, layout, etc.)
 - [ ] Signup gating / email verification

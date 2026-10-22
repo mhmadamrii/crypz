@@ -34,7 +34,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { mergeCandles } from '@/lib/candles'
 import { DEFAULT_BAR, DEFAULT_SYMBOL, MARKET_EXCHANGE, symbolBarSearch } from '@/lib/market'
 import { useIndicators } from '@/lib/indicators/store'
-import { STRATEGIES, strategyById } from '@/lib/strategies'
+import { STRATEGIES, strategyById, type Series } from '@/lib/strategies'
 import { replayCandlesQuery, replayFineQuery, useInstruments } from '@/lib/queries'
 import {
   DEFAULT_LEVERAGE,
@@ -165,18 +165,30 @@ function Replay() {
   )
 }
 
-/** The closed candles of a timeframe above the chart's, from the session start; null when `frame` is null. */
-function useHigher(exchange: ExchangeId, symbol: string, bar: Bar, from: number, now: number, frame: Bar | null) {
-  const query = useInfiniteQuery({ ...replayCandlesQuery(exchange, symbol, frame ?? bar, from), enabled: !!frame })
-  const higher = useMemo(() => {
+/** One timeframe's closed candles from the session start, up to the clock; null while `frame` is null or loading. */
+function useFrame(exchange: ExchangeId, symbol: string, from: number, now: number, frame: Bar | null) {
+  const query = useInfiniteQuery({
+    ...replayCandlesQuery(exchange, symbol, frame ?? DEFAULT_BAR, from),
+    enabled: !!frame,
+  })
+  const data = useMemo(() => {
     if (!frame || !query.data || query.isPlaceholderData) return null
     const ms = BAR_MS[frame]
     const all = mergeCandles(query.data.pages)
-    // closed bars only: a forming higher bar would let the bias change inside it
+    // closed bars only: a forming bar would let what reads it change inside the bar
     const closed = all.filter((k, i) => (all[i + 1]?.time ?? k.time + ms) <= now)
-    return { bar: frame, candles: closed, loadedTo: all.at(-1)?.time ?? 0 }
-  }, [frame, query.data, query.isPlaceholderData, now])
-  return { higher, query }
+    const loadedTo = all.at(-1)?.time ?? 0
+    // caught up once the last loaded bar reaches the clock (or there is nothing more to load)
+    return { bar: frame, candles: closed, loadedTo, caught: loadedTo + ms > now || !query.hasNextPage }
+  }, [frame, query.data, query.isPlaceholderData, query.hasNextPage, now])
+  // Page ahead of the clock. An effect because each page that lands can still leave the clock ahead of the data
+  // (a long step on a short frame), so the fetch has to re-run until it catches up.
+  const behind = !!data && query.hasNextPage && data.loadedTo - now < 10 * BAR_MS[data.bar]
+  const { fetchNextPage, isFetchingNextPage } = query
+  useEffect(() => {
+    if (behind && !isFetchingNextPage) void fetchNextPage()
+  }, [behind, isFetchingNextPage, fetchNextPage])
+  return data
 }
 
 function ReplaySession({
@@ -246,31 +258,40 @@ function ReplaySession({
     const closed = cursor < 0 ? [] : candles.slice(0, cursor + 1)
     return partial ? [...closed, partial] : closed
   }, [candles, cursor, partial])
-  // Top-down bias: the higher timeframe's closed candles, loaded from the session start and paged forward as the
-  // clock moves. Fetched only while something reads them (the bias indicator, the chosen strategy) and only when
-  // their timeframe sits above the chart's; two readers on the same timeframe share one query.
+  // Other timeframes, loaded from the session start and paged ahead of the clock. Fetched only while something
+  // reads them: the bias indicator (a timeframe above the chart's) and the chosen strategy (the timeframes it
+  // names, other than the chart's own). Two readers of one timeframe share one query.
   const indicatorState = useIndicators()
   const strategyDef = strategyById(strategy)
-  const above = (frame: Bar) => (BAR_MS[frame] > BAR_MS[bar] ? frame : null)
-  const biasHigher = useHigher(
+  const biasFrame = indicatorState.bias.higher
+  const higher = useFrame(
     exchange,
     symbol,
-    bar,
     from,
     state.now,
-    indicatorState.bias.on ? above(indicatorState.bias.higher) : null,
+    indicatorState.bias.on && BAR_MS[biasFrame] > BAR_MS[bar] ? biasFrame : null,
   )
-  const strategyHigher = useHigher(
-    exchange,
-    symbol,
-    bar,
-    from,
-    state.now,
-    strategyDef ? above(strategyDef.biasFrame) : null,
-  )
-  const higher = biasHigher.higher
-
-  const evaluation = useStrategy(strategy, revealed, bar, strategyHigher.higher)
+  const frames = strategyDef?.frames ?? []
+  const slot = (i: number) => (frames[i] && frames[i] !== bar ? frames[i] : null)
+  const f0 = useFrame(exchange, symbol, from, state.now, slot(0))
+  const f1 = useFrame(exchange, symbol, from, state.now, slot(1))
+  const f2 = useFrame(exchange, symbol, from, state.now, slot(2))
+  const closedChart = useMemo(() => (cursor < 0 ? [] : candles.slice(0, cursor + 1)), [candles, cursor])
+  const { series, pending } = useMemo(() => {
+    const out: Series = {}
+    const waiting: Bar[] = []
+    for (const fr of frames) {
+      if (fr === bar) out[fr] = closedChart
+      else {
+        const f = [f0, f1, f2].find((x) => x?.bar === fr)
+        if (f) out[fr] = f.candles
+        if (!f?.caught) waiting.push(fr)
+      }
+    }
+    return { series: out, pending: waiting }
+    // `frames` follows the strategy, which is in the deps by its id
+  }, [strategy, bar, closedChart, f0, f1, f2])
+  const evaluation = useStrategy(strategy, revealed, bar, series, pending)
 
   // Footprint from OKX trade history, per OKX day while the indicator is on; days nobody built wait for consent.
   const footprint = useFootprintHistory(exchange, symbol, bar, state.now, revealed)
@@ -306,14 +327,6 @@ function ReplaySession({
     }
     dispatch({ type: 'step', candle: next, closesAt: closesAt(cursor + 1) })
     if (candles.length - cursor < 60 && more) void q.fetchNextPage()
-    for (const h of [biasHigher, strategyHigher])
-      if (
-        h.higher &&
-        h.query.hasNextPage &&
-        !h.query.isFetchingNextPage &&
-        h.higher.loadedTo - state.now < 10 * BAR_MS[h.higher.bar]
-      )
-        void h.query.fetchNextPage()
   }
 
   const open = (side: Side) => {

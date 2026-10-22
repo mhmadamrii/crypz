@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 // the plan's levels follow; the chart itself stays clickable beneath.
 
 export function StrategyReadout({ evaluation }: { evaluation: Evaluation }) {
-  const { strategy, results, met, ready, plan, side } = evaluation
+  const { strategy, results, met, ready, plan, side, pending } = evaluation
   return (
     <section
       aria-label={strategy.name}
@@ -19,17 +19,18 @@ export function StrategyReadout({ evaluation }: { evaluation: Evaluation }) {
       <div className="flex items-baseline gap-1.5">
         <span className="truncate font-medium tracking-wide uppercase">{strategy.name}</span>
         <span className={cn('ml-auto shrink-0', ready ? 'text-up' : 'text-muted-foreground')}>
-          {ready ? 'Ready' : `${met} of ${results.length}`}
+          {ready ? 'Ready' : pending.length ? 'Loading' : `${met} of ${results.length}`}
         </span>
       </div>
-      {plan && (
+      {pending.length > 0 && <p className="mt-0.5 text-muted-foreground">Loading {pending.join(', ')} candles</p>}
+      {plan && !pending.length && (
         <p className="mt-0.5 text-muted-foreground">
           {plan.side === 'bull' ? 'Long' : 'Short'} <span className="text-foreground">{fmtPrice(plan.entry)}</span> ·
           stop <span className="text-foreground">{fmtPrice(plan.stop)}</span> · target{' '}
           <span className="text-foreground">{fmtPrice(plan.target)}</span>
         </p>
       )}
-      {!plan && !side && <p className="mt-0.5 text-muted-foreground">Waiting for a bias</p>}
+      {!plan && !side && !pending.length && <p className="mt-0.5 text-muted-foreground">Waiting for a bias</p>}
       {/* on a phone the chart is short; the verdict and the plan are what matter there */}
       <ul className="mt-1.5 hidden flex-col gap-0.5 border-t border-hairline pt-1.5 sm:flex">
         {results.map((r) => (
