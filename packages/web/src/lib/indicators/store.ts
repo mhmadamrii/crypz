@@ -16,6 +16,10 @@ export type ObStrength = (typeof OB_STRENGTHS)[number]
 export const SWING_LENGTHS = [3, 5, 10] as const
 export type SwingLength = (typeof SWING_LENGTHS)[number]
 
+/** How close equal highs or lows must be to pool, and how far a wick must go to take one, in ATRs. */
+export const LIQUIDITY_TOLERANCES = [0.05, 0.1, 0.2] as const
+export type LiquidityTolerance = (typeof LIQUIDITY_TOLERANCES)[number]
+
 /** Timeframes the bias can be read from. One at or below the chart's own falls back to the chart. */
 export const BIAS_FRAMES = ['1H', '4H', '1D'] as const
 export type BiasFrame = (typeof BIAS_FRAMES)[number]
@@ -41,6 +45,8 @@ export type IndicatorState = {
   fvg: { on: boolean; minAtr: FvgSize; showFilled: boolean }
   structure: { on: boolean; length: SwingLength; labels: boolean }
   bias: { on: boolean; higher: BiasFrame }
+  liquidity: { on: boolean; tolerance: LiquidityTolerance; showTaken: boolean }
+  sweeps: { on: boolean; swings: boolean }
   orderBlocks: { on: boolean; strength: ObStrength; imbalance: boolean; withTrend: boolean; showSpent: boolean }
   footprint: {
     on: boolean
@@ -57,6 +63,8 @@ const DEFAULTS: IndicatorState = {
   fvg: { on: false, minAtr: 0.25, showFilled: false },
   structure: { on: false, length: 5, labels: true },
   bias: { on: false, higher: '4H' },
+  liquidity: { on: false, tolerance: 0.1, showTaken: false },
+  sweeps: { on: false, swings: false },
   orderBlocks: { on: false, strength: 1.5, imbalance: true, withTrend: false, showSpent: false },
   footprint: { on: false, rows: 1, absorb: 3, cells: 'bars', imbalance: 'diagonal' },
 }
@@ -72,6 +80,8 @@ function load(): IndicatorState {
     if (!SWING_LENGTHS.includes(structure.length)) structure.length = DEFAULTS.structure.length
     const bias = { ...DEFAULTS.bias, ...saved.bias }
     if (!BIAS_FRAMES.includes(bias.higher)) bias.higher = DEFAULTS.bias.higher
+    const liquidity = { ...DEFAULTS.liquidity, ...saved.liquidity }
+    if (!LIQUIDITY_TOLERANCES.includes(liquidity.tolerance)) liquidity.tolerance = DEFAULTS.liquidity.tolerance
     const orderBlocks = { ...DEFAULTS.orderBlocks, ...saved.orderBlocks }
     if (!OB_STRENGTHS.includes(orderBlocks.strength)) orderBlocks.strength = DEFAULTS.orderBlocks.strength
     const footprint = { ...DEFAULTS.footprint, ...saved.footprint }
@@ -79,7 +89,16 @@ function load(): IndicatorState {
     if (!FOOTPRINT_ABSORB.includes(footprint.absorb)) footprint.absorb = DEFAULTS.footprint.absorb
     if (!FOOTPRINT_CELLS.includes(footprint.cells)) footprint.cells = DEFAULTS.footprint.cells
     if (!FOOTPRINT_IMBALANCE.includes(footprint.imbalance)) footprint.imbalance = DEFAULTS.footprint.imbalance
-    return { sessions: { ...DEFAULTS.sessions, ...saved.sessions }, fvg, structure, bias, orderBlocks, footprint }
+    return {
+      sessions: { ...DEFAULTS.sessions, ...saved.sessions },
+      fvg,
+      structure,
+      bias,
+      liquidity,
+      sweeps: { ...DEFAULTS.sweeps, ...saved.sweeps },
+      orderBlocks,
+      footprint,
+    }
   } catch {
     return DEFAULTS
   }
@@ -112,6 +131,8 @@ export const indicators = {
   setFvg: (p: Partial<IndicatorState['fvg']>) => patch('fvg', p),
   setStructure: (p: Partial<IndicatorState['structure']>) => patch('structure', p),
   setBias: (p: Partial<IndicatorState['bias']>) => patch('bias', p),
+  setLiquidity: (p: Partial<IndicatorState['liquidity']>) => patch('liquidity', p),
+  setSweeps: (p: Partial<IndicatorState['sweeps']>) => patch('sweeps', p),
   setOrderBlocks: (p: Partial<IndicatorState['orderBlocks']>) => patch('orderBlocks', p),
   setFootprint: (p: Partial<IndicatorState['footprint']>) => patch('footprint', p),
 }

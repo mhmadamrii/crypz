@@ -17,6 +17,7 @@ import { Route as publicIndexRouteImport } from './routes/(public)/index'
 import { Route as publicLoginRouteImport } from './routes/(public)/login'
 import { Route as mainaccountExchangeRouteRouteImport } from './routes/(main)/(account)/$exchange/route'
 import { Route as mainmarketNewsRouteImport } from './routes/(main)/(market)/news'
+import { Route as mainmarketStrategiesRouteImport } from './routes/(main)/(market)/strategies'
 import { Route as mainmarketTradeRouteImport } from './routes/(main)/(market)/trade'
 import { Route as mainmarketWorkspaceRouteImport } from './routes/(main)/(market)/workspace'
 import { Route as mainSettingsExchangesRouteImport } from './routes/(main)/settings/exchanges'
@@ -64,6 +65,11 @@ const mainmarketNewsRoute = mainmarketNewsRouteImport.update({
   path: '/news',
   getParentRoute: () => mainRouteRoute,
 } as any)
+const mainmarketStrategiesRoute = mainmarketStrategiesRouteImport.update({
+  id: '/(market)/strategies',
+  path: '/strategies',
+  getParentRoute: () => mainRouteRoute,
+} as any)
 const mainmarketTradeRoute = mainmarketTradeRouteImport.update({
   id: '/(market)/trade',
   path: '/trade',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/': typeof publicIndexRoute
   '/$exchange': typeof mainaccountExchangeRouteRouteWithChildren
   '/news': typeof mainmarketNewsRoute
+  '/strategies': typeof mainmarketStrategiesRoute
   '/trade': typeof mainmarketTradeRoute
   '/workspace': typeof mainmarketWorkspaceRoute
   '/settings/exchanges': typeof mainSettingsExchangesRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/': typeof publicIndexRoute
   '/$exchange': typeof mainaccountExchangeRouteRouteWithChildren
   '/news': typeof mainmarketNewsRoute
+  '/strategies': typeof mainmarketStrategiesRoute
   '/trade': typeof mainmarketTradeRoute
   '/workspace': typeof mainmarketWorkspaceRoute
   '/settings/exchanges': typeof mainSettingsExchangesRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/(public)/': typeof publicIndexRoute
   '/(main)/(account)/$exchange': typeof mainaccountExchangeRouteRouteWithChildren
   '/(main)/(market)/news': typeof mainmarketNewsRoute
+  '/(main)/(market)/strategies': typeof mainmarketStrategiesRoute
   '/(main)/(market)/trade': typeof mainmarketTradeRoute
   '/(main)/(market)/workspace': typeof mainmarketWorkspaceRoute
   '/(main)/settings/exchanges': typeof mainSettingsExchangesRoute
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$exchange'
     | '/news'
+    | '/strategies'
     | '/trade'
     | '/workspace'
     | '/settings/exchanges'
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$exchange'
     | '/news'
+    | '/strategies'
     | '/trade'
     | '/workspace'
     | '/settings/exchanges'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/(public)/'
     | '/(main)/(account)/$exchange'
     | '/(main)/(market)/news'
+    | '/(main)/(market)/strategies'
     | '/(main)/(market)/trade'
     | '/(main)/(market)/workspace'
     | '/(main)/settings/exchanges'
@@ -261,6 +273,13 @@ declare module '@tanstack/react-router' {
       path: '/news'
       fullPath: '/news'
       preLoaderRoute: typeof mainmarketNewsRouteImport
+      parentRoute: typeof mainRouteRoute
+    }
+    '/(main)/(market)/strategies': {
+      id: '/(main)/(market)/strategies'
+      path: '/strategies'
+      fullPath: '/strategies'
+      preLoaderRoute: typeof mainmarketStrategiesRouteImport
       parentRoute: typeof mainRouteRoute
     }
     '/(main)/(market)/trade': {
@@ -336,6 +355,7 @@ interface mainRouteRouteChildren {
   mainPositionsRoute: typeof mainPositionsRoute
   mainaccountExchangeRouteRoute: typeof mainaccountExchangeRouteRouteWithChildren
   mainmarketNewsRoute: typeof mainmarketNewsRoute
+  mainmarketStrategiesRoute: typeof mainmarketStrategiesRoute
   mainmarketTradeRoute: typeof mainmarketTradeRoute
   mainmarketWorkspaceRoute: typeof mainmarketWorkspaceRoute
   mainSettingsExchangesRoute: typeof mainSettingsExchangesRoute
@@ -347,6 +367,7 @@ const mainRouteRouteChildren: mainRouteRouteChildren = {
   mainPositionsRoute: mainPositionsRoute,
   mainaccountExchangeRouteRoute: mainaccountExchangeRouteRouteWithChildren,
   mainmarketNewsRoute: mainmarketNewsRoute,
+  mainmarketStrategiesRoute: mainmarketStrategiesRoute,
   mainmarketTradeRoute: mainmarketTradeRoute,
   mainmarketWorkspaceRoute: mainmarketWorkspaceRoute,
   mainSettingsExchangesRoute: mainSettingsExchangesRoute,

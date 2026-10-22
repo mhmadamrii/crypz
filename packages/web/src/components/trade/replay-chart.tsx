@@ -11,6 +11,8 @@ import { OhlcReadout } from './ohlc-readout'
 import { BiasReadout } from '@/components/indicators/bias-readout'
 import type { FootprintData } from '@/components/indicators/footprint-layer'
 import { useBias } from '@/components/indicators/use-bias'
+import { StrategyReadout } from '@/components/strategies/strategy-readout'
+import type { Evaluation } from '@/lib/strategies'
 import { createMosaicChart, palette, precisionFor, snapToChart, toBar, toChart, type Palette } from './chart-kit'
 
 type Props = {
@@ -28,6 +30,8 @@ type Props = {
   higher: { bar: Bar; candles: Candle[] } | null
   /** Footprint history to draw, when the indicator is on and its days have loaded. */
   footprint: FootprintData | null
+  /** The chosen strategy's checklist on these candles, when one is chosen. */
+  strategy: Evaluation | null
   position: OpenPosition | null
   trades: ReplayTrade[]
   className?: string
@@ -53,6 +57,7 @@ export function ReplayChart({
   barLabel,
   higher,
   footprint,
+  strategy,
   position,
   trades,
   className,
@@ -219,6 +224,7 @@ export function ReplayChart({
         </OhlcReadout>
       )}
       {bias && <BiasReadout bias={bias} chartLabel={barLabel} higherLabel={higher?.bar ?? null} />}
+      {strategy && <StrategyReadout evaluation={strategy} />}
       <div ref={box} className="absolute inset-0 [&[data-cursor]_*]:cursor-[inherit]!" />
     </div>
   )

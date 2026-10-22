@@ -6,9 +6,11 @@ import { monoFont, type Palette } from '@/components/trade/chart-kit'
 import { attachBiasLayer } from './bias-layer'
 import { attachFootprintLayer, type FootprintData } from './footprint-layer'
 import { attachFvgLayer } from './fvg-layer'
+import { attachLiquidityLayer } from './liquidity-layer'
 import { attachOrderBlocksLayer } from './order-blocks-layer'
 import { attachSessionsLayer } from './sessions-layer'
 import { attachStructureLayer } from './structure-layer'
+import { attachSweepsLayer } from './sweeps-layer'
 
 /**
  * Every indicator layer, stacked in draw order, for any chart that shows candles (the replay and the live trade
@@ -40,6 +42,9 @@ export function attachIndicators(opts: {
   const orderBlocks = attachOrderBlocksLayer({ chart, series, x, candles, palette, font })
   // structure labels and break lines sit over the candles, under the drawings
   const structure = attachStructureLayer({ chart, series, x, candles, palette, font })
+  // pools are levels price has not reached; sweeps are the candles that reached one, so they draw last of the two
+  const liquidity = attachLiquidityLayer({ chart, series, x, candles, palette, font })
+  const sweeps = attachSweepsLayer({ chart, series, x, candles, palette, font })
   const biasLayer = attachBiasLayer({ chart, series, x, candles, bias, palette, font })
   return {
     refresh(p?: Palette) {
@@ -48,6 +53,8 @@ export function attachIndicators(opts: {
       fvg.refresh(p)
       orderBlocks.refresh(p)
       structure.refresh(p)
+      liquidity.refresh(p)
+      sweeps.refresh(p)
       biasLayer.refresh(p)
     },
     footprintAt: footprintLayer?.at,
@@ -57,6 +64,8 @@ export function attachIndicators(opts: {
       fvg.dispose()
       orderBlocks.dispose()
       structure.dispose()
+      liquidity.dispose()
+      sweeps.dispose()
       biasLayer.dispose()
     },
   }

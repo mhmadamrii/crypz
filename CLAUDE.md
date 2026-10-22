@@ -32,10 +32,7 @@ Our own implementations, not LuxAlgo ports (theirs are Pine Script, closed or CC
 - Direction may use `--up` / `--down` at low alpha (bullish/bearish zones), as in order flow; everything else is ink.
 - Each one gets a size/sensitivity option and a "show only unmitigated" style toggle so the chart doesn't flood.
 
-Done: fair value gaps (`lib/indicators/fvg.ts`, ATR helper there too) and swing points + market structure (`lib/indicators/structure.ts`: swings, HH/LH/HL/LL, BOS/CHoCH on a close, the unbroken `lastHigh`/`lastLow`). Bias with invalidation is done too (`lib/indicators/bias.ts`; factors from candles only, no CVD since replay has no taker history; no win-rate until measured from replay history). Order blocks are done too (`lib/indicators/order-blocks.ts`: last candle before an impulse of N ATR within 4 bars, optional FVG and with-trend filters, first tap counts, spent on second tap or a close through). Footprint is done too (`lib/footprint.ts`, shared with the workspace widget: diagonal imbalance, stacked, absorption confirmed by the next bar; history from OKX daily trade files built per OKX day on demand by `api/src/footprint.ts` into `footprint_day`). Layers share `components/indicators/pane-layer.ts`. Build the rest in this order:
-
-1. [ ] **Liquidity pools** (plausible). Clusters of equal highs / equal lows: swing points within a tolerance (e.g. 0.1 × ATR) of each other, drawn as a level extending right until price takes it. Pool strength = number of touches.
-2. [ ] **Liquidity sweeps** (plausible, small once 1 exists). A candle whose wick runs through a pool or prior swing level but closes back on the other side: mark the sweep on that candle; the pool counts as taken.
+Done: fair value gaps (`lib/indicators/fvg.ts`, ATR helper there too) and swing points + market structure (`lib/indicators/structure.ts`: swings, HH/LH/HL/LL, BOS/CHoCH on a close, the unbroken `lastHigh`/`lastLow`). Bias with invalidation is done too (`lib/indicators/bias.ts`; factors from candles only, no CVD since replay has no taker history; no win-rate until measured from replay history). Order blocks are done too (`lib/indicators/order-blocks.ts`: last candle before an impulse of N ATR within 4 bars, optional FVG and with-trend filters, first tap counts, spent on second tap or a close through). Footprint is done too (`lib/footprint.ts`, shared with the workspace widget: diagonal imbalance, stacked, absorption confirmed by the next bar; history from OKX daily trade files built per OKX day on demand by `api/src/footprint.ts` into `footprint_day`). Layers share `components/indicators/pane-layer.ts`. Liquidity pools and sweeps are done too (`lib/indicators/liquidity.ts`: pools of swings within a tolerance in ATRs, strength = touches, taken by a wick beyond tolerance; a sweep is the taking candle closing back; layers `liquidity-layer.ts`, `sweeps-layer.ts`). Replay indicators are complete.
 
 ### Product
 
@@ -44,6 +41,7 @@ Done: fair value gaps (`lib/indicators/fvg.ts`, ATR helper there too) and swing 
 - [ ] Analytics, Risk pages
 - [ ] AI insights: the ask-a-question box (one-shot Gemini read is done, `api/src/insights.ts`); lesson loop once positions sync into the DB (journal note per trade, settled with realized PnL, recent lessons fed into the next read)
 - [ ] News: exchange announcements tab (OKX `/api/v5/support/announcements`, public, no key: listings, delistings, suspensions), flagging ones about coins you trade
+- [ ] Strategies: the list is static (`lib/strategies/`, one strategy, rules as code, run from the replay's Strategy menu, page at `/strategies`); move it to the DB and let rules be edited. Log each ready setup's outcome in R to measure the strategy from replay.
 - [ ] Sync positions into the DB
 - [ ] Persist user prefs (interval, layout, etc.)
 - [ ] Signup gating / email verification

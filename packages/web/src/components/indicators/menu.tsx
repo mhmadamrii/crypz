@@ -9,6 +9,7 @@ import {
   FOOTPRINT_IMBALANCE,
   FOOTPRINT_ROWS,
   FVG_SIZES,
+  LIQUIDITY_TOLERANCES,
   OB_STRENGTHS,
   SWING_LENGTHS,
   activeCount,
@@ -258,6 +259,49 @@ export function IndicatorMenu({
           >
             <span className="text-sm">Swing labels (HH, HL, LH, LL)</span>
           </Switch>
+        </Section>
+        <Section
+          on={s.liquidity.on}
+          onToggle={() => indicators.setLiquidity({ on: !s.liquidity.on })}
+          title="Liquidity pools"
+          blurb="Equal highs and equal lows, where stops rest, as levels that run right until price takes them."
+        >
+          <Row
+            text="Tolerance"
+            hint="How close highs or lows must be to pool, and how far a wick must go to take one, in ATR"
+          >
+            <Segmented
+              label="Pooling tolerance, in ATR"
+              options={LIQUIDITY_TOLERANCES}
+              value={s.liquidity.tolerance}
+              onChange={(tolerance) => indicators.setLiquidity({ tolerance, on: true })}
+              format={(v) => `${v} ATR`}
+              size="strip"
+            />
+          </Row>
+          <Switch
+            on={s.liquidity.showTaken}
+            onToggle={() => indicators.setLiquidity({ showTaken: !s.liquidity.showTaken, on: true })}
+            label="Show taken pools"
+          >
+            <span className="text-sm">Show taken pools</span>
+          </Switch>
+          <Note>The number is its touches. Swing length follows Market structure.</Note>
+        </Section>
+        <Section
+          on={s.sweeps.on}
+          onToggle={() => indicators.setSweeps({ on: !s.sweeps.on })}
+          title="Liquidity sweeps"
+          blurb="A candle whose wick runs through a level and closes back, so the orders were taken and price left."
+        >
+          <Switch
+            on={s.sweeps.swings}
+            onToggle={() => indicators.setSweeps({ swings: !s.sweeps.swings, on: true })}
+            label="Include single swings"
+          >
+            <span className="text-sm">Include single swing highs and lows</span>
+          </Switch>
+          <Note>Pools only by default. Uses the pool tolerance; a close beyond the level is a break, not a sweep.</Note>
         </Section>
         <Section
           on={s.bias.on}

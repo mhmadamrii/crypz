@@ -21,6 +21,8 @@ import { BAR_MS, type Bar, type ExchangeId } from '@crypz/exchanges'
 import { DrawingToolbar } from '@/components/drawings/toolbar'
 import { IndicatorMenu } from '@/components/indicators/menu'
 import { useFootprintHistory } from '@/components/indicators/use-footprint-history'
+import { StrategyMenu } from '@/components/strategies/strategy-menu'
+import { useStrategy } from '@/components/strategies/use-strategy'
 import { InstrumentSelect } from '@/components/trade/instrument-select'
 import { IntervalBar, useIntervalHotkeys } from '@/components/trade/interval-bar'
 import { zoneLabel } from '@/components/trade/chart-kit'
@@ -32,6 +34,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { mergeCandles } from '@/lib/candles'
 import { DEFAULT_BAR, DEFAULT_SYMBOL, MARKET_EXCHANGE, symbolBarSearch } from '@/lib/market'
 import { useIndicators } from '@/lib/indicators/store'
+import { STRATEGIES, strategyById } from '@/lib/strategies'
 import { replayCandlesQuery, replayFineQuery, useInstruments } from '@/lib/queries'
 import {
   DEFAULT_LEVERAGE,
@@ -61,7 +64,7 @@ import {
 import { searchText } from '@/lib/search'
 import { cn } from '@/lib/utils'
 
-type Search = { symbol?: string; bar?: Bar; from?: string; equity?: string; lev?: string }
+type Search = { symbol?: string; bar?: Bar; from?: string; equity?: string; lev?: string; strategy?: string }
 
 const SPEEDS = [1, 2, 5, 10] // bars per second
 const DAY = 864e5
@@ -72,6 +75,7 @@ export const Route = createFileRoute('/(main)/(market)/trade_/replay')({
     from: typeof s.from === 'string' && LOCAL_MINUTE.test(s.from) ? s.from : undefined,
     equity: /^\d*\.?\d*$/.test(searchText(s.equity) ?? 'x') ? searchText(s.equity) : undefined,
     lev: LEVERAGES.map(String).includes(searchText(s.lev) ?? '') ? searchText(s.lev) : undefined,
+    strategy: STRATEGIES.find((x) => x.id === s.strategy)?.id,
   }),
   head: () => ({ meta: [{ title: 'Replay · crypz' }] }),
   component: Replay,
@@ -122,6 +126,11 @@ function Replay() {
           <span className="hidden xl:inline">Random</span>
         </Button>
         <IndicatorMenu barMs={BAR_MS[bar]} className="hidden md:inline-flex" />
+        <StrategyMenu
+          value={search.strategy}
+          onChange={(id) => set({ strategy: id })}
+          className="hidden md:inline-flex"
+        />
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
           <span className="hidden sm:contents">
             <ThemeToggle />
@@ -147,11 +156,27 @@ function Replay() {
         onEquity={(v) => set({ equity: v || undefined })}
         leverage={Number(search.lev ?? DEFAULT_LEVERAGE)}
         onLeverage={(n) => set({ lev: n === DEFAULT_LEVERAGE ? undefined : String(n) })}
+        strategy={search.strategy}
+        onStrategy={(id) => set({ strategy: id })}
         panel={panel}
         onPanel={setPanel}
       />
     </div>
   )
+}
+
+/** The closed candles of a timeframe above the chart's, from the session start; null when `frame` is null. */
+function useHigher(exchange: ExchangeId, symbol: string, bar: Bar, from: number, now: number, frame: Bar | null) {
+  const query = useInfiniteQuery({ ...replayCandlesQuery(exchange, symbol, frame ?? bar, from), enabled: !!frame })
+  const higher = useMemo(() => {
+    if (!frame || !query.data || query.isPlaceholderData) return null
+    const ms = BAR_MS[frame]
+    const all = mergeCandles(query.data.pages)
+    // closed bars only: a forming higher bar would let the bias change inside it
+    const closed = all.filter((k, i) => (all[i + 1]?.time ?? k.time + ms) <= now)
+    return { bar: frame, candles: closed, loadedTo: all.at(-1)?.time ?? 0 }
+  }, [frame, query.data, query.isPlaceholderData, now])
+  return { higher, query }
 }
 
 function ReplaySession({
@@ -164,6 +189,8 @@ function ReplaySession({
   onEquity,
   leverage,
   onLeverage,
+  strategy,
+  onStrategy,
   panel,
   onPanel,
 }: {
@@ -178,6 +205,9 @@ function ReplaySession({
   /** Leverage for the next order; an open position keeps the leverage it was opened with. */
   leverage: number
   onLeverage: (n: number) => void
+  /** The strategy whose checklist shows over the chart (its id), if any. */
+  strategy: string | undefined
+  onStrategy: (id: string | undefined) => void
   /** Ticket + log column shown, or folded to a rail. */
   panel: boolean
   onPanel: (open: boolean) => void
@@ -217,19 +247,30 @@ function ReplaySession({
     return partial ? [...closed, partial] : closed
   }, [candles, cursor, partial])
   // Top-down bias: the higher timeframe's closed candles, loaded from the session start and paged forward as the
-  // clock moves. Fetched only while the bias indicator is on and its timeframe sits above the chart's.
+  // clock moves. Fetched only while something reads them (the bias indicator, the chosen strategy) and only when
+  // their timeframe sits above the chart's; two readers on the same timeframe share one query.
   const indicatorState = useIndicators()
-  const higherBar =
-    indicatorState.bias.on && BAR_MS[indicatorState.bias.higher] > BAR_MS[bar] ? indicatorState.bias.higher : null
-  const hq = useInfiniteQuery({ ...replayCandlesQuery(exchange, symbol, higherBar ?? bar, from), enabled: !!higherBar })
-  const higher = useMemo(() => {
-    if (!higherBar || !hq.data || hq.isPlaceholderData) return null
-    const ms = BAR_MS[higherBar]
-    const all = mergeCandles(hq.data.pages)
-    // closed bars only: a forming higher bar would let the bias change inside it
-    const closed = all.filter((k, i) => (all[i + 1]?.time ?? k.time + ms) <= state.now)
-    return { bar: higherBar, candles: closed, loadedTo: all.at(-1)?.time ?? 0 }
-  }, [higherBar, hq.data, hq.isPlaceholderData, state.now])
+  const strategyDef = strategyById(strategy)
+  const above = (frame: Bar) => (BAR_MS[frame] > BAR_MS[bar] ? frame : null)
+  const biasHigher = useHigher(
+    exchange,
+    symbol,
+    bar,
+    from,
+    state.now,
+    indicatorState.bias.on ? above(indicatorState.bias.higher) : null,
+  )
+  const strategyHigher = useHigher(
+    exchange,
+    symbol,
+    bar,
+    from,
+    state.now,
+    strategyDef ? above(strategyDef.biasFrame) : null,
+  )
+  const higher = biasHigher.higher
+
+  const evaluation = useStrategy(strategy, revealed, bar, strategyHigher.higher)
 
   // Footprint from OKX trade history, per OKX day while the indicator is on; days nobody built wait for consent.
   const footprint = useFootprintHistory(exchange, symbol, bar, state.now, revealed)
@@ -265,8 +306,14 @@ function ReplaySession({
     }
     dispatch({ type: 'step', candle: next, closesAt: closesAt(cursor + 1) })
     if (candles.length - cursor < 60 && more) void q.fetchNextPage()
-    if (higher && hq.hasNextPage && !hq.isFetchingNextPage && higher.loadedTo - state.now < 10 * BAR_MS[higher.bar])
-      void hq.fetchNextPage()
+    for (const h of [biasHigher, strategyHigher])
+      if (
+        h.higher &&
+        h.query.hasNextPage &&
+        !h.query.isFetchingNextPage &&
+        h.higher.loadedTo - state.now < 10 * BAR_MS[h.higher.bar]
+      )
+        void h.query.fetchNextPage()
   }
 
   const open = (side: Side) => {
@@ -362,6 +409,7 @@ function ReplaySession({
               symbol={symbol}
               barLabel={bar}
               higher={higher}
+              strategy={evaluation}
               footprint={footprint.data}
               candles={revealed}
               position={p}
@@ -422,6 +470,7 @@ function ReplaySession({
           <IntervalBar value={bar} onChange={onBar} className="md:hidden" />
           {/* the top bar has no room left on a phone; the menu joins the interval controls here */}
           <IndicatorMenu barMs={BAR_MS[bar]} className="md:hidden" />
+          <StrategyMenu value={strategy} onChange={onStrategy} className="md:hidden" />
           <div className="flex min-w-0 flex-col leading-tight">
             <span className="num text-sm">
               {current ? fmtWhen(current.time) : '–'}
