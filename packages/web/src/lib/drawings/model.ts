@@ -13,7 +13,7 @@ export type Drawing =
 export type Kind = Drawing['kind']
 export type Tool = 'cursor' | 'trend' | 'rect' | 'fib' | 'long' | 'short' | 'path'
 
-export const FIB_LEVELS = [1, 0.618, 0.5, 0, -0.2] as const
+export const FIB_LEVELS = [1, 0.786, 0.618, 0.5, 0, -0.2] as const
 
 export const fibPrice = (d: Extract<Drawing, { kind: 'fib' }>, level: number) =>
   d.b.price + (d.a.price - d.b.price) * level
