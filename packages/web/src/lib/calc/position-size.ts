@@ -1,19 +1,23 @@
 export type Direction = 'long' | 'short'
 
 export type PositionSizeInput = {
+  /** In `currency`. */
   equity: number
-  currency: 'USDT' | 'USD'
+  /** What the equity is held in. Prices, and every amount in the result, are in USDT (or USD): IDR converts at `idrRate`. */
+  currency: 'USDT' | 'USD' | 'IDR'
   riskPct: number
   direction: Direction
   entry: number
   stop: number
   /** Reward multiple R in 1:R. */
   rr: number
-  /** Manual USDT/USD → IDR rate; 0 or empty hides the IDR line. */
+  /** Manual IDR per 1 USDT/USD. Required when sizing in IDR; otherwise 0 or empty hides the rupiah lines. */
   idrRate: number
 }
 
 export type PositionSizeResult = {
+  /** The equity in USDT/USD: the input as is, or converted from IDR. */
+  equity: number
   riskAmount: number
   riskPerUnit: number
   size: number
@@ -55,18 +59,21 @@ export function validate(i: PositionSizeInput): FieldErrors {
   else if (!e.stop && !e.entry && i.direction === 'short' && i.entry - (i.stop - i.entry) * i.rr <= 0)
     e.rr = 'Target would fall to zero or below. Lower the multiple.'
   if (i.idrRate < 0) e.idrRate = 'Rate cannot be negative.'
+  else if (i.currency === 'IDR' && !(i.idrRate > 0)) e.idrRate = 'Enter the rate to size from rupiah.'
   return e
 }
 
 export function calculate(i: PositionSizeInput): PositionSizeResult | null {
   if (Object.keys(validate(i)).length) return null
-  const riskAmount = i.equity * (i.riskPct / 100)
+  const equity = i.currency === 'IDR' ? i.equity / i.idrRate : i.equity
+  const riskAmount = equity * (i.riskPct / 100)
   const riskPerUnit = i.direction === 'long' ? i.entry - i.stop : i.stop - i.entry
   const size = riskAmount / riskPerUnit
   const value = size * i.entry
-  const pctOfEquity = (value / i.equity) * 100
+  const pctOfEquity = (value / equity) * 100
   const takeProfit = i.direction === 'long' ? i.entry + riskPerUnit * i.rr : i.entry - riskPerUnit * i.rr
   return {
+    equity,
     riskAmount,
     riskPerUnit,
     size,

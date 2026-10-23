@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -162,14 +163,24 @@ export function HistoryFilterDialog({ positions, value, onApply, activeCount }: 
           <div className="grid gap-7 sm:grid-cols-2">
             <Field label="Closed between">
               <div className="grid grid-cols-2 gap-2">
-                <Label className="sr-only" htmlFor="f-from">
-                  From
-                </Label>
-                <Input id="f-from" type="date" value={draft.from} onChange={(e) => set({ from: e.target.value })} />
-                <Label className="sr-only" htmlFor="f-to">
-                  To
-                </Label>
-                <Input id="f-to" type="date" value={draft.to} onChange={(e) => set({ to: e.target.value })} />
+                <DatePicker
+                  id="f-from"
+                  aria-label="Closed from"
+                  placeholder="From"
+                  value={draft.from}
+                  max={draft.to || undefined}
+                  onChange={(from) => set({ from })}
+                  clearable
+                />
+                <DatePicker
+                  id="f-to"
+                  aria-label="Closed to"
+                  placeholder="To"
+                  value={draft.to}
+                  min={draft.from || undefined}
+                  onChange={(to) => set({ to })}
+                  clearable
+                />
               </div>
             </Field>
             <Field label="Realized PnL" hint="USDT">

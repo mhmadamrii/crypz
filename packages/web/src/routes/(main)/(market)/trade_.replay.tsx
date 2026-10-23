@@ -29,6 +29,7 @@ import { zoneLabel } from '@/components/trade/chart-kit'
 import { ReplayChart } from '@/components/trade/replay-chart'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
+import { DateTimePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { mergeCandles } from '@/lib/candles'
@@ -111,12 +112,12 @@ function Replay() {
         <IntervalBar value={bar} onChange={(v) => set({ bar: v })} className="hidden md:flex" />
         <label className="flex items-center gap-2">
           <span className="hidden label lg:inline">Start</span>
-          <Input
-            type="datetime-local"
+          <DateTimePicker
+            id="replay-start"
             value={fromInput}
             max={toLocalInput(Date.now())}
-            onChange={(e) => LOCAL_MINUTE.test(e.target.value) && set({ from: e.target.value })}
-            className="h-8 w-36 px-2 num text-xs sm:w-[12.75rem] sm:px-3"
+            onChange={(v) => LOCAL_MINUTE.test(v) && set({ from: v })}
+            className="h-8 w-36 px-2 text-xs sm:w-[12.75rem] sm:px-3"
             aria-label="Replay start"
             title={`Replay start, in your time zone (${zoneLabel()})`}
           />

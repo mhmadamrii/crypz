@@ -7,7 +7,10 @@ import { useSignedIn } from '@/lib/auth-client'
 // Shared shell for everything reachable without logging in: landing, login, public tools.
 export const Route = createFileRoute('/(public)')({ component: PublicLayout })
 
-const NAV = [{ to: '/tools/position-size', label: 'Position size' }] as const
+const NAV = [
+  { to: '/tools/position-size', label: 'Position size' },
+  { to: '/tools/risk', label: 'Risk' },
+] as const
 
 function PublicLayout() {
   const signedIn = useSignedIn()
@@ -30,9 +33,6 @@ function PublicLayout() {
                 {n.label}
               </Link>
             ))}
-            <span className="px-2.5 py-1.5 text-sm text-muted-foreground/60" aria-disabled>
-              Risk <span className="label">Soon</span>
-            </span>
           </nav>
           <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />

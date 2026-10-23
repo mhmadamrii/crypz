@@ -21,6 +21,7 @@ import {
   type PositionSizeResult,
 } from '@/lib/calc/position-size'
 import { searchText } from '@/lib/search'
+import { Field, NumberInput, Stat, fmt, fmtMoney, parse } from './kit'
 import { cn } from '@/lib/utils'
 import { tone } from '@/lib/format'
 
@@ -47,14 +48,10 @@ export function parseDraft(search: Record<string, unknown>): Partial<Draft> {
     const v = searchText(search[k])
     if (v !== undefined) out[k] = v.slice(0, 32)
   }
-  if (search.currency === 'USDT' || search.currency === 'USD') out.currency = search.currency
+  if (search.currency === 'USDT' || search.currency === 'USD' || search.currency === 'IDR')
+    out.currency = search.currency
   if (search.direction === 'long' || search.direction === 'short') out.direction = search.direction
   return out
-}
-
-const parse = (s: string) => {
-  const n = Number(s.replace(/,/g, '').trim())
-  return s.trim() === '' || Number.isNaN(n) ? NaN : n
 }
 
 const toInput = (d: Draft): PositionSizeInput => ({
@@ -68,81 +65,33 @@ const toInput = (d: Draft): PositionSizeInput => ({
   idrRate: d.idrRate.trim() === '' ? 0 : parse(d.idrRate),
 })
 
-// Formatting: keep enough precision for cheap coins, never more than 8 decimals.
-const fmt = (n: number, max = 2) =>
-  Number.isFinite(n) ? n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: max }) : '–'
-const fmtMoney = (n: number) =>
-  Number.isFinite(n) ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '–'
 const fmtPriceAuto = (n: number) => fmt(n, n >= 1000 ? 2 : n >= 1 ? 4 : 8)
 const fmtUnits = (n: number) => fmt(n, n >= 100 ? 2 : n >= 1 ? 4 : 8)
 const fmtIdr = (n: number) =>
   `${n < 0 ? '−' : ''}Rp${Math.abs(Math.round(n)).toLocaleString('id-ID', { maximumFractionDigits: 0 })}`
-const signed = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${fmtMoney(Math.abs(n))}`
 
-function Field({
-  id,
-  label,
-  hint,
-  error,
-  suffix,
-  children,
-}: {
-  id: string
-  label: string
-  hint?: string
-  error?: string
-  suffix?: string
-  children?: React.ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>{label}</Label>
-      <div className="relative">
-        {children}
-        {suffix && (
-          <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 num text-sm text-muted-foreground">
-            {suffix}
-          </span>
-        )}
-      </div>
-      {error ? (
-        <p id={`${id}-msg`} className="text-xs text-down">
-          {error}
-        </p>
-      ) : hint ? (
-        <p id={`${id}-msg`} className="text-xs text-muted-foreground">
-          {hint}
-        </p>
-      ) : null}
-    </div>
-  )
+/** What the amounts are shown in: the equity's currency, with the other denomination as a second line. */
+type Money = {
+  /** Amount with its unit: "1,200.00 USDT", or "Rp19.200.000" when sizing in rupiah. */
+  show: (n: number) => string
+  /** The same with a sign, for gains and losses. */
+  signed: (n: number) => string
+  /** The other denomination, under the figure: rupiah for USDT/USD, USDT for rupiah; undefined with no rate. */
+  alt: (n: number) => string | undefined
 }
 
-function NumberInput({
-  id,
-  value,
-  onChange,
-  invalid,
-  className,
-}: {
-  id: string
-  value: string
-  onChange: (v: string) => void
-  invalid?: boolean
-  className?: string
-}) {
-  return (
-    <Input
-      id={id}
-      inputMode="decimal"
-      autoComplete="off"
-      value={value}
-      aria-invalid={invalid || undefined}
-      aria-describedby={`${id}-msg`}
-      onChange={(e) => onChange(e.target.value)}
-      className={cn('h-11 num text-base', className)}
-    />
-  )
+function moneyIn(cur: PositionSizeInput['currency'], idr: number | null): Money {
+  if (cur === 'IDR')
+    return {
+      show: (n) => (idr ? fmtIdr(n * idr) : '–'),
+      signed: (n) => (idr ? `${n > 0 ? '+' : ''}${fmtIdr(n * idr)}` : '–'),
+      alt: (n) => `≈ ${fmtMoney(n)} USDT`,
+    }
+  return {
+    show: (n) => `${fmtMoney(n)} ${cur}`,
+    signed: (n) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${fmtMoney(Math.abs(n))} ${cur}`,
+    alt: (n) => (idr ? `≈ ${fmtIdr(n * idr)}` : undefined),
+  }
 }
 
 /** Controlled: the route owns the draft (kept in the URL, so a setup is shareable and survives reloads). */
@@ -159,7 +108,17 @@ export function PositionSizeCalculator({
   const errors = useMemo(() => validate(input), [input])
   const result = useMemo(() => calculate(input), [input])
   const cur = input.currency
+  const quote = cur === 'IDR' ? 'USDT' : cur
   const idr = input.idrRate > 0 ? input.idrRate : null
+
+  // Moving between rupiah and dollars keeps the same money: the equity is converted at the rate, not relabelled.
+  const switchCurrency = (next: Draft['currency']) => {
+    const equity = input.equity
+    const rate = input.idrRate
+    if (Number.isFinite(equity) && rate > 0 && (cur === 'IDR') !== (next === 'IDR'))
+      set({ currency: next, equity: String(Math.round((next === 'IDR' ? equity * rate : equity / rate) * 100) / 100) })
+    else set({ currency: next })
+  }
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
@@ -174,7 +133,14 @@ export function PositionSizeCalculator({
         </div>
 
         <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-3">
-          <Field id="equity" label="Equity" hint="Total trading capital available." error={errors.equity}>
+          <Field
+            id="equity"
+            label="Equity"
+            hint={
+              cur === 'IDR' ? 'In rupiah. Converted to USDT at the rate below.' : 'Total trading capital available.'
+            }
+            error={errors.equity}
+          >
             <NumberInput
               id="equity"
               value={draft.equity}
@@ -184,13 +150,14 @@ export function PositionSizeCalculator({
           </Field>
           <div className="flex flex-col gap-2">
             <Label htmlFor="currency">Currency</Label>
-            <Select value={draft.currency} onValueChange={(v) => set({ currency: v as Draft['currency'] })}>
+            <Select value={draft.currency} onValueChange={(v) => switchCurrency(v as Draft['currency'])}>
               <SelectTrigger id="currency" className="h-11! w-full num">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="USDT">USDT</SelectItem>
                 <SelectItem value="USD">USD</SelectItem>
+                <SelectItem value="IDR">IDR</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -260,51 +227,31 @@ export function PositionSizeCalculator({
           </Field>
           <Field
             id="idrRate"
-            label={`${cur} to IDR`}
-            hint="Manual rate. Leave empty to hide rupiah. No live rates are fetched."
+            label={`${quote} to IDR`}
+            hint={
+              cur === 'IDR'
+                ? 'Required: rupiah per 1 USDT. Entry and stop prices are in USDT.'
+                : 'Rupiah per 1 USDT. Leave empty to hide rupiah. No live rates are fetched.'
+            }
             error={errors.idrRate}
           >
-            <NumberInput
-              id="idrRate"
-              value={draft.idrRate}
-              onChange={(v) => set({ idrRate: v })}
-              invalid={!!errors.idrRate}
-            />
+            <div className="flex items-center">
+              <span className="grid h-11 shrink-0 place-items-center border border-r-0 border-input px-3 num text-sm whitespace-nowrap text-muted-foreground">
+                1 {quote} =
+              </span>
+              <NumberInput
+                id="idrRate"
+                value={draft.idrRate}
+                onChange={(v) => set({ idrRate: v })}
+                invalid={!!errors.idrRate}
+                className="pr-12"
+              />
+            </div>
           </Field>
         </div>
       </section>
 
       <Results input={input} result={result} idr={idr} />
-    </div>
-  )
-}
-
-function Stat({
-  label,
-  value,
-  sub,
-  className,
-  large,
-}: {
-  label: string
-  value: React.ReactNode
-  sub?: React.ReactNode
-  className?: string
-  large?: boolean
-}) {
-  return (
-    <div className="flex min-w-0 flex-col gap-1.5">
-      <dt className="label">{label}</dt>
-      <dd
-        className={cn(
-          'num font-medium tracking-tight break-words',
-          large ? 'text-3xl sm:text-4xl' : 'text-xl',
-          className,
-        )}
-      >
-        {value}
-      </dd>
-      {sub && <dd className="num text-xs text-muted-foreground">{sub}</dd>}
     </div>
   )
 }
@@ -325,8 +272,7 @@ function Results({
   result: PositionSizeResult | null
   idr: number | null
 }) {
-  const cur = input.currency
-  const asIdr = (n: number) => (idr ? `≈ ${fmtIdr(n * idr)}` : undefined)
+  const money = moneyIn(input.currency, idr)
 
   return (
     <section aria-labelledby="results-title" aria-live="polite" className="flex flex-col border border-border">
@@ -346,15 +292,15 @@ function Results({
           <div className="grid gap-6 border-b border-hairline px-5 py-6 sm:px-7">
             <dl className="grid grid-cols-2 gap-6">
               <Stat label="Position size" value={`${fmtUnits(r.size)} ${r.size === 1 ? 'unit' : 'units'}`} large />
-              <Stat label="Position value" value={`${fmtMoney(r.value)} ${cur}`} sub={asIdr(r.value)} />
+              <Stat label="Position value" value={money.show(r.value)} sub={money.alt(r.value)} />
             </dl>
             <dl className="grid grid-cols-2 gap-6">
               <Stat label="Risk per trade" value={`${fmt(input.riskPct, 2)}%`} />
               <Stat
                 label="Max risk"
-                value={`${fmtMoney(r.riskAmount)} ${cur}`}
+                value={money.show(r.riskAmount)}
                 className="text-down"
-                sub={asIdr(r.riskAmount)}
+                sub={money.alt(r.riskAmount)}
               />
             </dl>
             <p className="flex items-start gap-2.5 text-sm">
@@ -377,7 +323,7 @@ function Results({
                 value={r.minLeverage <= 1 ? 'None' : `≥ ${r.minLeverage}x`}
                 sub={
                   r.minLeverage > 1
-                    ? `Margin at ${r.minLeverage}x ≈ ${fmtMoney(r.value / r.minLeverage)} ${cur}`
+                    ? `Margin at ${r.minLeverage}x ≈ ${money.show(r.value / r.minLeverage)}`
                     : 'Position fits inside equity.'
                 }
               />
@@ -388,15 +334,15 @@ function Results({
           <dl className="grid grid-cols-2 gap-6 px-5 py-6 sm:px-7">
             <Stat
               label="If stop is hit"
-              value={`${signed(r.maxLoss)} ${cur}`}
+              value={money.signed(r.maxLoss)}
               className={tone(r.maxLoss)}
-              sub={asIdr(r.maxLoss)}
+              sub={money.alt(r.maxLoss)}
             />
             <Stat
               label="If target is hit"
-              value={`${signed(r.potentialProfit)} ${cur}`}
+              value={money.signed(r.potentialProfit)}
               className={tone(r.potentialProfit)}
-              sub={asIdr(r.potentialProfit)}
+              sub={money.alt(r.potentialProfit)}
             />
           </dl>
           <p className="mt-auto border-t border-border px-5 py-4 text-xs leading-relaxed text-muted-foreground sm:px-7">
@@ -449,17 +395,27 @@ function Ladder({ input, r }: { input: PositionSizeInput; r: PositionSizeResult 
 }
 
 function FormulaDialog({ input: i, result: r }: { input: PositionSizeInput; result: PositionSizeResult | null }) {
-  const cur = i.currency
+  // prices are in USDT, so the sums run in USDT even when the equity is typed in rupiah
+  const cur = i.currency === 'IDR' ? 'USDT' : i.currency
   const long = i.direction === 'long'
+  const convert =
+    i.currency === 'IDR'
+      ? [
+          {
+            title: 'Equity in USDT',
+            formula: 'Equity in IDR ÷ IDR per USDT',
+            live: r && `${fmt(i.equity, 0)} ÷ ${fmt(i.idrRate, 2)} = ${fmtMoney(r.equity)} USDT`,
+          },
+        ]
+      : []
   const rows = [
+    ...convert,
     {
-      n: 1,
       title: 'Risk amount',
       formula: 'Equity × Risk %',
-      live: r && `${fmt(i.equity)} × ${fmt(i.riskPct, 2)}% = ${fmtMoney(r.riskAmount)} ${cur}`,
+      live: r && `${fmt(r.equity)} × ${fmt(i.riskPct, 2)}% = ${fmtMoney(r.riskAmount)} ${cur}`,
     },
     {
-      n: 2,
       title: 'Risk per unit',
       formula: long ? 'Entry − Stop loss   (long)' : 'Stop loss − Entry   (short)',
       live:
@@ -468,7 +424,6 @@ function FormulaDialog({ input: i, result: r }: { input: PositionSizeInput; resu
           ` = ${fmt(r.riskPerUnit, 8)}`,
     },
     {
-      n: 3,
       title: 'Position size',
       formula: 'Risk amount ÷ Risk per unit',
       live:
@@ -476,19 +431,16 @@ function FormulaDialog({ input: i, result: r }: { input: PositionSizeInput; resu
         `${fmtMoney(r.riskAmount)} ÷ ${fmt(r.riskPerUnit, 8)} = ${fmtUnits(r.size)} ${r.size === 1 ? 'unit' : 'units'}`,
     },
     {
-      n: 4,
       title: 'Position value',
       formula: 'Position size × Entry',
       live: r && `${fmtUnits(r.size)} × ${fmt(i.entry, 8)} = ${fmtMoney(r.value)} ${cur}`,
     },
     {
-      n: 5,
       title: 'Position % of equity',
       formula: 'Position value ÷ Equity × 100%',
-      live: r && `${fmtMoney(r.value)} ÷ ${fmt(i.equity)} × 100% = ${fmt(r.pctOfEquity, 2)}%`,
+      live: r && `${fmtMoney(r.value)} ÷ ${fmt(r.equity)} × 100% = ${fmt(r.pctOfEquity, 2)}%`,
     },
     {
-      n: 6,
       title: 'Take profit',
       formula: long ? 'Entry + Risk per unit × RR   (long)' : 'Entry − Risk per unit × RR   (short)',
       live:
@@ -496,7 +448,6 @@ function FormulaDialog({ input: i, result: r }: { input: PositionSizeInput; resu
         `${fmt(i.entry, 8)} ${long ? '+' : '−'} ${fmt(r.riskPerUnit, 8)} × ${fmt(i.rr, 2)} = ${fmtPriceAuto(r.takeProfit)}`,
     },
     {
-      n: 7,
       title: 'Leverage needed',
       formula: 'ceil(Position % of equity ÷ 100), minimum 1x',
       live: r && `ceil(${fmt(r.pctOfEquity, 2)} ÷ 100) = ${r.minLeverage}x`,
@@ -518,9 +469,12 @@ function FormulaDialog({ input: i, result: r }: { input: PositionSizeInput; resu
           </DialogDescription>
         </DialogHeader>
         <ol className="overflow-y-auto">
-          {rows.map((row) => (
-            <li key={row.n} className="grid grid-cols-[2rem_minmax(0,1fr)] gap-x-3 border-b border-hairline px-6 py-4">
-              <span className="num text-sm text-muted-foreground">{row.n}</span>
+          {rows.map((row, k) => (
+            <li
+              key={row.title}
+              className="grid grid-cols-[2rem_minmax(0,1fr)] gap-x-3 border-b border-hairline px-6 py-4"
+            >
+              <span className="num text-sm text-muted-foreground">{k + 1}</span>
               <div className="flex min-w-0 flex-col gap-1.5">
                 <span className="text-sm font-medium">{row.title}</span>
                 <code className="num text-sm break-words">{`${row.title} = ${row.formula}`}</code>

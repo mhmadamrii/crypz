@@ -22,6 +22,7 @@ import { Route as mainmarketTradeRouteImport } from './routes/(main)/(market)/tr
 import { Route as mainmarketWorkspaceRouteImport } from './routes/(main)/(market)/workspace'
 import { Route as mainSettingsExchangesRouteImport } from './routes/(main)/settings/exchanges'
 import { Route as publicToolsPositionSizeRouteImport } from './routes/(public)/tools/position-size'
+import { Route as publicToolsRiskRouteImport } from './routes/(public)/tools/risk'
 import { Route as mainaccountExchangeOverviewRouteImport } from './routes/(main)/(account)/$exchange/overview'
 import { Route as mainaccountExchangePositionsRouteImport } from './routes/(main)/(account)/$exchange/positions'
 import { Route as mainmarketTradeReplayRouteImport } from './routes/(main)/(market)/trade_.replay'
@@ -90,6 +91,11 @@ const publicToolsPositionSizeRoute = publicToolsPositionSizeRouteImport.update({
   path: '/tools/position-size',
   getParentRoute: () => publicRouteRoute,
 } as any)
+const publicToolsRiskRoute = publicToolsRiskRouteImport.update({
+  id: '/tools/risk',
+  path: '/tools/risk',
+  getParentRoute: () => publicRouteRoute,
+} as any)
 const mainaccountExchangeOverviewRoute =
   mainaccountExchangeOverviewRouteImport.update({
     id: '/overview',
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/workspace': typeof mainmarketWorkspaceRoute
   '/settings/exchanges': typeof mainSettingsExchangesRoute
   '/tools/position-size': typeof publicToolsPositionSizeRoute
+  '/tools/risk': typeof publicToolsRiskRoute
   '/$exchange/overview': typeof mainaccountExchangeOverviewRoute
   '/$exchange/positions': typeof mainaccountExchangePositionsRoute
   '/trade/replay': typeof mainmarketTradeReplayRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByTo {
   '/workspace': typeof mainmarketWorkspaceRoute
   '/settings/exchanges': typeof mainSettingsExchangesRoute
   '/tools/position-size': typeof publicToolsPositionSizeRoute
+  '/tools/risk': typeof publicToolsRiskRoute
   '/$exchange/overview': typeof mainaccountExchangeOverviewRoute
   '/$exchange/positions': typeof mainaccountExchangePositionsRoute
   '/trade/replay': typeof mainmarketTradeReplayRoute
@@ -155,6 +163,7 @@ export interface FileRoutesById {
   '/(main)/(market)/workspace': typeof mainmarketWorkspaceRoute
   '/(main)/settings/exchanges': typeof mainSettingsExchangesRoute
   '/(public)/tools/position-size': typeof publicToolsPositionSizeRoute
+  '/(public)/tools/risk': typeof publicToolsRiskRoute
   '/(main)/(account)/$exchange/overview': typeof mainaccountExchangeOverviewRoute
   '/(main)/(account)/$exchange/positions': typeof mainaccountExchangePositionsRoute
   '/(main)/(market)/trade_/replay': typeof mainmarketTradeReplayRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
     | '/workspace'
     | '/settings/exchanges'
     | '/tools/position-size'
+    | '/tools/risk'
     | '/$exchange/overview'
     | '/$exchange/positions'
     | '/trade/replay'
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/workspace'
     | '/settings/exchanges'
     | '/tools/position-size'
+    | '/tools/risk'
     | '/$exchange/overview'
     | '/$exchange/positions'
     | '/trade/replay'
@@ -207,6 +218,7 @@ export interface FileRouteTypes {
     | '/(main)/(market)/workspace'
     | '/(main)/settings/exchanges'
     | '/(public)/tools/position-size'
+    | '/(public)/tools/risk'
     | '/(main)/(account)/$exchange/overview'
     | '/(main)/(account)/$exchange/positions'
     | '/(main)/(market)/trade_/replay'
@@ -310,6 +322,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof publicToolsPositionSizeRouteImport
       parentRoute: typeof publicRouteRoute
     }
+    '/(public)/tools/risk': {
+      id: '/(public)/tools/risk'
+      path: '/tools/risk'
+      fullPath: '/tools/risk'
+      preLoaderRoute: typeof publicToolsRiskRouteImport
+      parentRoute: typeof publicRouteRoute
+    }
     '/(main)/(account)/$exchange/overview': {
       id: '/(main)/(account)/$exchange/overview'
       path: '/overview'
@@ -382,12 +401,14 @@ interface publicRouteRouteChildren {
   publicLoginRoute: typeof publicLoginRoute
   publicIndexRoute: typeof publicIndexRoute
   publicToolsPositionSizeRoute: typeof publicToolsPositionSizeRoute
+  publicToolsRiskRoute: typeof publicToolsRiskRoute
 }
 
 const publicRouteRouteChildren: publicRouteRouteChildren = {
   publicLoginRoute: publicLoginRoute,
   publicIndexRoute: publicIndexRoute,
   publicToolsPositionSizeRoute: publicToolsPositionSizeRoute,
+  publicToolsRiskRoute: publicToolsRiskRoute,
 }
 
 const publicRouteRouteWithChildren = publicRouteRoute._addFileChildren(
