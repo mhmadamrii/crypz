@@ -428,6 +428,7 @@ function ReplaySession({
               candles={revealed}
               position={p}
               trades={state.trades}
+              onLevel={(which, price) => editLevel(which, String(price))}
               className="absolute inset-0"
             />
             {loading && (

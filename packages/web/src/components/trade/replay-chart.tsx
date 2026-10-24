@@ -13,7 +13,17 @@ import type { FootprintData } from '@/components/indicators/footprint-layer'
 import { useBias } from '@/components/indicators/use-bias'
 import { StrategyReadout } from '@/components/strategies/strategy-readout'
 import type { Evaluation } from '@/lib/strategies'
-import { createMosaicChart, palette, precisionFor, snapToChart, toBar, toChart, type Palette } from './chart-kit'
+import { attachLevelDrag } from './level-drag'
+import {
+  createMosaicChart,
+  monoFont,
+  palette,
+  precisionFor,
+  snapToChart,
+  toBar,
+  toChart,
+  type Palette,
+} from './chart-kit'
 
 type Props = {
   /** Only the revealed candles; the chart never sees the future. */
@@ -34,6 +44,8 @@ type Props = {
   strategy: Evaluation | null
   position: OpenPosition | null
   trades: ReplayTrade[]
+  /** The open position's stop or target was dragged to `price` (already on the right side of the last price). */
+  onLevel: (which: 'stop' | 'target', price: number) => void
   className?: string
 }
 
@@ -46,6 +58,7 @@ type Handles = {
   lines: IPriceLine[]
   dashed: number
   refreshIndicators: (p?: Palette) => void
+  refreshLevels: () => void
   footprintAt: ReturnType<typeof attachIndicators>['footprintAt']
 }
 
@@ -60,6 +73,7 @@ export function ReplayChart({
   strategy,
   position,
   trades,
+  onLevel,
   className,
 }: Props) {
   const box = useRef<HTMLDivElement>(null)
@@ -68,8 +82,8 @@ export function ReplayChart({
   const [hover, setHover] = useState<Candle | null>(null)
   const [theme, setTheme] = useState(0)
   const bias = useBias(candles, barLabel, higher)
-  const live = useRef({ candles, barMs, bias, footprint })
-  live.current = { candles, barMs, bias, footprint }
+  const live = useRef({ candles, barMs, bias, footprint, position, onLevel })
+  live.current = { candles, barMs, bias, footprint, position, onLevel }
 
   // 1. Lifecycle: create the chart once, tear it down on unmount.
   useEffect(() => {
@@ -82,6 +96,7 @@ export function ReplayChart({
         if (ref.current) ref.current.palette = q
         layer.setPalette(q)
         indicators.refresh(q)
+        levels.refresh(q)
         setTheme((n) => n + 1)
       })
       const mapper = createMapper(
@@ -101,6 +116,18 @@ export function ReplayChart({
         footprint: () => live.current.footprint,
         palette: palette(),
       })
+      // the stop and target handles read the pointer before the drawing layer does, so a level wins over a drawing
+      const levels = attachLevelDrag({
+        chart: made.chart,
+        series: made.candles,
+        el: box.current,
+        x: mapper.x,
+        position: () => live.current.position,
+        last: () => live.current.candles.at(-1)?.close,
+        onLevel: (which, price) => live.current.onLevel(which, price),
+        palette: palette(),
+        font: monoFont(),
+      })
       const layer = attachDrawingLayer({
         chart: made.chart,
         series: made.candles,
@@ -111,6 +138,7 @@ export function ReplayChart({
       })
       dispose = () => {
         layer.dispose()
+        levels.dispose()
         indicators.dispose()
         made.dispose()
       }
@@ -123,6 +151,7 @@ export function ReplayChart({
         lines: [],
         dashed: lw.LineStyle.Dashed,
         refreshIndicators: indicators.refresh,
+        refreshLevels: () => levels.refresh(),
         footprintAt: indicators.footprintAt,
       }
       made.chart.subscribeCrosshairMove((param) => {
@@ -197,6 +226,7 @@ export function ReplayChart({
       if (position.target !== null) line(position.target, 'Target', p.up)
       line(position.liq, 'Liq', p.muted)
     }
+    c.refreshLevels()
   }, [ready, theme, trades, position, candles])
 
   const k = hover ?? candles[candles.length - 1]
