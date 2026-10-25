@@ -34,7 +34,7 @@ export function attachIndicators(opts: {
   const { chart, series, x, candles, barMs, bias, footprint, liveBook, palette } = opts
   const font = monoFont()
   // resting orders sit under everything else: they are a backdrop at the edge, not a mark on a candle
-  const book = liveBook ? attachBookLayer({ chart, series, palette, font }) : null
+  const book = liveBook ? attachBookLayer({ chart, series, x, palette, font }) : null
   // the footprint's heat sits lowest and its cell columns replace the candles when zoomed in, so every other
   // indicator draws over it
   const footprintLayer = footprint

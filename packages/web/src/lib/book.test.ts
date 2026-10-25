@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  LevelTracker,
   bookState,
   depthWithin,
   imbalance,
@@ -234,5 +235,64 @@ describe('bookState', () => {
   it('is loading before the first snapshot, and disconnected if the feed is already retrying', () => {
     expect(bookState({ seq: -1, at: 0 }, { status: 'connecting', since: 0 }, 5)).toBe('loading')
     expect(bookState({ seq: -1, at: 0 }, { status: 'retrying', since: 0 }, 5)).toBe('disconnected')
+  })
+})
+
+describe('LevelTracker', () => {
+  const lvl = (side: 'bid' | 'ask', px: number, notional: number) => ({ side, px, base: 0, notional })
+
+  it('starts a level when first seen and keeps it open while it stays', () => {
+    const t = new LevelTracker()
+    t.update([lvl('bid', 99, 10)], 1, 1000)
+    t.update([lvl('bid', 99, 30)], 1, 2000)
+    const [a] = t.tracks()
+    expect(a).toMatchObject({ side: 'bid', start: 1000, end: null, notional: 30, peak: 30, at: 99.5 })
+  })
+
+  it('centres a bucket: a bid bucket spans upwards from its price, an ask bucket downwards', () => {
+    const t = new LevelTracker()
+    t.update([lvl('bid', 99, 1), lvl('ask', 101, 1)], 1, 1)
+    expect(t.tracks().map((x) => x.at)).toEqual([99.5, 100.5])
+  })
+
+  it('ends a level the update no longer includes, remembering its peak', () => {
+    const t = new LevelTracker()
+    t.update([lvl('ask', 101, 50)], 1, 1000)
+    t.update([lvl('ask', 101, 80)], 1, 2000)
+    t.update([], 1, 3000)
+    expect(t.tracks()).toEqual([expect.objectContaining({ start: 1000, end: 3000, peak: 80 })])
+  })
+
+  it('treats a level that comes back as a new line', () => {
+    const t = new LevelTracker()
+    t.update([lvl('bid', 99, 5)], 1, 1000)
+    t.update([], 1, 2000)
+    t.update([lvl('bid', 99, 5)], 1, 3000)
+    expect(t.tracks().map((x) => [x.start, x.end])).toEqual([
+      [1000, 2000],
+      [3000, null],
+    ])
+  })
+
+  it('ends everything at the last update on a gap, and when the bucket width changes', () => {
+    const t = new LevelTracker()
+    t.update([lvl('bid', 99, 5)], 1, 1000)
+    t.endAll(1500)
+    expect(t.tracks()[0].end).toBe(1500)
+    t.update([lvl('bid', 99, 5)], 1, 4000)
+    t.update([lvl('bid', 90, 5)], 10, 5000) // new width: the 99 line cannot continue as a 90 one
+    expect(t.tracks().filter((x) => x.end === null)).toHaveLength(1)
+    expect(t.tracks().find((x) => x.start === 4000)!.end).toBe(5000)
+  })
+
+  it('keeps only the most recent ended lines, and can be reset', () => {
+    const t = new LevelTracker(2)
+    for (let i = 0; i < 4; i++) {
+      t.update([lvl('bid', 90 + i, 5)], 1, i * 10)
+      t.update([], 1, i * 10 + 5)
+    }
+    expect(t.tracks().map((x) => x.at)).toEqual([92.5, 93.5])
+    t.reset()
+    expect(t.tracks()).toEqual([])
   })
 })

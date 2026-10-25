@@ -66,21 +66,32 @@ Nothing is sized until the spec has loaded.
 
 ## Chart indicator
 
-Indicators menu on `/trade` → **OKX liquidity**. Bars at the right edge of the chart, from each level's price, reaching
-left in proportion to its notional (bids up-coloured under the market, asks down-coloured above). Settings, saved in
-this browser with the other indicators:
+Indicators menu on `/trade` → **OKX liquidity**. Two styles of the same data:
 
-| Setting    | Options                                        | Default |
-| ---------- | ---------------------------------------------- | ------- |
-| Sides      | Both, Bids, Asks                               | Both    |
-| Range      | ±0.5%, ±1%, ±2%, ±5% from the market           | ±2%     |
-| Hide under | None, 10%, 25%, 50% of the biggest level drawn | 10%     |
-| Levels     | 5, 10, 20, 40 per side (the biggest are kept)  | 10      |
-| Group      | Fine, 10×, 100× the finest step for the price  | 10×     |
-| Labels     | price and notional on the biggest five a side  | on      |
+- **Lines** (default): each significant level is a horizontal line that starts at the candle where it first appeared
+  and runs right until it leaves, so walls read as lines across the chart. Bids are up-coloured under the market,
+  asks down-coloured above; bigger size is thicker and stronger. A level that went (pulled, traded through, or shrunk
+  under the threshold) stops where it did and fades; "Keep levels that went" turns that off.
+- **Bars**: a profile of the book as it is now, at the right edge, each level reaching left in proportion to its
+  notional.
+
+Lines can only start from when this chart began watching: OKX keeps no book history, so nothing is drawn before that,
+and a gap in the feed ends every line at the last update before it. Switching instrument or a setting that changes
+which levels are picked starts the lines over. Settings are saved in this browser with the other indicators:
+
+| Setting               | Options                                        | Default |
+| --------------------- | ---------------------------------------------- | ------- |
+| Style                 | Lines, Bars                                    | Lines   |
+| Sides                 | Both, Bids, Asks                               | Both    |
+| Range                 | ±0.5%, ±1%, ±2%, ±5% from the market           | ±2%     |
+| Hide under            | None, 10%, 25%, 50% of the biggest level drawn | 10%     |
+| Levels                | 5, 10, 20, 40 per side (the biggest are kept)  | 10      |
+| Group                 | Fine, 10×, 100× the finest step for the price  | 10×     |
+| Keep levels that went | on, off (lines only)                           | on      |
+| Labels                | notional on the biggest five a side            | on      |
 
 It subscribes to the book only while switched on. The layer follows pan, zoom and timeframe changes without
-rebuilding; it starts when the chart opens, and the replay (which has no live book) does not offer it.
+rebuilding, and the replay (which has no live book) does not offer it.
 
 ## Workspace widget
 

@@ -60,8 +60,15 @@ export type BookMaxLevels = (typeof BOOK_MAX_LEVELS)[number]
 export const BOOK_GROUPS = [0, 1, 2] as const
 export type BookGroup = (typeof BOOK_GROUPS)[number]
 
+/** How the order book is drawn: a line per level from when it appeared, or a profile of the book now at the edge. */
+export const BOOK_STYLES = ['lines', 'bars'] as const
+export type BookStyle = (typeof BOOK_STYLES)[number]
+
 export type IndicatorState = {
   book: {
+    style: BookStyle
+    /** Keep drawing lines for levels that have gone, faded, where they stopped. */
+    ended: boolean
     on: boolean
     sides: BookSides
     range: BookRange
@@ -88,7 +95,7 @@ export type IndicatorState = {
 
 const KEY = 'crypz.indicators.v1'
 const DEFAULTS: IndicatorState = {
-  book: { on: false, sides: 'both', range: 0.02, minShare: 0.1, maxLevels: 10, group: 1, labels: true },
+  book: { on: false, style: 'lines', ended: true, sides: 'both', range: 0.02, minShare: 0.1, maxLevels: 10, group: 1, labels: true },
   sessions: { on: false, asia: true, london: true, newYork: true },
   fvg: { on: false, minAtr: 0.25, showFilled: false },
   structure: { on: false, length: 5, labels: true },
@@ -113,6 +120,7 @@ function load(): IndicatorState {
     const liquidity = { ...DEFAULTS.liquidity, ...saved.liquidity }
     if (!LIQUIDITY_TOLERANCES.includes(liquidity.tolerance)) liquidity.tolerance = DEFAULTS.liquidity.tolerance
     const book = { ...DEFAULTS.book, ...saved.book }
+    if (!BOOK_STYLES.includes(book.style)) book.style = DEFAULTS.book.style
     if (!BOOK_SIDES.includes(book.sides)) book.sides = DEFAULTS.book.sides
     if (!BOOK_RANGES.includes(book.range)) book.range = DEFAULTS.book.range
     if (!BOOK_MIN_SHARES.includes(book.minShare)) book.minShare = DEFAULTS.book.minShare

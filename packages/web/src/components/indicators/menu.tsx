@@ -9,6 +9,7 @@ import {
   BOOK_MIN_SHARES,
   BOOK_RANGES,
   BOOK_SIDES,
+  BOOK_STYLES,
   FOOTPRINT_ABSORB,
   FOOTPRINT_CELLS,
   FOOTPRINT_IMBALANCE,
@@ -402,6 +403,19 @@ export function IndicatorMenu({
             title="OKX liquidity"
             blurb="Resting limit orders in OKX’s live order book, as bars at the right edge. Walls show where size is waiting."
           >
+            <Row
+              text="Style"
+              hint="Lines: each level a line from when it appeared until it went. Bars: the book as it is now, at the right edge."
+            >
+              <Segmented
+                label="How the book is drawn"
+                options={BOOK_STYLES}
+                value={s.book.style}
+                onChange={(style) => indicators.setBook({ style, on: true })}
+                format={(v) => (v === 'lines' ? 'Lines' : 'Bars')}
+                size="strip"
+              />
+            </Row>
             <Row text="Sides">
               <Segmented
                 label="Which sides of the book to draw"
@@ -451,6 +465,15 @@ export function IndicatorMenu({
                 size="strip"
               />
             </Row>
+            {s.book.style === 'lines' && (
+              <Switch
+                on={s.book.ended}
+                onToggle={() => indicators.setBook({ ended: !s.book.ended, on: true })}
+                label="Keep ended levels"
+              >
+                <span className="text-sm">Keep levels that went, faded</span>
+              </Switch>
+            )}
             <Switch
               on={s.book.labels}
               onToggle={() => indicators.setBook({ labels: !s.book.labels, on: true })}
@@ -459,8 +482,8 @@ export function IndicatorMenu({
               <span className="text-sm">Label the biggest levels</span>
             </Switch>
             <Note>
-              The book as it is now, not traded volume: it starts when the chart opens and orders can be pulled at any
-              moment. Hidden while the feed is offline or silent.
+              Resting orders, not traded volume. OKX keeps no book history, so a line starts when this chart first saw
+              the level, and orders can be pulled at any moment. Hidden while the feed is offline or silent.
             </Note>
           </Section>
         )}

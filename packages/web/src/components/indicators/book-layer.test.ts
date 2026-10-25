@@ -55,7 +55,7 @@ function fakeFeed() {
 
 function setup(over: { status?: 'live' | 'retrying'; since?: number; now?: number } = {}) {
   const f = fakeFeed()
-  let conn = { status: over.status ?? 'live', since: over.since ?? 0 } as const
+  let conn: { status: 'live' | 'retrying'; since: number } = { status: over.status ?? 'live', since: over.since ?? 0 }
   const connListeners = new Set<() => void>()
   let primitive: {
     attached: (p: { requestUpdate: () => void }) => void
@@ -75,6 +75,8 @@ function setup(over: { status?: 'live' | 'retrying'; since?: number; now?: numbe
   const layer = attachBookLayer({
     chart: {} as never,
     series: series as never,
+    // time → pixel: 10ms to the pixel
+    x: (time: number) => time / 10,
     palette,
     font: 'monospace',
     feed: f.feed,
@@ -105,12 +107,34 @@ function setup(over: { status?: 'live' | 'retrying'; since?: number; now?: numbe
           cb({ context: ctx, mediaSize: { width: 1000, height: 2000 } }),
       })
   }
-  return { f, layer, series, draw, calls, clock, requestUpdate, connListeners, setConn: (c: typeof conn) => (conn = c) }
+  const fire = () => connListeners.forEach((fn) => fn())
+  return {
+    f,
+    layer,
+    series,
+    draw,
+    calls,
+    clock,
+    requestUpdate,
+    connListeners,
+    fire,
+    setConn: (c: typeof conn) => (conn = c),
+  }
 }
 
 beforeEach(() => {
   vi.useFakeTimers()
-  indicators.setBook({ on: true, sides: 'both', range: 0.05, minShare: 0, maxLevels: 10, group: 0, labels: true })
+  indicators.setBook({
+    on: true,
+    style: 'bars',
+    ended: true,
+    sides: 'both',
+    range: 0.05,
+    minShare: 0,
+    maxLevels: 10,
+    group: 0,
+    labels: true,
+  })
 })
 afterEach(() => {
   indicators.setBook({ on: false })
@@ -229,5 +253,85 @@ describe('the OKX liquidity layer', () => {
     indicators.setBook({ on: false })
     indicators.setBook({ on: true })
     expect(t.f.listeners('BTC-USDT-SWAP')).toBe(0)
+  })
+})
+
+describe('the OKX liquidity layer, as lines', () => {
+  beforeEach(() => indicators.setBook({ style: 'lines' }))
+  const alpha = (style: string) => Number(/,([\d.]+)\)$/.exec(style)![1])
+  const without = (id: string, px: string) => {
+    const b = bookOf({ at: 3000 })
+    b.bids.delete(px)
+    return { id, b }
+  }
+
+  it('draws a line per level from when it first appeared to the right edge', () => {
+    const t = setup()
+    t.layer.setInstrument('BTC-USDT-SWAP', spec)
+    t.draw()
+    expect(t.calls.fills).toHaveLength(4)
+    // the book was first seen at at = 1000, which is x = 100 on this axis: lines run 100 → 1000
+    expect(t.calls.fills.every((f) => f.w === 900)).toBe(true)
+    t.layer.dispose()
+  })
+
+  it('stops a level that went where it went, fades it, and drops it when asked', () => {
+    const t = setup()
+    t.layer.setInstrument('BTC-USDT-SWAP', spec)
+    const { id, b } = without('BTC-USDT-SWAP', '98')
+    t.f.push(id, b)
+    t.draw()
+    expect(t.calls.fills).toHaveLength(4)
+    // the pulled bid ran from x = 100 to x = 300, not on to the edge
+    const ended = t.calls.fills.filter((f) => f.w === 200)
+    expect(ended).toHaveLength(1)
+    const kept = t.calls.fills.filter((f) => f.w === 900)
+    expect(alpha(ended[0].style)).toBeLessThan(Math.max(...kept.map((f) => alpha(f.style))))
+    indicators.setBook({ ended: false })
+    t.draw()
+    expect(t.calls.fills).toHaveLength(3)
+    t.layer.dispose()
+  })
+
+  it('draws stronger, thicker lines for bigger levels', () => {
+    const t = setup()
+    t.layer.setInstrument('BTC-USDT-SWAP', spec)
+    t.draw()
+    const alphas = t.calls.fills.map((f) => alpha(f.style))
+    expect(Math.max(...alphas)).toBeGreaterThan(Math.min(...alphas))
+  })
+
+  it('ends every line at the last update when the feed drops, and never bridges the gap', () => {
+    const t = setup()
+    t.layer.setInstrument('BTC-USDT-SWAP', spec)
+    t.setConn({ status: 'retrying', since: 0 })
+    t.clock.now = 9000
+    t.fire()
+    t.draw()
+    // status line only says why; the old lines stay as ended ones, stopping at x = 100 (their last update)
+    expect(t.calls.texts.join(' ')).toMatch(/offline/)
+    expect(t.calls.fills.every((f) => f.w === 0 || f.w < 900)).toBe(true)
+    indicators.setBook({ ended: false })
+    t.draw()
+    expect(t.calls.fills).toEqual([])
+
+    // back online: fresh lines start at the new update, not at the old one
+    t.setConn({ status: 'live', since: 9000 })
+    t.clock.now = 9500
+    t.f.push('BTC-USDT-SWAP', bookOf({ at: 9200 }))
+    t.draw()
+    expect(t.calls.fills).toHaveLength(4)
+    expect(t.calls.fills.every((f) => f.w === 1000 - 920)).toBe(true)
+    t.layer.dispose()
+  })
+
+  it('starts again on another instrument', () => {
+    const t = setup()
+    t.layer.setInstrument('BTC-USDT-SWAP', spec)
+    t.layer.setInstrument('ETH-USDT-SWAP', { ...spec, id: 'ETH-USDT-SWAP' })
+    t.draw()
+    // the ETH book was seen at at = 1000 as well, but nothing carried over from BTC: four lines, not eight
+    expect(t.calls.fills).toHaveLength(4)
+    t.layer.dispose()
   })
 })

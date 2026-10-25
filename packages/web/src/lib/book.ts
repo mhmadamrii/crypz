@@ -249,3 +249,79 @@ export function summarize(
     asks: rank(asks, 'ask'),
   }
 }
+
+// ---- levels over time ----------------------------------------------------------------------------------------
+
+/** One resting level followed through time: from when it first appeared on the book to when it left the selection. */
+export type Track = {
+  side: Side
+  /** Middle of the bucket, where the line is drawn. */
+  at: number
+  /** ms, when this browser first saw it. The book has no history: nothing starts before the feed did. */
+  start: number
+  /** ms it stopped being a level worth drawing (pulled, traded through, shrunk under the threshold); null while it is. */
+  end: number | null
+  notional: number
+  peak: number
+}
+
+/**
+ * Follows the selected levels from one book update to the next, so a level can be drawn as a line that starts when
+ * the order appeared and stops when it went. Only what this browser watched is known; a gap in the feed ends every
+ * line at the last update before it, never bridging time nothing was seen.
+ */
+export class LevelTracker {
+  private open = new Map<string, Track>()
+  private closed: Track[] = []
+  private step = 0
+
+  constructor(private keep = 150) {}
+
+  update(levels: BookLevel[], step: number, at: number) {
+    // a new bucket width makes every key mean something else
+    if (step !== this.step) {
+      this.endAll(at)
+      this.step = step
+    }
+    const seen = new Set<string>()
+    for (const l of levels) {
+      const key = `${l.side}:${l.px}`
+      seen.add(key)
+      const t = this.open.get(key)
+      if (t) {
+        t.notional = l.notional
+        t.peak = Math.max(t.peak, l.notional)
+      } else {
+        const mid = l.side === 'bid' ? l.px + step / 2 : l.px - step / 2
+        this.open.set(key, { side: l.side, at: mid, start: at, end: null, notional: l.notional, peak: l.notional })
+      }
+    }
+    for (const [key, t] of this.open)
+      if (!seen.has(key)) {
+        t.end = at
+        this.closed.push(t)
+        this.open.delete(key)
+      }
+    if (this.closed.length > this.keep) this.closed.splice(0, this.closed.length - this.keep)
+  }
+
+  /** End every open line at `at`: the feed went away or the settings changed. */
+  endAll(at: number) {
+    for (const t of this.open.values()) {
+      t.end = at
+      this.closed.push(t)
+    }
+    this.open.clear()
+    if (this.closed.length > this.keep) this.closed.splice(0, this.closed.length - this.keep)
+  }
+
+  reset() {
+    this.open.clear()
+    this.closed = []
+    this.step = 0
+  }
+
+  tracks(): Track[] {
+    return [...this.closed, ...this.open.values()]
+  }
+}
