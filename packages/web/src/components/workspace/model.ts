@@ -14,6 +14,7 @@ export type WidgetKind =
   | 'trades'
   | 'stats'
   | 'depth'
+  | 'liquidity'
   | 'cvd'
   | 'profile'
   | 'footprint'

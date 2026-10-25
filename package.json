@@ -11,6 +11,7 @@
     "dev:api": "pnpm --filter @crypz/api dev",
     "db:migrate": "pnpm --filter @crypz/db migrate",
     "db:studio": "pnpm --filter @crypz/db studio",
+    "test": "pnpm --filter web test",
     "typecheck": "pnpm --filter web exec tsc --noEmit -p . && pnpm --filter @crypz/api typecheck",
     "db:generate": "pnpm --filter @crypz/db generate"
   },

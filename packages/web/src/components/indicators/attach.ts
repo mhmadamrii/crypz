@@ -4,6 +4,7 @@ import type { Bias } from '@/lib/indicators/bias'
 import type { createMapper } from '@/components/drawings/layer'
 import { monoFont, type Palette } from '@/components/trade/chart-kit'
 import { attachBiasLayer } from './bias-layer'
+import { attachBookLayer } from './book-layer'
 import { attachFootprintLayer, type FootprintData } from './footprint-layer'
 import { attachFvgLayer } from './fvg-layer'
 import { attachLiquidityLayer } from './liquidity-layer'
@@ -26,10 +27,14 @@ export function attachIndicators(opts: {
   bias: () => Bias | null
   /** Omit where there is no footprint history to draw. */
   footprint?: () => FootprintData | null
+  /** True on a live chart: adds the OKX order-book liquidity layer, fed through `setBook`. */
+  liveBook?: boolean
   palette: Palette
 }) {
-  const { chart, series, x, candles, barMs, bias, footprint, palette } = opts
+  const { chart, series, x, candles, barMs, bias, footprint, liveBook, palette } = opts
   const font = monoFont()
+  // resting orders sit under everything else: they are a backdrop at the edge, not a mark on a candle
+  const book = liveBook ? attachBookLayer({ chart, series, palette, font }) : null
   // the footprint's heat sits lowest and its cell columns replace the candles when zoomed in, so every other
   // indicator draws over it
   const footprintLayer = footprint
@@ -48,6 +53,7 @@ export function attachIndicators(opts: {
   const biasLayer = attachBiasLayer({ chart, series, x, candles, bias, palette, font })
   return {
     refresh(p?: Palette) {
+      book?.refresh(p)
       footprintLayer?.refresh(p)
       sessions.refresh(p)
       fvg.refresh(p)
@@ -58,7 +64,9 @@ export function attachIndicators(opts: {
       biasLayer.refresh(p)
     },
     footprintAt: footprintLayer?.at,
+    setBook: book?.setInstrument,
     dispose() {
+      book?.dispose()
       footprintLayer?.dispose()
       sessions.dispose()
       fvg.dispose()

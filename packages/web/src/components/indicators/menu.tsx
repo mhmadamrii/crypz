@@ -4,6 +4,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { SESSIONS, localHours, type SessionId } from '@/lib/indicators/sessions'
 import {
   BIAS_FRAMES,
+  BOOK_GROUPS,
+  BOOK_MAX_LEVELS,
+  BOOK_MIN_SHARES,
+  BOOK_RANGES,
+  BOOK_SIDES,
   FOOTPRINT_ABSORB,
   FOOTPRINT_CELLS,
   FOOTPRINT_IMBALANCE,
@@ -112,15 +117,18 @@ const Note = ({ children, strong }: { children: React.ReactNode; strong?: boolea
 export function IndicatorMenu({
   barMs,
   footprint = true,
+  book = false,
   className,
 }: {
   barMs: number
   /** False on charts with no footprint history to draw (the live trade chart): hides its section and its count. */
   footprint?: boolean
+  /** True on live charts, which can draw the OKX order book; replays have no book to show. */
+  book?: boolean
   className?: string
 }) {
   const s = useIndicators()
-  const count = activeCount(s) - Number(!footprint && s.footprint.on)
+  const count = activeCount(s) - Number(!footprint && s.footprint.on) - Number(!book && s.book.on)
   const tooLong = barMs > SESSION_MAX_BAR
   const footprintTooLong = barMs > FOOTPRINT_MAX_BAR
 
@@ -384,6 +392,75 @@ export function IndicatorMenu({
               {footprintTooLong && s.footprint.on
                 ? 'Switch to 1H or shorter to see it.'
                 : 'Each OKX day is built on first use, in a few seconds. Zoom in to read the numbers; absorption is marked once the next bar closes.'}
+            </Note>
+          </Section>
+        )}
+        {book && (
+          <Section
+            on={s.book.on}
+            onToggle={() => indicators.setBook({ on: !s.book.on })}
+            title="OKX liquidity"
+            blurb="Resting limit orders in OKX’s live order book, as bars at the right edge. Walls show where size is waiting."
+          >
+            <Row text="Sides">
+              <Segmented
+                label="Which sides of the book to draw"
+                options={BOOK_SIDES}
+                value={s.book.sides}
+                onChange={(sides) => indicators.setBook({ sides, on: true })}
+                format={(v) => (v === 'both' ? 'Both' : v === 'bids' ? 'Bids' : 'Asks')}
+                size="strip"
+              />
+            </Row>
+            <Row text="Range" hint="How far from the market price to look">
+              <Segmented
+                label="Distance from the market, each way"
+                options={BOOK_RANGES}
+                value={s.book.range}
+                onChange={(range) => indicators.setBook({ range, on: true })}
+                format={(v) => `±${+(v * 100).toFixed(1)}%`}
+                size="strip"
+              />
+            </Row>
+            <Row text="Hide under" hint="Levels smaller than this share of the biggest one drawn are left out">
+              <Segmented
+                label="Threshold, as a share of the biggest level"
+                options={BOOK_MIN_SHARES}
+                value={s.book.minShare}
+                onChange={(minShare) => indicators.setBook({ minShare, on: true })}
+                format={(v) => (v ? `${v * 100}%` : 'None')}
+                size="strip"
+              />
+            </Row>
+            <Row text="Levels" hint="The most levels drawn on each side; the biggest are kept">
+              <Segmented
+                label="Maximum levels per side"
+                options={BOOK_MAX_LEVELS}
+                value={s.book.maxLevels}
+                onChange={(maxLevels) => indicators.setBook({ maxLevels, on: true })}
+                size="strip"
+              />
+            </Row>
+            <Row text="Group" hint="Price bucket width: orders inside one bucket are summed, none are merged beyond it">
+              <Segmented
+                label="Price grouping"
+                options={BOOK_GROUPS}
+                value={s.book.group}
+                onChange={(group) => indicators.setBook({ group, on: true })}
+                format={(v) => (v ? `${10 ** v}×` : 'Fine')}
+                size="strip"
+              />
+            </Row>
+            <Switch
+              on={s.book.labels}
+              onToggle={() => indicators.setBook({ labels: !s.book.labels, on: true })}
+              label="Level labels"
+            >
+              <span className="text-sm">Label the biggest levels</span>
+            </Switch>
+            <Note>
+              The book as it is now, not traded volume: it starts when the chart opens and orders can be pulled at any
+              moment. Hidden while the feed is offline or silent.
             </Note>
           </Section>
         )}

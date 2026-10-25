@@ -1,4 +1,5 @@
 import { useMemo, useSyncExternalStore, type FC } from 'react'
+import { decimalsOf, stepsFor } from '@/lib/book'
 import { BARS, type Bar } from '@crypz/exchanges'
 import { CandleChart } from '@/components/trade/candle-chart'
 import { useIntervals } from '@/lib/intervals'
@@ -6,9 +7,10 @@ import { MARKET_EXCHANGE } from '@/lib/market'
 import { useBook, useFunding, useMarkPrice, useTicker, useTrades } from '@/lib/okx-ws'
 import { fmtDuration, fmtNum, fmtQty, fmtPrice, fmtSigned, tone } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { LiquidityBody, LiquidityControls } from './book-liquidity'
 import { BasisBody, LiquidationsBody, LongShortBody, OpenInterestBody, TakerBody } from './derivatives'
 import { Segmented } from '@/components/segmented'
-import { SplitBar, StripControl, Waiting, decimalsOf, p90, stepsFor } from './kit'
+import { SplitBar, StripControl, Waiting, p90, useNow } from './kit'
 import type { WidgetKind } from './model'
 import {
   CvdBody,
@@ -34,32 +36,6 @@ type Entry = {
   /** Extra controls in the widget's header. */
   Controls?: FC<WidgetProps>
 }
-
-// Shared one-second clock for countdowns, so N widgets do not run N timers.
-const clock = {
-  listeners: new Set<() => void>(),
-  now: Date.now(),
-  timer: undefined as ReturnType<typeof setInterval> | undefined,
-}
-const useNow = () =>
-  useSyncExternalStore(
-    (fn) => {
-      clock.listeners.add(fn)
-      clock.timer ??= setInterval(() => {
-        clock.now = Date.now()
-        for (const l of clock.listeners) l()
-      }, 1000)
-      return () => {
-        clock.listeners.delete(fn)
-        if (!clock.listeners.size) {
-          clearInterval(clock.timer)
-          clock.timer = undefined
-        }
-      }
-    },
-    () => clock.now,
-    () => 0,
-  )
 
 // ---- chart ---------------------------------------------------------------------------------------------------
 
@@ -304,6 +280,15 @@ export const WIDGETS: Record<WidgetKind, Entry> = {
     size: { w: 6, h: 10, minW: 4, minH: 6 },
     Body: DepthBody,
     Controls: DepthControls,
+  },
+  liquidity: {
+    title: 'OKX liquidity',
+    group: 'Order flow',
+    description:
+      'Resting bids and asks in OKX’s live book within a band of the price, the imbalance and the biggest levels.',
+    size: { w: 5, h: 16, minW: 4, minH: 9 },
+    Body: LiquidityBody,
+    Controls: LiquidityControls,
   },
   cvd: {
     title: 'CVD',

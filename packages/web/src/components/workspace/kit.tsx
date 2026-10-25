@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react'
+import { useSyncExternalStore, type ComponentProps } from 'react'
 import { MARKET_EXCHANGE } from '@/lib/market'
 import { Segmented } from '@/components/segmented'
 import { cn } from '@/lib/utils'
@@ -10,6 +10,36 @@ export const Waiting = ({ what }: { what?: string }) => (
     {what ?? `Waiting for ${MARKET_EXCHANGE.toUpperCase()}…`}
   </p>
 )
+
+// Shared one-second clock for countdowns and freshness, so N widgets do not run N timers.
+const clock = {
+  listeners: new Set<() => void>(),
+  now: Date.now(),
+  timer: undefined as ReturnType<typeof setInterval> | undefined,
+}
+export const useNow = () =>
+  useSyncExternalStore(
+    (fn) => {
+      clock.listeners.add(fn)
+      if (!clock.timer) {
+        // nothing has been ticking while no widget listened, so the stored time is old until the first tick
+        clock.now = Date.now()
+        clock.timer = setInterval(() => {
+          clock.now = Date.now()
+          for (const l of clock.listeners) l()
+        }, 1000)
+      }
+      return () => {
+        clock.listeners.delete(fn)
+        if (!clock.listeners.size) {
+          clearInterval(clock.timer)
+          clock.timer = undefined
+        }
+      }
+    },
+    () => clock.now,
+    () => 0,
+  )
 
 /** The row of a widget body that holds one setting: a label on the left, the options on the right. */
 export function StripControl<T extends string | number>({
@@ -38,14 +68,6 @@ export function SplitBar({ share, fill, className }: { share: number; fill: 'up'
 
 /** The size that only the biggest tenth of `sizes` reaches; Infinity when there is nothing to rank. */
 export const p90 = (sizes: number[]) => [...sizes].sort((a, b) => a - b)[Math.floor(sizes.length * 0.9)] ?? Infinity
-
-/** Price groupings from the price's magnitude: e.g. 0.1 / 1 / 10 for BTC near 80,000. */
-export const stepsFor = (price: number) => {
-  const base = 10 ** (Math.floor(Math.log10(price)) - 5)
-  return [base, base * 10, base * 100]
-}
-
-export const decimalsOf = (step: number) => Math.max(0, -Math.floor(Math.log10(step) + 1e-9))
 
 /** A setting that must be one of `options`, falling back to `fallback` when the saved value is gone or foreign. */
 export const pick = <T extends string | number>(value: unknown, options: readonly T[], fallback: T): T =>

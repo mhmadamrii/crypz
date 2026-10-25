@@ -8,7 +8,8 @@ import { absorptionsOf, columnsOf, imbalancesOf, rowOf, type Absorption, type Im
 import { useBook, useFootprint, useTicker } from '@/lib/okx-ws'
 import { cn } from '@/lib/utils'
 import { IndicatorChart, Readout, within, type Bar } from './indicator-chart'
-import { StripControl, Waiting, clockTime, decimalsOf, periodLabel, pick, stepsFor } from './kit'
+import { StripControl, Waiting, clockTime, periodLabel, pick } from './kit'
+import { decimalsOf, stepsFor } from '@/lib/book'
 import { Segmented } from '@/components/segmented'
 import type { WidgetProps } from './widgets'
 

@@ -70,7 +70,7 @@ function Trade() {
           className="w-40 sm:w-52"
         />
         <IntervalBar value={bar} onChange={(v) => set({ bar: v })} className="hidden sm:flex" />
-        <IndicatorMenu barMs={BAR_MS[bar]} footprint={false} className="hidden lg:inline-flex" />
+        <IndicatorMenu barMs={BAR_MS[bar]} footprint={false} book className="hidden lg:inline-flex" />
       </PageHeader>
 
       <main className="flex w-full flex-col px-4 sm:px-8">
@@ -102,7 +102,7 @@ function Trade() {
                 <i className="size-2.5 shadow-[inset_0_0_0_1px_var(--foreground)]" /> Close below open
               </span>
               {connected && <span className="num">L / S = your entry · square = your exit, toned by result</span>}
-              <IndicatorMenu barMs={BAR_MS[bar]} footprint={false} className="ml-auto lg:hidden" />
+              <IndicatorMenu barMs={BAR_MS[bar]} footprint={false} book className="ml-auto lg:hidden" />
             </div>
           </div>
         </div>

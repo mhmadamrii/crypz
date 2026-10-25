@@ -10,7 +10,7 @@ const URL = 'wss://ws.okx.com:8443/ws/v5/public'
 
 /** A channel on one instrument, or on a whole instrument type (liquidations arrive for every swap at once). */
 export type Arg = { channel: string; instId?: string; instType?: string }
-type Push = { action?: 'snapshot' | 'update'; data: unknown[] }
+type Push = { action?: 'snapshot' | 'update'; data: unknown[]; error?: string }
 type Handler = (push: Push) => void
 
 const keyOf = (a: Arg) => `${a.channel}:${a.instId ?? a.instType}`
@@ -23,6 +23,10 @@ class OkxPublic {
   private reconnect: ReturnType<typeof setTimeout> | undefined
   /** Connection state for the workspace's status pill. */
   status: 'idle' | 'connecting' | 'live' | 'retrying' = 'idle'
+  /** When the socket last opened (ms). Anything received before it predates the current connection. */
+  since = 0
+  /** Replaced on every change, so it can back a useSyncExternalStore. */
+  connection: Connection = { status: 'idle', since: 0 }
   private statusListeners = new Set<() => void>()
 
   subscribe(arg: Arg, handler: Handler) {
@@ -58,6 +62,7 @@ class OkxPublic {
 
   private setStatus(s: OkxPublic['status']) {
     this.status = s
+    this.connection = { status: s, since: this.since }
     for (const fn of this.statusListeners) fn()
   }
 
@@ -72,6 +77,7 @@ class OkxPublic {
     this.ws = ws
     ws.onopen = () => {
       this.retry = 0
+      this.since = Date.now()
       this.setStatus('live')
       const args = [...this.subs.values()].map((s) => s.arg)
       if (args.length) this.send({ op: 'subscribe', args })
@@ -80,10 +86,19 @@ class OkxPublic {
     }
     ws.onmessage = (e) => {
       if (e.data === 'pong') return
-      const msg = JSON.parse(e.data as string) as { event?: string; arg?: Arg } & Push
-      if (msg.event || !msg.arg || !msg.data) return
+      let msg: { event?: string; msg?: string; arg?: Arg } & Push
+      try {
+        msg = JSON.parse(e.data as string)
+      } catch {
+        return // a malformed frame is dropped; a gap it leaves is caught by the book's sequence check
+      }
+      if (!msg || typeof msg !== 'object' || !msg.arg) return
       const sub = this.subs.get(keyOf(msg.arg))
-      if (sub) for (const h of sub.handlers) h(msg)
+      if (!sub) return
+      // OKX refuses a subscription (unknown instrument, channel not offered for it) with an error event
+      if (msg.event === 'error')
+        for (const h of sub.handlers) h({ data: [], error: msg.msg ?? 'OKX refused the subscription' })
+      else if (!msg.event && Array.isArray(msg.data)) for (const h of sub.handlers) h(msg)
     }
     ws.onclose = () => {
       clearInterval(this.ping)
@@ -97,7 +112,17 @@ class OkxPublic {
   }
 }
 
+type Connection = { status: OkxPublic['status']; since: number }
 const okxPublic = new OkxPublic()
+
+/** The socket's state plus when it last opened, for judging whether a book is current (`bookState`). */
+export const okxConnection = {
+  get: () => okxPublic.connection,
+  subscribe: (fn: () => void) => okxPublic.onStatus(fn),
+}
+
+export const useConnection = () => useSyncExternalStore(okxConnection.subscribe, okxConnection.get, () => IDLE)
+const IDLE: Connection = { status: 'idle', since: 0 }
 
 export const useFeedStatus = () =>
   useSyncExternalStore(
@@ -120,6 +145,8 @@ class Feed<T> {
     private arg: Arg,
     private initial: T,
     private reduce: (prev: T, push: Push, feed: { resync: () => void }) => T,
+    /** What the value becomes when OKX refuses the subscription; feeds without one ignore the refusal. */
+    private fail?: (message: string) => T,
   ) {
     this.value = initial
   }
@@ -129,7 +156,8 @@ class Feed<T> {
     if (this.listeners.size === 1) {
       const resync = () => okxPublic.resubscribe(this.arg)
       this.stop = okxPublic.subscribe(this.arg, (push) => {
-        const next = this.reduce(this.value, push, { resync })
+        if (push.error !== undefined && !this.fail) return
+        const next = push.error !== undefined ? this.fail!(push.error) : this.reduce(this.value, push, { resync })
         if (next === this.value) return
         this.value = next
         if (!this.frame) this.frame = requestAnimationFrame(this.flush)
@@ -161,12 +189,13 @@ function feed<T>(
   initial: T,
   reduce: (prev: T, push: Push, f: { resync: () => void }) => T,
   name = keyOf(arg),
+  fail?: (message: string) => T,
 ) {
-  if (!feeds.has(name)) feeds.set(name, new Feed(arg, initial, reduce) as Feed<unknown>)
+  if (!feeds.has(name)) feeds.set(name, new Feed(arg, initial, reduce, fail) as Feed<unknown>)
   return feeds.get(name) as Feed<T>
 }
 
-function useFeed<T>(f: Feed<T>, server: T) {
+function useFeed<T>(f: Store<T>, server: T) {
   return useSyncExternalStore(f.subscribe, f.get, () => server)
 }
 
@@ -322,26 +351,54 @@ export function useMarkPrice(instId: string) {
 
 type Level = [px: string, sz: string, liq: string, orders: string]
 type BookPush = { asks: Level[]; bids: Level[]; ts: string; seqId: number; prevSeqId: number }
-export type Book = { bids: Map<string, string>; asks: Map<string, string>; ts: number; seq: number }
+export type Book = {
+  bids: Map<string, string>
+  asks: Map<string, string>
+  /** OKX's timestamp of the last message (ms). */
+  ts: number
+  seq: number
+  /** When this browser last heard from OKX about the book, heartbeats included (ms). Freshness is judged on this. */
+  at: number
+  /** Why OKX refused the subscription, when it did. */
+  error?: string
+}
 
-const EMPTY: Book = { bids: new Map(), asks: new Map(), ts: 0, seq: -1 }
+const EMPTY: Book = { bids: new Map(), asks: new Map(), ts: 0, seq: -1, at: 0 }
 
-function applyBook(prev: Book, p: Push, f: { resync: () => void }): Book {
+const isLevels = (v: unknown): v is Level[] => Array.isArray(v) && v.every((l) => Array.isArray(l) && l.length >= 2)
+
+/** Fold one `books` push into the book. A snapshot replaces it; an update must continue the sequence. */
+export function applyBook(prev: Book, p: Push, f: { resync: () => void }): Book {
   const d = p.data[0] as BookPush | undefined
   if (!d) return prev
   const snapshot = p.action === 'snapshot'
+  // a push that cannot be read may have carried an update, so the book can no longer be trusted: start over
+  if (!isLevels(d.bids) || !isLevels(d.asks) || !Number.isFinite(d.seqId)) {
+    f.resync()
+    return EMPTY
+  }
   if (!snapshot && (prev.seq < 0 || d.prevSeqId !== prev.seq)) {
     f.resync()
     return EMPTY
   }
-  if (!snapshot && !d.bids.length && !d.asks.length) return { ...prev, seq: d.seqId } // heartbeat: nothing moved
+  const at = Date.now()
+  if (!snapshot && !d.bids.length && !d.asks.length) return { ...prev, seq: d.seqId, at } // heartbeat: nothing moved
   const bids = snapshot ? new Map<string, string>() : new Map(prev.bids)
   const asks = snapshot ? new Map<string, string>() : new Map(prev.asks)
   for (const [px, sz] of d.bids) sz === '0' ? bids.delete(px) : bids.set(px, sz)
   for (const [px, sz] of d.asks) sz === '0' ? asks.delete(px) : asks.set(px, sz)
-  return { bids, asks, ts: Number(d.ts), seq: d.seqId }
+  return { bids, asks, ts: Number(d.ts), seq: d.seqId, at }
 }
 
+export type Store<T> = { subscribe: (listener: () => void) => () => void; get: () => T }
+
+/**
+ * The shared store for an instrument's book. Every consumer of the same instrument (a widget, the chart indicator)
+ * gets this one object, so they share one OKX subscription; the last one to leave unsubscribes it.
+ */
+export const bookFeed = (instId: string): Store<Book> =>
+  feed<Book>({ channel: 'books', instId }, EMPTY, applyBook, undefined, (error) => ({ ...EMPTY, error }))
+
 export function useBook(instId: string) {
-  return useFeed(feed<Book>({ channel: 'books', instId }, EMPTY, applyBook), EMPTY)
+  return useFeed(bookFeed(instId), EMPTY)
 }

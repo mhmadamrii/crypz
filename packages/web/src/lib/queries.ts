@@ -4,6 +4,7 @@ import { BAR_MS, type Bar, type Candle, type ExchangeId, type LongShortKind, typ
 
 import { api, unwrap } from './api'
 import { DEFAULT_STATE } from '@/components/workspace/model'
+import { parseInstrument } from './book'
 
 const getCandles = (exchange: ExchangeId, symbol: string, bar: Bar, before?: number) =>
   unwrap(api.market.candles.$get({ query: { exchange, symbol, bar, ...(before ? { before: String(before) } : {}) } }))
@@ -241,6 +242,25 @@ const POPULAR = [
   'PEPE',
   'ZEC',
 ].map((b) => `${b}-USDT-SWAP`)
+
+const OKX_REST = 'https://www.okx.com'
+
+/**
+ * An instrument's spec (tick size, contract value) from OKX's public REST. It needs no key and answers cross-origin,
+ * so the browser asks directly, like the WebSocket feed. Specs barely ever change, hence never refetched.
+ */
+export const instrumentQuery = (symbol: string) =>
+  queryOptions({
+    queryKey: ['instrument', symbol],
+    queryFn: async () => {
+      const type = symbol.endsWith('-SWAP') ? 'SWAP' : 'SPOT'
+      const res = await fetch(`${OKX_REST}/api/v5/public/instruments?instType=${type}&instId=${symbol}`)
+      if (!res.ok) throw new Error(`OKX answered ${res.status} for ${symbol}`)
+      return parseInstrument(await res.json())
+    },
+    staleTime: Infinity,
+    retry: 2,
+  })
 
 /** Instruments for the pickers: the ones you traded (most-traded first), then popular perpetuals. */
 export function useInstruments() {

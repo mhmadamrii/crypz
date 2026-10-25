@@ -40,7 +40,36 @@ export type FootprintImbalance = (typeof FOOTPRINT_IMBALANCE)[number]
 export const FOOTPRINT_CELLS = ['bars', 'volume'] as const
 export type FootprintCells = (typeof FOOTPRINT_CELLS)[number]
 
+/** Which sides of the OKX order book the liquidity indicator draws. */
+export const BOOK_SIDES = ['both', 'bids', 'asks'] as const
+export type BookSides = (typeof BOOK_SIDES)[number]
+
+/** How far from the market it looks, as a fraction of price (0.02 = ±2%). */
+export const BOOK_RANGES = [0.005, 0.01, 0.02, 0.05] as const
+export type BookRange = (typeof BOOK_RANGES)[number]
+
+/** Levels smaller than this share of the biggest visible one are hidden (0 = none), so the threshold fits any coin. */
+export const BOOK_MIN_SHARES = [0, 0.1, 0.25, 0.5] as const
+export type BookMinShare = (typeof BOOK_MIN_SHARES)[number]
+
+/** The most levels drawn per side; the biggest win. */
+export const BOOK_MAX_LEVELS = [5, 10, 20, 40] as const
+export type BookMaxLevels = (typeof BOOK_MAX_LEVELS)[number]
+
+/** Price bucket width: 0 is the finest grouping for the price, 1 and 2 are ten and a hundred times wider. */
+export const BOOK_GROUPS = [0, 1, 2] as const
+export type BookGroup = (typeof BOOK_GROUPS)[number]
+
 export type IndicatorState = {
+  book: {
+    on: boolean
+    sides: BookSides
+    range: BookRange
+    minShare: BookMinShare
+    maxLevels: BookMaxLevels
+    group: BookGroup
+    labels: boolean
+  }
   sessions: { on: boolean } & Record<SessionId, boolean>
   fvg: { on: boolean; minAtr: FvgSize; showFilled: boolean }
   structure: { on: boolean; length: SwingLength; labels: boolean }
@@ -59,6 +88,7 @@ export type IndicatorState = {
 
 const KEY = 'crypz.indicators.v1'
 const DEFAULTS: IndicatorState = {
+  book: { on: false, sides: 'both', range: 0.02, minShare: 0.1, maxLevels: 10, group: 1, labels: true },
   sessions: { on: false, asia: true, london: true, newYork: true },
   fvg: { on: false, minAtr: 0.25, showFilled: false },
   structure: { on: false, length: 5, labels: true },
@@ -82,6 +112,12 @@ function load(): IndicatorState {
     if (!BIAS_FRAMES.includes(bias.higher)) bias.higher = DEFAULTS.bias.higher
     const liquidity = { ...DEFAULTS.liquidity, ...saved.liquidity }
     if (!LIQUIDITY_TOLERANCES.includes(liquidity.tolerance)) liquidity.tolerance = DEFAULTS.liquidity.tolerance
+    const book = { ...DEFAULTS.book, ...saved.book }
+    if (!BOOK_SIDES.includes(book.sides)) book.sides = DEFAULTS.book.sides
+    if (!BOOK_RANGES.includes(book.range)) book.range = DEFAULTS.book.range
+    if (!BOOK_MIN_SHARES.includes(book.minShare)) book.minShare = DEFAULTS.book.minShare
+    if (!BOOK_MAX_LEVELS.includes(book.maxLevels)) book.maxLevels = DEFAULTS.book.maxLevels
+    if (!BOOK_GROUPS.includes(book.group)) book.group = DEFAULTS.book.group
     const orderBlocks = { ...DEFAULTS.orderBlocks, ...saved.orderBlocks }
     if (!OB_STRENGTHS.includes(orderBlocks.strength)) orderBlocks.strength = DEFAULTS.orderBlocks.strength
     const footprint = { ...DEFAULTS.footprint, ...saved.footprint }
@@ -90,6 +126,7 @@ function load(): IndicatorState {
     if (!FOOTPRINT_CELLS.includes(footprint.cells)) footprint.cells = DEFAULTS.footprint.cells
     if (!FOOTPRINT_IMBALANCE.includes(footprint.imbalance)) footprint.imbalance = DEFAULTS.footprint.imbalance
     return {
+      book,
       sessions: { ...DEFAULTS.sessions, ...saved.sessions },
       fvg,
       structure,
@@ -127,6 +164,7 @@ export const indicators = {
     listeners.add(fn)
     return () => listeners.delete(fn)
   },
+  setBook: (p: Partial<IndicatorState['book']>) => patch('book', p),
   setSessions: (p: Partial<IndicatorState['sessions']>) => patch('sessions', p),
   setFvg: (p: Partial<IndicatorState['fvg']>) => patch('fvg', p),
   setStructure: (p: Partial<IndicatorState['structure']>) => patch('structure', p),

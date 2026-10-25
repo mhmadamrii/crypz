@@ -2,11 +2,12 @@ import { BAR_MS, type Bar, type Candle, type ExchangeId, type Position } from '@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
-import { latestCandlesQuery, olderCandlesQuery } from '@/lib/queries'
+import { instrumentQuery, latestCandlesQuery, olderCandlesQuery } from '@/lib/queries'
 import { cn } from '@/lib/utils'
 import { fmtSigned } from '@/lib/format'
 import { mergeCandles } from '@/lib/candles'
 import { useTicker } from '@/lib/okx-ws'
+import type { Instrument } from '@/lib/book'
 import { useIndicators } from '@/lib/indicators/store'
 import { attachDrawingLayer, createMapper } from '@/components/drawings/layer'
 import { attachIndicators } from '@/components/indicators/attach'
@@ -40,6 +41,7 @@ type Chart = {
   candles: ISeriesApi<'Candlestick'>
   markers: ISeriesMarkersPluginApi<Time>
   refreshIndicators: () => void
+  setBook: (id: string, spec: Instrument | null, failed?: boolean) => void
 }
 
 // The ticker can open the next bar before REST has it, so the series may already end past `k`. update() throws on a
@@ -98,6 +100,8 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
     return { bar: higherBar, candles: hq.data.filter((k) => k.time + ms <= Date.now()) }
   }, [higherBar, hq.data])
   const bias = useBias(shownCandles, bar, higher)
+  // the order-book layer sizes its levels from the instrument's spec, so that is fetched only while the layer is on
+  const spec = useQuery({ ...instrumentQuery(symbol), enabled: ind.book.on })
 
   const box = useRef<HTMLDivElement>(null)
   const chartRef = useRef<Chart | null>(null)
@@ -148,6 +152,7 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
         candles: () => live.current.shownCandles,
         barMs: () => BAR_MS[live.current.bar],
         bias: () => live.current.bias,
+        liveBook: true,
         palette: palette(),
       })
       const layer = attachDrawingLayer({
@@ -158,7 +163,13 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
         mapper,
         palette: palette(),
       })
-      chartRef.current = { chart, candles: candleSeries, markers, refreshIndicators: () => indicators.refresh() }
+      chartRef.current = {
+        chart,
+        candles: candleSeries,
+        markers,
+        refreshIndicators: () => indicators.refresh(),
+        setBook: indicators.setBook!,
+      }
       dispose = () => {
         layer.dispose()
         indicators.dispose()
@@ -237,6 +248,11 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
   useEffect(() => {
     chartRef.current?.refreshIndicators()
   }, [ready, shownCandles, bias])
+
+  // 2d. Order book: tell the layer which instrument (and spec) it is drawing, so a symbol change never shows the last one's book.
+  useEffect(() => {
+    chartRef.current?.setBook(symbol, spec.data ?? null, spec.isError)
+  }, [ready, symbol, spec.data, spec.isError])
 
   // 3. Focus: page in history until the trade is covered, then frame it once.
   const framed = useRef<Props['focus']>(null)
