@@ -11,6 +11,8 @@ minimumReleaseAgeExclude:
   - better-auth@1.7.9
 # Prisma's install scripts only prefetch engines; the CLI fetches them on demand, and the api image installs with
 # --ignore-scripts. Denying them explicitly keeps CI (Vercel) from failing on "ignored build scripts".
+# esbuild (pulled in by vitest) only checks its binary on install; the binary itself ships in its platform package.
 allowBuilds:
   '@prisma/engines': false
+  esbuild: false
   prisma: false
