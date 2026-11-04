@@ -17,29 +17,27 @@ const clock = {
   now: Date.now(),
   timer: undefined as ReturnType<typeof setInterval> | undefined,
 }
-export const useNow = () =>
-  useSyncExternalStore(
-    (fn) => {
-      clock.listeners.add(fn)
-      if (!clock.timer) {
-        // nothing has been ticking while no widget listened, so the stored time is old until the first tick
-        clock.now = Date.now()
-        clock.timer = setInterval(() => {
-          clock.now = Date.now()
-          for (const l of clock.listeners) l()
-        }, 1000)
-      }
-      return () => {
-        clock.listeners.delete(fn)
-        if (!clock.listeners.size) {
-          clearInterval(clock.timer)
-          clock.timer = undefined
-        }
-      }
-    },
-    () => clock.now,
-    () => 0,
-  )
+
+// Both are module-level on purpose. React re-subscribes whenever the subscribe function changes identity, and
+// subscribing must never change the snapshot: either one in a hook body makes every render trigger the next, and
+// React stops it with "Maximum update depth exceeded" (#185).
+export const readClock = () => clock.now
+export const subscribeClock = (fn: () => void) => {
+  clock.listeners.add(fn)
+  clock.timer ??= setInterval(() => {
+    clock.now = Date.now()
+    for (const l of clock.listeners) l()
+  }, 1000)
+  return () => {
+    clock.listeners.delete(fn)
+    if (!clock.listeners.size) {
+      clearInterval(clock.timer)
+      clock.timer = undefined
+    }
+  }
+}
+
+export const useNow = () => useSyncExternalStore(subscribeClock, readClock, () => 0)
 
 /** The row of a widget body that holds one setting: a label on the left, the options on the right. */
 export function StripControl<T extends string | number>({
