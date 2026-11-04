@@ -1,4 +1,4 @@
-import { useMemo, useSyncExternalStore, type FC } from 'react'
+import { useMemo, type FC } from 'react'
 import { decimalsOf, stepsFor } from '@/lib/book'
 import { BARS, type Bar } from '@crypz/exchanges'
 import { CandleChart } from '@/components/trade/candle-chart'

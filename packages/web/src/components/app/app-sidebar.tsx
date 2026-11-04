@@ -16,6 +16,7 @@ import {
   LayoutGrid,
   LogOut,
   Newspaper,
+  Radar,
   Rows3,
   Calculator,
   LayoutDashboard,
@@ -52,7 +53,7 @@ import {
 type MarketItem = {
   label: string
   icon: LucideIcon
-  to: '/workspace' | '/trade' | '/trade/replay' | '/strategies' | '/news'
+  to: '/workspace' | '/intelligence' | '/trade' | '/trade/replay' | '/strategies' | '/news'
 }
 type AccountItem = { label: string; icon: LucideIcon; to: '/$exchange/overview' | '/$exchange/positions' }
 type SoonItem = { label: string; icon: LucideIcon; soon: true }
@@ -60,6 +61,7 @@ type SoonItem = { label: string; icon: LucideIcon; soon: true }
 // Market: public data from one pinned venue, no key needed. Account: one connected exchange, named in the URL.
 const MARKET: (MarketItem | SoonItem)[] = [
   { label: 'Workspace', icon: LayoutDashboard, to: '/workspace' },
+  { label: 'Intelligence', icon: Radar, to: '/intelligence' },
   { label: 'Trade', icon: CandlestickChart, to: '/trade' },
   { label: 'Replay', icon: Rewind, to: '/trade/replay' },
   { label: 'Strategies', icon: ListChecks, to: '/strategies' },

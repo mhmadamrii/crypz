@@ -1,6 +1,6 @@
 import { useMemo, useState, type PointerEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { STAT_BARS, type Candle } from '@crypz/exchanges'
+import { STAT_BARS } from '@crypz/exchanges'
 import { fmtNum, fmtPrice, fmtSigned, fmtSize, signedSize, tone } from '@/lib/format'
 import { MARKET_EXCHANGE } from '@/lib/market'
 import { latestCandlesQuery, takerFlowQuery } from '@/lib/queries'
@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { IndicatorChart, Readout, within, type Bar } from './indicator-chart'
 import { StripControl, Waiting, clockTime, periodLabel, pick } from './kit'
 import { decimalsOf, stepsFor } from '@/lib/book'
+import { BINS, profileOf } from '@/lib/profile'
 import { Segmented } from '@/components/segmented'
 import type { WidgetProps } from './widgets'
 
@@ -262,44 +263,6 @@ export function PeriodControls({ settings, set }: WidgetProps) {
 const SPANS = { '1D': '5m', '3D': '15m', '12D': '1H', '50D': '4H' } as const
 type Span = keyof typeof SPANS
 const SPAN_KEYS = Object.keys(SPANS) as Span[]
-const BINS = 64
-
-function profileOf(candles: Candle[]) {
-  let lo = Infinity
-  let hi = -Infinity
-  for (const k of candles) {
-    lo = Math.min(lo, k.low)
-    hi = Math.max(hi, k.high)
-  }
-  const size = (hi - lo) / BINS || 1
-  const vols = new Array<number>(BINS).fill(0)
-  const bin = (p: number) => Math.min(BINS - 1, Math.max(0, Math.floor((p - lo) / size)))
-  for (const k of candles) {
-    const span = k.high - k.low
-    if (span <= 0) {
-      vols[bin(k.close)] += k.volume ?? 0
-      continue
-    }
-    for (let b = bin(k.low); b <= bin(k.high); b++) {
-      const overlap = Math.min(k.high, lo + (b + 1) * size) - Math.max(k.low, lo + b * size)
-      if (overlap > 0) vols[b] += ((k.volume ?? 0) * overlap) / span
-    }
-  }
-  const total = vols.reduce((s, v) => s + v, 0)
-  const poc = vols.indexOf(Math.max(...vols))
-  // the value area grows from the POC towards whichever neighbour traded more, until it holds 70%
-  let top = poc
-  let bottom = poc
-  let held = vols[poc]
-  while (held < total * 0.7 && (top < BINS - 1 || bottom > 0)) {
-    const up = top < BINS - 1 ? vols[top + 1] : -1
-    const down = bottom > 0 ? vols[bottom - 1] : -1
-    if (up >= down) held += vols[++top]
-    else held += vols[--bottom]
-  }
-  return { lo, hi, size, vols, total, poc, top, bottom, peak: vols[poc] || 1 }
-}
-
 export function ProfileBody({ symbol, settings, set }: WidgetProps) {
   const span = pick(settings.span, SPAN_KEYS, '3D')
   const candles = useQuery(latestCandlesQuery(MARKET_EXCHANGE, symbol, SPANS[span]))
