@@ -23,7 +23,7 @@ export function zoneLabel(at = Date.now()) {
 }
 
 /** Resolve a CSS colour (incl. oklch / var()) to rgba via canvas, since the chart parses only basic formats. */
-function resolveColor(expr: string, alpha = 1) {
+export function resolveColor(expr: string, alpha = 1) {
   const probe = document.createElement('i')
   probe.style.color = expr
   document.body.appendChild(probe)
@@ -51,6 +51,8 @@ export function palette() {
     border: resolveColor('var(--border)'),
     up: resolveColor('var(--up)'),
     down: resolveColor('var(--down)'),
+    risk: resolveColor('var(--accent-risk)'),
+    best: resolveColor('var(--accent-best)'),
     session: {
       asia: resolveColor('var(--session-asia)'),
       london: resolveColor('var(--session-london)'),

@@ -8,6 +8,7 @@ export function Segmented<T extends string | number>({
   onChange,
   format = String,
   size = 'header',
+  className,
 }: {
   label: string
   options: readonly T[]
@@ -16,9 +17,10 @@ export function Segmented<T extends string | number>({
   format?: (v: T) => string
   /** header: in a widget's 28px header; strip: in a body's control strip. */
   size?: 'header' | 'strip'
+  className?: string
 }) {
   return (
-    <div className="flex" role="group" aria-label={label}>
+    <div className={cn('flex', className)} role="group" aria-label={label}>
       {options.map((o) => (
         <button
           key={String(o)}

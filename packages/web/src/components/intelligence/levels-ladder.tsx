@@ -42,11 +42,7 @@ export function LevelsLadder({ a }: { a: MarketIntelligence }) {
             <li key={r.id} className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5 border-b border-hairline py-2">
               <span className="flex items-baseline gap-2 text-sm">
                 <span
-                  className={cn(
-                    'label',
-                    r.type === 'support' && 'text-up',
-                    r.type === 'resistance' && 'text-down',
-                  )}
+                  className={cn('label', r.type === 'support' && 'text-up', r.type === 'resistance' && 'text-down')}
                 >
                   {TYPE[r.type]}
                 </span>

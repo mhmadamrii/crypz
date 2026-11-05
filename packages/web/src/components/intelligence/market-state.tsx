@@ -23,8 +23,7 @@ export function MarketStateStrip({ a }: { a: MarketIntelligence }) {
     {
       label: 'Trend',
       value: TREND[s.trend],
-      tone:
-        s.trend === 'higher_highs_higher_lows' ? 'up' : s.trend === 'lower_highs_lower_lows' ? 'down' : undefined,
+      tone: s.trend === 'higher_highs_higher_lows' ? 'up' : s.trend === 'lower_highs_lower_lows' ? 'down' : undefined,
     },
     {
       label: 'Momentum',
