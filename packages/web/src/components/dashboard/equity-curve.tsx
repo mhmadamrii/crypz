@@ -9,13 +9,13 @@ const fmtDay = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: '2-
 
 const config = { v: { label: 'Cumulative PnL', color: 'var(--foreground)' } } satisfies ChartConfig
 
-const AXIS_TICK = { fill: 'var(--muted-foreground)', fontSize: 11, fontFamily: 'var(--font-mono)' }
+const AXIS_TICK = { fill: 'var(--muted-foreground)', fontSize: 12, fontFamily: 'var(--font-mono)' }
 
 function CurveTooltip({ active, payload }: { active?: boolean; payload?: { payload: CurvePoint }[] }) {
   const p = active ? payload?.[0]?.payload : undefined
   if (!p) return null
   return (
-    <div className="grid min-w-52 gap-2 border border-border bg-popover px-3 py-2.5 text-xs text-popover-foreground">
+    <div className="grid min-w-52 gap-2 rounded-lg border border-border bg-popover px-3 py-2.5 text-xs text-popover-foreground shadow-lg shadow-black/10">
       <span className="num text-muted-foreground">{fmtDate(p.t)}</span>
       <div className="flex items-baseline justify-between gap-6">
         <span className="text-muted-foreground">Cumulative</span>

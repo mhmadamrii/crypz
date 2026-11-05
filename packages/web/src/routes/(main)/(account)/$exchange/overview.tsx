@@ -9,8 +9,8 @@ import { CandleChart } from '@/components/trade/candle-chart'
 import { EdgeBars } from '@/components/dashboard/edge-bars'
 import { EquityCurve } from '@/components/dashboard/equity-curve'
 import { Insights } from '@/components/dashboard/insights'
-import { Mosaic, MosaicLegend } from '@/components/dashboard/mosaic'
 import { PositionsTable } from '@/components/dashboard/positions-table'
+import { SessionTrace, SessionTraceLegend } from '@/components/dashboard/session-trace'
 import { StatStrip } from '@/components/dashboard/stat-strip'
 import { Button } from '@/components/ui/button'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -46,9 +46,9 @@ function Section({
   className?: string
 }) {
   return (
-    <section id={id} className={cn('scroll-mt-20', className)}>
+    <section id={id} className={cn('min-w-0 scroll-mt-20', className)}>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <h2 className="text-base font-medium tracking-tight">{title}</h2>
+        <h2 className="text-[19px] font-semibold tracking-tight">{title}</h2>
         {aside}
       </div>
       {children}
@@ -115,7 +115,7 @@ function Dashboard() {
 
       <main className="flex w-full flex-col gap-14 px-4 py-8 sm:px-8">
         {data.errors.map((e, i) => (
-          <p key={i} className="border border-down/40 px-4 py-3 num text-sm text-down">
+          <p key={i} className="rounded-xl border border-down/40 bg-down/10 px-4 py-3 num text-sm text-down">
             {e.exchange}: {e.message}
           </p>
         ))}
@@ -124,11 +124,21 @@ function Dashboard() {
           <StatStrip accounts={data.accounts} stats={stats} />
 
           <div className="grid gap-8 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-            <Section title={`${stats.count} closed positions`} aside={<MosaicLegend />}>
-              <Mosaic positions={chronological} focus={asset} onFocus={setFocus} />
+            <Section
+              title="Session trace"
+              className="flex h-full flex-col"
+              aside={
+                <div className="flex w-full flex-col items-start gap-1.5 sm:w-auto sm:items-end">
+                  <span className="num text-xs text-muted-foreground">{stats.count} closed positions</span>
+                  <SessionTraceLegend />
+                </div>
+              }
+            >
+              <SessionTrace positions={chronological} focus={asset} className="flex-1" />
             </Section>
             <Section
               title="Edge by asset"
+              className="flex h-full flex-col"
               aside={
                 <span className="text-xs text-muted-foreground">Top 12 by impact, best to worst · select to trace</span>
               }
@@ -139,7 +149,7 @@ function Dashboard() {
         </section>
 
         <section id="chart" className="grid scroll-mt-20 gap-8 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-          <div className="flex flex-col border border-border">
+          <div className="flex flex-col overflow-hidden rounded-xl border border-border">
             <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
               <span className="num text-sm">{chartPos?.symbol ?? 'No instrument'}</span>
               {chartPos && (
@@ -173,17 +183,17 @@ function Dashboard() {
           <div className="flex flex-col gap-10">
             <div className="grid gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
               <div>
-                <h3 className="mb-3 text-sm font-medium">Hour of day</h3>
+                <h3 className="mb-3 text-[15px] font-medium">Hour of day</h3>
                 <CellStrip buckets={fStats.byHour} tick={(_, i) => (i % 3 === 0 ? String(i).padStart(2, '0') : '')} />
               </div>
               <div>
-                <h3 className="mb-3 text-sm font-medium">Weekday</h3>
+                <h3 className="mb-3 text-[15px] font-medium">Weekday</h3>
                 <CellStrip buckets={fStats.byWeekday} />
               </div>
             </div>
             <div className="grid gap-10 md:grid-cols-2 xl:grid-cols-3">
               <div>
-                <h3 className="mb-3 text-sm font-medium">Long vs short</h3>
+                <h3 className="mb-3 text-[15px] font-medium">Long vs short</h3>
                 <EdgeBars buckets={fStats.bySide} focus={null} name="Side" />
               </div>
               <BreakdownTable title="Hold time" buckets={fStats.byHold} />
@@ -197,7 +207,7 @@ function Dashboard() {
             <EquityCurve curve={fStats.curve} maxDrawdown={fStats.maxDrawdown} />
           </Section>
           <Section title={asset ? `Streaks & extremes · ${asset}` : 'Streaks & extremes'}>
-            <dl className="grid grid-cols-2 border-t border-hairline text-sm [&>div]:flex [&>div]:flex-col [&>div]:gap-1 [&>div]:border-b [&>div]:border-hairline [&>div]:py-3 [&>div:nth-child(odd)]:pr-4">
+            <dl className="grid grid-cols-2 rounded-xl bg-card px-5 text-sm [&>div]:flex [&>div]:flex-col [&>div]:gap-1 [&>div]:border-b [&>div]:border-hairline [&>div]:py-3 [&>div:nth-child(odd)]:pr-4 [&>div:nth-last-child(-n+2)]:border-b-0">
               <div>
                 <dt className="label">Avg win</dt>
                 <dd className="num text-up">{fmtSigned(fStats.avgWin, 3)}</dd>

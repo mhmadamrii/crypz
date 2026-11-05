@@ -31,14 +31,21 @@ export function StateTag({ state, className }: { state: SignalState; className?:
 }
 
 /** Three squares for a scenario's rank: filled count is the rank, hollow the rest. The word beside it says it too. */
-export function Meter({ filled, className }: { filled: 0 | 1 | 2 | 3; className?: string }) {
+export function Meter({
+  filled,
+  tone = 'neutral',
+  className,
+}: {
+  filled: 0 | 1 | 2 | 3
+  /** Direction the scenario argues for; colour is an echo of the word, not the only signal. */
+  tone?: 'up' | 'down' | 'neutral'
+  className?: string
+}) {
+  const fill = tone === 'up' ? 'bg-up' : tone === 'down' ? 'bg-down' : 'bg-foreground'
   return (
     <span aria-hidden className={cn('inline-flex shrink-0 gap-0.5', className)}>
       {[0, 1, 2].map((i) => (
-        <i
-          key={i}
-          className={cn('size-2', i < filled ? 'bg-foreground' : 'shadow-[inset_0_0_0_1px_var(--muted-foreground)]')}
-        />
+        <i key={i} className={cn('size-2', i < filled ? fill : 'shadow-[inset_0_0_0_1px_var(--muted-foreground)]')} />
       ))}
     </span>
   )

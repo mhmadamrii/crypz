@@ -26,7 +26,7 @@ export type WidgetKind =
 
 export const COLS = 24
 export const ROW = 28
-export const GAP = 8
+export const GAP = 12
 
 export const newWidgetId = () => `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
 

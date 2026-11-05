@@ -1,11 +1,75 @@
-<!doctype html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0}body{width:1440px;height:900px;overflow:hidden;background:#0b0e11;color:#eaecef;font:14px Inter;display:grid;grid-template-columns:240px 1fr}
-aside{background:#12161c;padding:20px;display:flex;flex-direction:column;gap:8px} aside a{padding:10px 12px;border-radius:8px;color:#848e9c} aside .on{background:#1e2329;color:#f0b90b}
-main{padding:24px;display:grid;gap:20px;grid-template-rows:auto auto 1fr}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px} .card{background:#1e2329;border-radius:12px;padding:18px} .card small{color:#848e9c} .card b{display:block;font:600 26px Inter;margin-top:8px}
-.neg{color:#f6465d}.pos{color:#0ecb81}
-.two{display:grid;grid-template-columns:2fr 1fr;gap:16px}
-.ph{height:300px;display:grid;place-items:center;color:#474d57}
-</style></head><body><aside><b style="color:#f0b90b;font-size:20px;margin-bottom:16px">crypz</b><a class="on">Dashboard</a><a>Positions</a><a>Analytics</a><a>Settings</a></aside>
-<main><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:22px">Dashboard</b><span style="background:#f0b90b;color:#000;padding:8px 16px;border-radius:8px;font-weight:600">Connect exchange</span></div>
-<div class="kpis"><div class="card"><small>Total equity</small><b>$1,284.52</b></div><div class="card"><small>Realized PnL</small><b class="neg">-74.39</b></div><div class="card"><small>Win rate</small><b>41.4%</b></div><div class="card"><small>Positions</small><b>333</b></div></div>
-<div class="two"><div class="card ph">Chart</div><div class="card"><small>Top instruments</small><p style="margin-top:14px">BTC-USDT <span class="pos" style="float:right">+12.40</span></p><p style="margin-top:12px">SOL-USDT <span class="neg" style="float:right">-28.66</span></p><p style="margin-top:12px">DOGE-USDT <span class="neg" style="float:right">-21.08</span></p></div></div></main></body></html>
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1440px;height:900px;overflow:hidden;background:#f8fafc;color:#0f172a;font-family:'Inter',sans-serif}
+.shell{display:flex;width:100%;height:100%}
+.rail{width:220px;background:#fff;border-right:1px solid #e2e8f0;padding:24px 16px;flex-shrink:0}
+.logo{font-weight:700;font-size:18px;margin-bottom:26px}
+.nav a{display:block;padding:10px 12px;border-radius:8px;color:#64748b;font-size:14px;font-weight:500;margin-bottom:2px}
+.nav a.active{background:#eff6ff;color:#2563eb}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{height:64px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0}
+.topbar h1{font-size:18px;font-weight:600}
+.btn{background:#2563eb;color:#fff;font-size:13px;font-weight:600;padding:8px 16px;border-radius:8px}
+.content{padding:24px 28px;overflow:hidden}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;margin-bottom:20px}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.label{font-size:12px;color:#64748b;margin-bottom:8px}
+.fig{font-size:22px;font-weight:700}
+.up{color:#16a34a}.down{color:#dc2626}
+.row2{display:grid;grid-template-columns:1.6fr 1fr;gap:16px}
+.panel{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.panel h3{font-size:14px;font-weight:600;margin-bottom:14px;color:#334155}
+.chart{height:150px;background:linear-gradient(180deg,#eff6ff,transparent);border-bottom:2px solid #2563eb;border-radius:6px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:#94a3b8;font-weight:500;font-size:11px;text-transform:uppercase;padding-bottom:8px}
+td{padding:8px 0;border-top:1px solid #f1f5f9}
+</style></head>
+<body>
+<div class="shell">
+  <div class="rail">
+    <div class="logo">crypz</div>
+    <div class="nav">
+      <a class="active">Overview</a>
+      <a>Trade</a>
+      <a>Replay</a>
+      <a>Positions</a>
+      <a>Workspace</a>
+      <a>Intelligence</a>
+      <a>News</a>
+    </div>
+  </div>
+  <div class="main">
+    <div class="topbar">
+      <h1>Overview</h1>
+      <div class="btn">Export report</div>
+    </div>
+    <div class="content">
+      <div class="stats">
+        <div class="card"><div class="label">Equity</div><div class="fig">$12,480</div></div>
+        <div class="card"><div class="label">Realized PnL</div><div class="fig up">+$842</div></div>
+        <div class="card"><div class="label">Win Rate</div><div class="fig">54%</div></div>
+        <div class="card"><div class="label">Profit Factor</div><div class="fig">1.32</div></div>
+        <div class="card"><div class="label">Fees</div><div class="fig down">-$61</div></div>
+        <div class="card"><div class="label">Funding</div><div class="fig down">-$19</div></div>
+      </div>
+      <div class="row2">
+        <div class="panel"><h3>Equity Curve</h3><div class="chart"></div></div>
+        <div class="panel">
+          <h3>Top Instruments</h3>
+          <table>
+            <tr><th>Symbol</th><th>PnL</th></tr>
+            <tr><td>BTC-USDT</td><td class="up">+$412</td></tr>
+            <tr><td>ETH-USDT</td><td class="up">+$206</td></tr>
+            <tr><td>SOL-USDT</td><td class="down">-$88</td></tr>
+            <tr><td>XRP-USDT</td><td class="up">+$61</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

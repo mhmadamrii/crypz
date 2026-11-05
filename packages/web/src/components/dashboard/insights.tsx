@@ -47,9 +47,9 @@ export function Insights({
   }
 
   return (
-    <div className="flex h-full flex-col border border-border">
+    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border">
       <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-        <h3 className="flex items-center gap-2 text-sm font-medium">
+        <h3 className="flex items-center gap-2 text-[15px] font-medium">
           <svg viewBox="0 0 3 3" className="size-3" shapeRendering="crispEdges" aria-hidden>
             <rect x="0" y="0" width="1" height="1" fill="currentColor" />
             <rect x="2" y="0" width="1" height="1" fill="currentColor" />

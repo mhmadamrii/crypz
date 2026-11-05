@@ -116,8 +116,11 @@ function WidgetFrame({
   const [confirm, setConfirm] = useState(false)
 
   return (
-    <section className="flex h-full flex-col border border-border bg-background" aria-label={entry?.title ?? w.kind}>
-      <header className="flex h-7 shrink-0 items-center gap-1 border-b border-border pr-1">
+    <section
+      className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card"
+      aria-label={entry?.title ?? w.kind}
+    >
+      <header className="flex h-7 shrink-0 select-none items-center gap-1 border-b border-border bg-muted pr-1">
         <span className="widget-handle flex h-full min-w-0 flex-1 cursor-grab items-center gap-1.5 pl-1 active:cursor-grabbing">
           <GripVertical className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
           <span className="truncate text-xs font-medium">{entry?.title ?? w.kind}</span>

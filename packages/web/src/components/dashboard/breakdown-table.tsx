@@ -5,11 +5,11 @@ import { fmtPct, fmtSigned, tone } from '@/lib/format'
 export function BreakdownTable({ title, buckets }: { title: string; buckets: Bucket[] }) {
   const rows = buckets.filter((b) => b.count)
   return (
-    <div className="flex flex-col">
-      <h3 className="mb-3 text-sm font-medium">{title}</h3>
+    <div className="flex flex-col rounded-xl bg-card p-4">
+      <h3 className="mb-3 text-[15px] font-medium">{title}</h3>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-hairline label [&>th]:pb-2 [&>th]:font-normal">
+          <tr className="border-b border-border label [&>th]:pb-2 [&>th]:font-normal">
             <th className="text-left">Bucket</th>
             <th className="text-right">N</th>
             <th className="text-right">Win</th>
@@ -18,7 +18,7 @@ export function BreakdownTable({ title, buckets }: { title: string; buckets: Buc
         </thead>
         <tbody>
           {rows.map((b) => (
-            <tr key={b.key} className="border-b border-hairline [&>td]:py-2">
+            <tr key={b.key} className="border-b border-hairline last:border-0 [&>td]:py-2">
               <td>{b.label}</td>
               <td className="text-right num text-muted-foreground">{b.count}</td>
               <td className="text-right num text-muted-foreground">{fmtPct(b.winRate, 0)}</td>

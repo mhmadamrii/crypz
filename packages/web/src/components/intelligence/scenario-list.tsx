@@ -47,16 +47,19 @@ function Row({
   const rank = RANK[s.qualitativeRank]
   const def = SCENARIOS[s.id]
   const dim = !s.applicable
+  const tone = s.id.startsWith('bullish') ? 'up' : s.id.startsWith('bearish') ? 'down' : 'neutral'
   return (
     <details className="group border-b border-hairline">
       <summary
         className={cn(
           'flex cursor-pointer list-none flex-col gap-1.5 py-3 marker:hidden hover:bg-accent/50 focus-visible:outline-2 [&::-webkit-details-marker]:hidden',
-          lead && 'bg-accent/60 px-3',
+          lead && !dim && tone === 'up' && 'bg-up/10 px-3',
+          lead && !dim && tone === 'down' && 'bg-down/10 px-3',
+          lead && (dim || tone === 'neutral') && 'bg-accent/60 px-3',
         )}
       >
         <span className="flex items-center gap-3">
-          <Meter filled={dim ? 0 : rank.filled} />
+          <Meter filled={dim ? 0 : rank.filled} tone={dim ? 'neutral' : tone} />
           <span
             className={cn('font-medium', lead ? 'text-lg tracking-tight' : 'text-sm', dim && 'text-muted-foreground')}
           >

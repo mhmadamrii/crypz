@@ -26,18 +26,16 @@ export function CellStrip({
             <TooltipTrigger asChild>
               <div className="flex flex-col items-center gap-1.5">
                 <div
-                  className="aspect-square w-full"
+                  className="aspect-square w-full rounded-[3px]"
                   style={
                     !b.count
                       ? { boxShadow: 'inset 0 0 0 1px var(--hairline)' }
                       : b.realized >= 0
-                        ? { background: `color-mix(in oklab, var(--foreground) ${ink * 100}%, transparent)` }
-                        : {
-                            boxShadow: `inset 0 0 0 1px color-mix(in oklab, var(--foreground) ${ink * 90}%, transparent)`,
-                          }
+                        ? { background: `color-mix(in oklab, var(--up) ${ink * 100}%, transparent)` }
+                        : { background: `color-mix(in oklab, var(--down) ${ink * 100}%, transparent)` }
                   }
                 />
-                <span className="num text-[10px] text-muted-foreground">{tick(b, i)}</span>
+                <span className="num text-[11px] text-muted-foreground">{tick(b, i)}</span>
               </div>
             </TooltipTrigger>
             <TooltipContent className="num">

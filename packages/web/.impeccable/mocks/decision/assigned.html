@@ -1,52 +1,104 @@
-<!doctype html><html><head><meta charset="utf-8">
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{width:1440px;height:900px;overflow:hidden;background:#0a0a0a;color:#f4f4f2;font:13px Geist,sans-serif;display:grid;grid-template-columns:64px 1fr}
-.rail{border-right:1px solid #222;display:flex;flex-direction:column;align-items:center;padding:20px 0;gap:22px}
-.logo{width:24px;height:24px;display:grid;grid-template-columns:repeat(4,6px)}
-.logo b{background:#f4f4f2} .logo s{}
-.ri{width:20px;height:20px;border:1px solid #444} .ri.on{background:#f4f4f2;border-color:#f4f4f2}
-main{padding:24px 32px;display:grid;grid-template-rows:auto auto 1fr;gap:24px}
-.top{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #222;padding-bottom:16px}
-.lab{font:500 11px 'Geist Mono';letter-spacing:.08em;text-transform:uppercase;color:#7a7a76}
-.tabs{display:flex;border:1px solid #333} .tabs span{padding:6px 14px;font:12px 'Geist Mono';color:#7a7a76} .tabs .on{background:#f4f4f2;color:#0a0a0a}
-.eq{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr;border:1px solid #222}
-.eq>div{padding:18px 20px;border-right:1px solid #222} .eq>div:last-child{border:0}
-.big{font:500 44px 'Geist Mono';letter-spacing:-.03em;margin-top:8px}
-.mid{font:500 24px 'Geist Mono';margin-top:8px}
-.neg{color:#f6465d} .pos{color:#2ebd85} .dim{color:#7a7a76}
-.body{display:grid;grid-template-columns:auto 1fr;gap:24px}
-.mo{border:1px solid #222;padding:20px}
-.grid{display:grid;grid-template-columns:repeat(24,16px);gap:3px;margin-top:14px}
-.grid i{width:16px;height:16px;display:block}
-.side{display:grid;grid-template-rows:auto 1fr;gap:24px}
-.edge{border:1px solid #222;padding:20px}
-.row{display:grid;grid-template-columns:120px 1fr 80px 80px;align-items:center;padding:9px 0;border-bottom:1px solid #1a1a1a;font:13px 'Geist Mono'}
-.bar{height:6px;background:#2a2a2a;position:relative} .bar b{position:absolute;top:0;bottom:0;background:#f4f4f2}
-.chart{border:1px dashed #333;display:grid;place-items:center;color:#555;font:12px 'Geist Mono'}
-</style></head><body>
-<nav class="rail"><div class="logo"><b></b><s></s><b></b><b></b><s></s><b></b><b></b><s></s><b></b><b></b><s></s><b></b><s></s><b></b><b></b><s></s></div>
-<div class="ri on"></div><div class="ri"></div><div class="ri"></div><div class="ri"></div></nav>
-<main>
-<div class="top"><div><div class="lab">crypz / overview</div><div style="font:600 22px Geist;margin-top:4px">Edge report</div></div>
-<div style="display:flex;gap:12px;align-items:center"><div class="tabs"><span>7D</span><span>30D</span><span class="on">90D</span><span>ALL</span></div><span class="lab">OKX ● LIVE</span></div></div>
-<div class="eq">
-<div><div class="lab">Equity · USDT</div><div class="big">1,284.<span class="dim">52</span></div></div>
-<div><div class="lab">Realized PnL</div><div class="mid neg">−74.39</div></div>
-<div><div class="lab">Win rate</div><div class="mid">41.4<span class="dim">%</span></div></div>
-<div><div class="lab">Fees burned</div><div class="mid">−38.72</div></div>
-<div><div class="lab">Profit factor</div><div class="mid">0.82</div></div>
+body{width:1440px;height:900px;overflow:hidden;background:#15181d;color:#eef1f5;font-family:'Space Grotesk',sans-serif}
+.shell{display:flex;width:100%;height:100%}
+.rail{width:232px;background:#1b1f26;border-right:1px solid #2a2f38;padding:24px 16px;flex-shrink:0}
+.logo{font-weight:700;font-size:18px;letter-spacing:-.02em;margin-bottom:28px;color:#fff}
+.nav a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:#9aa4b2;font-size:14px;font-weight:500;margin-bottom:2px}
+.nav a.active{background:#262b34;color:#fff;border-left:3px solid #8b5cf6;padding-left:9px}
+.dot{width:7px;height:7px;border-radius:2px;background:#444}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{height:68px;border-bottom:1px solid #262b34;display:flex;align-items:center;justify-content:space-between;padding:0 32px;flex-shrink:0}
+.topbar h1{font-size:20px;font-weight:700}
+.range{display:flex;gap:4px;background:#1b1f26;border-radius:8px;padding:4px}
+.range span{padding:6px 14px;font-size:12px;font-weight:600;color:#9aa4b2;border-radius:6px}
+.range span.on{background:#8b5cf6;color:#fff}
+.content{padding:28px 32px;overflow:hidden}
+.stats{display:grid;grid-template-columns:1.6fr repeat(5,1fr);gap:14px;margin-bottom:22px}
+.card{background:#1b1f26;border:1px solid #262b34;border-radius:12px;padding:18px}
+.card .tab{height:3px;width:28px;border-radius:2px;margin-bottom:10px}
+.label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7b8594;font-weight:600;margin-bottom:8px}
+.fig{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
+.fig.hero{font-size:40px}
+.up{color:#34d399}.down{color:#f87171}.amber{background:#f5a623}.violet{background:#8b5cf6}.teal{background:#2dd4bf}
+.row2{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+.panel{background:#1b1f26;border:1px solid #262b34;border-radius:12px;padding:20px}
+.panel h3{font-size:15px;font-weight:700;margin-bottom:14px}
+.trace{height:150px;display:flex;align-items:flex-end;gap:3px}
+.bar{flex:1;border-radius:3px 3px 0 0}
+.edge-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #262b34;font-size:13px}
+.edge-row:last-child{border:none}
+.pill{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px}
+.legend{display:flex;gap:16px;margin-top:12px;font-size:11px;color:#7b8594}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:8px;height:8px;border-radius:2px}
+</style></head>
+<body>
+<div class="shell">
+  <div class="rail">
+    <div class="logo">crypz</div>
+    <div class="nav">
+      <a class="active"><span class="dot" style="background:#8b5cf6"></span>Overview</a>
+      <a><span class="dot"></span>Trade</a>
+      <a><span class="dot"></span>Replay</a>
+      <a><span class="dot"></span>Positions</a>
+      <a><span class="dot"></span>Workspace</a>
+      <a><span class="dot"></span>Intelligence</a>
+      <a><span class="dot"></span>News</a>
+    </div>
+  </div>
+  <div class="main">
+    <div class="topbar">
+      <h1>Session Debrief</h1>
+      <div class="range"><span>7D</span><span class="on">30D</span><span>90D</span><span>ALL</span></div>
+    </div>
+    <div class="content">
+      <div class="stats">
+        <div class="card"><div class="tab violet"></div><div class="label">Equity</div><div class="fig hero">$12,480<span style="color:#7b8594;font-size:20px">.32</span></div></div>
+        <div class="card"><div class="tab teal"></div><div class="label">Realized PnL</div><div class="fig up">+$842</div></div>
+        <div class="card"><div class="tab amber"></div><div class="label">Win Rate</div><div class="fig">54%</div></div>
+        <div class="card"><div class="tab violet"></div><div class="label">Profit Factor</div><div class="fig">1.32</div></div>
+        <div class="card"><div class="tab"></div><div class="label">Fees</div><div class="fig down">-$61</div></div>
+        <div class="card"><div class="tab"></div><div class="label">Funding</div><div class="fig down">-$19</div></div>
+      </div>
+      <div class="row2">
+        <div class="panel">
+          <h3>Cumulative Session Trace</h3>
+          <div class="trace">
+            <div class="bar" style="height:40%;background:#2a2f38"></div>
+            <div class="bar" style="height:55%;background:#2a2f38"></div>
+            <div class="bar" style="height:35%;background:#f87171"></div>
+            <div class="bar" style="height:70%;background:#2a2f38"></div>
+            <div class="bar" style="height:95%;background:#8b5cf6"></div>
+            <div class="bar" style="height:60%;background:#2a2f38"></div>
+            <div class="bar" style="height:80%;background:#34d399"></div>
+            <div class="bar" style="height:50%;background:#2a2f38"></div>
+            <div class="bar" style="height:30%;background:#f87171"></div>
+            <div class="bar" style="height:75%;background:#2a2f38"></div>
+            <div class="bar" style="height:88%;background:#34d399"></div>
+            <div class="bar" style="height:65%;background:#2a2f38"></div>
+          </div>
+          <div class="legend">
+            <span><i class="sw" style="background:#8b5cf6"></i>Personal best</span>
+            <span><i class="sw" style="background:#f5a623"></i>High leverage</span>
+            <span><i class="sw" style="background:#34d399"></i>Win</span>
+            <span><i class="sw" style="background:#f87171"></i>Loss</span>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Edge by Instrument</h3>
+          <div class="edge-row"><span>BTC-USDT</span><span class="pill up">+$412</span></div>
+          <div class="edge-row"><span>ETH-USDT</span><span class="pill up">+$206</span></div>
+          <div class="edge-row"><span>SOL-USDT</span><span class="pill down">-$88</span></div>
+          <div class="edge-row"><span>DOGE-USDT</span><span class="pill down">-$44</span></div>
+          <div class="edge-row"><span>XRP-USDT</span><span class="pill up">+$61</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
-<div class="body">
-<div class="mo"><div style="display:flex;justify-content:space-between"><span class="lab">333 positions · one square each</span><span class="lab">■ win □ loss</span></div><div class="grid"><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.31)"></i><i style="background:rgba(244,244,242,0.39)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.30)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.32)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.48)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.30)"></i><i style="background:rgba(244,244,242,0.62)"></i><i style="background:rgba(244,244,242,0.36)"></i><i style="background:rgba(244,244,242,0.59)"></i><i style="background:rgba(244,244,242,0.29)"></i><i style="background:rgba(244,244,242,0.34)"></i><i style="background:rgba(244,244,242,0.26)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.67)"></i><i style="background:rgba(244,244,242,0.52)"></i><i style="background:rgba(244,244,242,0.39)"></i><i style="background:rgba(244,244,242,0.38)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.68)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.69)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.47)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.36)"></i><i style="background:rgba(244,244,242,0.31)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.25)"></i><i style="background:rgba(244,244,242,0.39)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.41)"></i><i style="background:rgba(244,244,242,0.31)"></i><i style="background:rgba(244,244,242,0.34)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.41)"></i><i style="background:rgba(244,244,242,0.86)"></i><i style="background:rgba(244,244,242,0.41)"></i><i style="background:rgba(244,244,242,0.66)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.40)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.43)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.33)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.27)"></i><i style="background:rgba(244,244,242,0.44)"></i><i style="background:rgba(244,244,242,0.29)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.36)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.49)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.38)"></i><i style="background:rgba(244,244,242,0.67)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.45)"></i><i style="background:rgba(244,244,242,0.29)"></i><i style="background:rgba(244,244,242,0.36)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.63)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.23)"></i><i style="background:rgba(244,244,242,0.70)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.32)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.27)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.45)"></i><i style="background:rgba(244,244,242,0.38)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.26)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.62)"></i><i style="background:rgba(244,244,242,0.51)"></i><i style="background:rgba(244,244,242,0.45)"></i><i style="background:rgba(244,244,242,0.56)"></i><i style="background:rgba(244,244,242,0.75)"></i><i style="background:rgba(244,244,242,0.33)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.21)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.58)"></i><i style="background:rgba(244,244,242,0.43)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.40)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.36)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.57)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.49)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.38)"></i><i style="background:rgba(244,244,242,0.69)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.62)"></i><i style="background:rgba(244,244,242,0.28)"></i><i style="background:rgba(244,244,242,0.75)"></i><i style="background:rgba(244,244,242,0.42)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="background:rgba(244,244,242,0.33)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.43)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.53)"></i><i style="background:rgba(244,244,242,0.57)"></i><i style="background:rgba(244,244,242,0.62)"></i><i style="background:rgba(244,244,242,0.25)"></i><i style="background:rgba(244,244,242,0.29)"></i><i style="background:rgba(244,244,242,0.36)"></i><i style="background:rgba(244,244,242,0.81)"></i><i style="background:rgba(244,244,242,0.43)"></i><i style="background:rgba(244,244,242,0.39)"></i><i style="background:rgba(244,244,242,0.40)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.65)"></i><i style="background:rgba(244,244,242,0.69)"></i><i style="background:rgba(244,244,242,0.56)"></i><i style="background:rgba(244,244,242,0.40)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.40)"></i><i style="background:rgba(244,244,242,0.52)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.29)"></i><i style="background:rgba(244,244,242,0.59)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.58)"></i><i style="background:rgba(244,244,242,0.82)"></i><i style="background:rgba(244,244,242,0.41)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.28)"></i><i style="background:rgba(244,244,242,0.32)"></i><i style="background:rgba(244,244,242,0.44)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.21)"></i><i style="background:rgba(244,244,242,0.64)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.41)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.35)"></i><i style="background:rgba(244,244,242,0.60)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.23)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.47)"></i><i style="background:rgba(244,244,242,0.56)"></i><i style="background:rgba(244,244,242,0.76)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.36)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.60)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.28)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.28)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.32)"></i><i style="background:rgba(244,244,242,0.74)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.51)"></i><i style="background:rgba(244,244,242,0.68)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.57)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.44)"></i><i style="background:rgba(244,244,242,0.44)"></i><i style="background:rgba(244,244,242,0.63)"></i><i style="background:rgba(244,244,242,0.53)"></i><i style="background:rgba(244,244,242,0.32)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.20)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.20)"></i><i style="background:rgba(244,244,242,0.41)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.29)"></i><i style="background:rgba(244,244,242,0.30)"></i><i style="background:rgba(244,244,242,0.41)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.24)"></i><i style="background:rgba(244,244,242,0.49)"></i><i style="background:rgba(244,244,242,0.41)"></i><i style="background:rgba(244,244,242,0.97)"></i><i style="background:rgba(244,244,242,0.32)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.35)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.34)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.24)"></i><i style="background:rgba(244,244,242,0.55)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.33)"></i><i style="background:rgba(244,244,242,0.34)"></i><i style="background:rgba(244,244,242,0.91)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.53)"></i><i style="background:rgba(244,244,242,0.29)"></i><i style="background:rgba(244,244,242,0.35)"></i><i style="background:rgba(244,244,242,0.28)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.35)"></i><i style="background:rgba(244,244,242,0.45)"></i><i style="background:rgba(244,244,242,0.30)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.38)"></i><i style="background:rgba(244,244,242,1.00)"></i><i style="background:rgba(244,244,242,0.33)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.38)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.27)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.30)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.26)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.37)"></i><i style="background:rgba(244,244,242,0.58)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.54)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.26)"></i><i style="background:rgba(244,244,242,0.56)"></i><i style="background:rgba(244,244,242,0.52)"></i><i style="background:rgba(244,244,242,0.77)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.68)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.33)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.33)"></i><i style="background:rgba(244,244,242,0.43)"></i><i style="background:rgba(244,244,242,0.62)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="background:rgba(244,244,242,0.61)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.62)"></i><i style="background:rgba(244,244,242,0.46)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.63)"></i><i style="background:rgba(244,244,242,0.26)"></i><i style="background:rgba(244,244,242,0.66)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.28)"></i><i style="background:rgba(244,244,242,0.26)"></i><i style="background:rgba(244,244,242,0.50)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.20)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.26)"></i><i style="background:rgba(244,244,242,0.79)"></i><i style="background:rgba(244,244,242,0.60)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.32)"></i><i style="background:rgba(244,244,242,1.00)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.54)"></i><i style="background:rgba(244,244,242,0.55)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.31)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.21)"></i><i style="background:rgba(244,244,242,0.46)"></i><i style="background:rgba(244,244,242,0.28)"></i><i style="background:rgba(244,244,242,0.44)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.64)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.63)"></i><i style="background:rgba(244,244,242,0.43)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.49)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.51)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.62)"></i><i style="background:rgba(244,244,242,0.68)"></i><i style="background:rgba(244,244,242,0.48)"></i><i style="background:rgba(244,244,242,0.76)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.48)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.24)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.54)"></i><i style="background:rgba(244,244,242,0.49)"></i><i style="background:rgba(244,244,242,0.81)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.47)"></i><i style="background:rgba(244,244,242,0.80)"></i><i style="background:rgba(244,244,242,0.58)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.29)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="background:rgba(244,244,242,0.74)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.27)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.40)"></i><i style="background:rgba(244,244,242,0.35)"></i><i style="background:rgba(244,244,242,0.35)"></i><i style="background:rgba(244,244,242,0.77)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.51)"></i><i style="background:rgba(244,244,242,0.63)"></i><i style="background:rgba(244,244,242,0.77)"></i><i style="background:rgba(244,244,242,0.76)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.29)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.43)"></i><i style="background:rgba(244,244,242,0.59)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.21)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.21)"></i><i style="background:rgba(244,244,242,0.75)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.31)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.34)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="background:rgba(244,244,242,0.51)"></i><i style="background:rgba(244,244,242,0.31)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.40)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.24)"></i><i style="background:rgba(244,244,242,0.51)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.22)"></i><i style="background:rgba(244,244,242,0.71)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.26)"></i><i style="background:rgba(244,244,242,0.60)"></i><i style="background:rgba(244,244,242,0.77)"></i><i style="background:rgba(244,244,242,0.82)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.41)"></i><i style="background:rgba(244,244,242,0.53)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.52)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="background:rgba(244,244,242,0.61)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.56)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.24)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.29)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.25)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.39)"></i><i style="background:rgba(244,244,242,0.28)"></i><i style="background:rgba(244,244,242,0.89)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.23)"></i><i style="background:rgba(244,244,242,0.40)"></i><i style="background:rgba(244,244,242,0.58)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.29)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.57)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.38)"></i><i style="background:rgba(244,244,242,0.61)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.67)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.40)"></i><i style="background:rgba(244,244,242,0.58)"></i><i style="background:rgba(244,244,242,0.50)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.24)"></i><i style="background:rgba(244,244,242,0.50)"></i><i style="background:rgba(244,244,242,0.25)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.55)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.65)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.41)"></i><i style="background:rgba(244,244,242,0.55)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.39)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.47)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.44)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.64)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.27)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.55)"></i><i style="background:rgba(244,244,242,0.33)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="background:rgba(244,244,242,0.32)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.41)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="background:rgba(244,244,242,0.47)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.31)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.47)"></i><i style="background:rgba(244,244,242,0.30)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.36)"></i><i style="background:rgba(244,244,242,0.49)"></i><i style="background:rgba(244,244,242,0.48)"></i><i style="background:rgba(244,244,242,0.45)"></i><i style="background:rgba(244,244,242,0.32)"></i><i style="background:rgba(244,244,242,0.71)"></i><i style="background:rgba(244,244,242,0.45)"></i><i style="background:rgba(244,244,242,0.37)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="background:rgba(244,244,242,0.54)"></i><i style="background:rgba(244,244,242,0.70)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.32)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.36)"></i><i style="background:rgba(244,244,242,0.95)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="background:rgba(244,244,242,0.37)"></i><i style="background:rgba(244,244,242,1.00)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.48)"></i><i style="background:rgba(244,244,242,0.46)"></i><i style="background:rgba(244,244,242,0.93)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.27)"></i><i style="background:rgba(244,244,242,0.41)"></i><i style="background:rgba(244,244,242,0.54)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.48)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.26)"></i><i style="background:rgba(244,244,242,0.30)"></i><i style="background:rgba(244,244,242,0.51)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.25)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.29)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.50)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.33)"></i><i style="background:rgba(244,244,242,0.54)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.21)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.46)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.46)"></i><i style="background:rgba(244,244,242,1.00)"></i><i style="background:rgba(244,244,242,0.63)"></i><i style="background:rgba(244,244,242,0.44)"></i><i style="box-shadow:inset 0 0 0 1px rgba(244,244,242,0.70)"></i><i style="background:rgba(244,244,242,0.43)"></i><i style="background:rgba(244,244,242,0.38)"></i><i style="background:rgba(244,244,242,0.85)"></i></div></div>
-<div class="side">
-<div class="edge"><div class="lab" style="margin-bottom:8px">Edge by instrument</div>
-<div class="row"><span>BTC-USDT</span><div class="bar"><b style="left:50%;width:18%"></b></div><span class="pos" style="text-align:right">+12.40</span><span class="dim" style="text-align:right">48%</span></div>
-<div class="row"><span>DOGE-USDT</span><div class="bar"><b style="right:50%;width:22%"></b></div><span class="neg" style="text-align:right">−21.08</span><span class="dim" style="text-align:right">37%</span></div>
-<div class="row"><span>SOL-USDT</span><div class="bar"><b style="right:50%;width:30%"></b></div><span class="neg" style="text-align:right">−28.66</span><span class="dim" style="text-align:right">35%</span></div>
-<div class="row"><span>ZEC-USDT</span><div class="bar"><b style="left:50%;width:9%"></b></div><span class="pos" style="text-align:right">+6.12</span><span class="dim" style="text-align:right">52%</span></div>
-<div class="row"><span>ETH-USDT</span><div class="bar"><b style="right:50%;width:14%"></b></div><span class="neg" style="text-align:right">−11.30</span><span class="dim" style="text-align:right">39%</span></div>
-</div>
-<div class="chart">[ price chart slot · TradingView / lightweight-charts ]</div>
-</div></div></main></body></html>
+</body></html>

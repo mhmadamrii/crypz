@@ -35,7 +35,9 @@ export function StatusBar({ a }: { a: MarketIntelligence }) {
                 aria-hidden
                 className={cn(
                   'size-2',
-                  q.status === 'good' ? 'bg-foreground' : 'shadow-[inset_0_0_0_1px_var(--foreground)]',
+                  q.status === 'good' && 'bg-up',
+                  q.status === 'degraded' && 'bg-accent-risk',
+                  q.status === 'insufficient' && 'bg-down',
                 )}
               />
               {QUALITY[q.status]}

@@ -35,8 +35,8 @@ export function EdgeBars({ buckets, focus, onFocus, limit, name = 'Asset' }: Pro
   const Row = onFocus ? 'button' : 'div'
 
   return (
-    <div className="flex flex-col">
-      <div className={cn(ROW, 'border-b border-hairline pb-2 label')}>
+    <div className="flex flex-col overflow-hidden rounded-xl bg-card">
+      <div className={cn(ROW, 'border-b border-border px-3 pt-3 pb-2 label')}>
         <span>{name}</span>
         <span className="hidden text-center sm:block">Net</span>
         <span className="text-right">USDT</span>
@@ -54,30 +54,24 @@ export function EdgeBars({ buckets, focus, onFocus, limit, name = 'Asset' }: Pro
               : {})}
             className={cn(
               ROW,
-              'items-center gap-y-2 border-b border-hairline py-2 text-left text-sm transition-opacity duration-300',
+              'items-center gap-y-2 border-b border-hairline px-3 py-2.5 text-left text-[15px] transition-colors duration-200',
               onFocus && 'hover:bg-accent/60',
               focus && !active && 'opacity-35',
               active && 'bg-accent',
             )}
           >
             <span className="flex items-center gap-2 font-medium">
-              <i className={cn('size-1.5 shrink-0', active ? 'bg-foreground' : 'bg-transparent')} />
+              <i
+                className={cn('size-1.5 shrink-0 rounded-full', active ? 'bg-accent-best' : 'bg-transparent')}
+                aria-hidden
+              />
               {b.label}
             </span>
             <span className="relative order-last col-span-full h-2 sm:order-none sm:col-span-1">
               <i className="absolute inset-y-[-3px] left-1/2 w-px bg-border" />
               <i
-                className="absolute inset-y-0 bg-foreground"
-                style={
-                  b.realized >= 0
-                    ? { left: '50%', width: `${w}%` }
-                    : {
-                        right: '50%',
-                        width: `${w}%`,
-                        background: 'transparent',
-                        boxShadow: 'inset 0 0 0 1px var(--foreground)',
-                      }
-                }
+                className={cn('absolute inset-y-0 rounded-full', b.realized >= 0 ? 'bg-up' : 'bg-down')}
+                style={b.realized >= 0 ? { left: '50%', width: `${w}%` } : { right: '50%', width: `${w}%` }}
               />
             </span>
             <span className={cn('text-right num', tone(b.realized))}>{fmtSigned(b.realized)}</span>
@@ -90,7 +84,7 @@ export function EdgeBars({ buckets, focus, onFocus, limit, name = 'Asset' }: Pro
         <Button
           variant="ghost"
           size="sm"
-          className="mt-2 self-start text-muted-foreground"
+          className="mx-3 my-2 self-start text-muted-foreground"
           onClick={() => setExpanded((e) => !e)}
         >
           {expanded ? `Show top ${limit} by impact` : `Show all ${buckets.length} assets`}

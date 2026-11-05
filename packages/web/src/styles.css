@@ -5,11 +5,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Light: bone paper, ink type. */
+/* Light: warm paper, ink type. */
 :root {
   --background: oklch(0.975 0.002 95);
   --foreground: oklch(0.16 0 0);
-  --card: oklch(0.975 0.002 95);
+  --card: oklch(0.99 0.002 95);
   --card-foreground: oklch(0.16 0 0);
   --popover: oklch(0.99 0.002 95);
   --popover-foreground: oklch(0.16 0 0);
@@ -26,8 +26,12 @@
   --input: oklch(0.82 0.003 95);
   --ring: oklch(0.16 0 0);
   --hairline: oklch(0.9 0.003 95);
-  --up: oklch(0.56 0.13 160);
-  --down: oklch(0.56 0.2 20);
+  --up: oklch(0.54 0.15 160);
+  --down: oklch(0.56 0.21 22);
+  /* Pit Wall Debrief: a real accent set with named jobs, not one brand colour. Violet is scarce — the single
+     most load-bearing flagged number per screen (a personal-best session). Amber flags elevated cost/risk. */
+  --accent-best: oklch(0.56 0.21 293);
+  --accent-risk: oklch(0.72 0.16 70);
   /* trading sessions: the one place hue names a thing; kept clear of up's teal and down's red */
   --session-asia: oklch(0.5 0.17 300);
   --session-london: oklch(0.5 0.14 250);
@@ -42,29 +46,33 @@
   --sidebar-ring: var(--ring);
 }
 
-/* Dark: ink ground, bone type. Default theme. */
+/* Dark: graphite ground, off-white type. Default theme — the pit-wall debrief reads best under low ambient light. */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.96 0.003 95);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.96 0.003 95);
-  --popover: oklch(0.19 0 0);
-  --popover-foreground: oklch(0.96 0.003 95);
-  --primary: oklch(0.96 0.003 95);
-  --primary-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.21 0 0);
-  --secondary-foreground: oklch(0.96 0.003 95);
-  --muted: oklch(0.2 0 0);
-  --muted-foreground: oklch(0.66 0.004 95);
-  --accent: oklch(0.23 0 0);
-  --accent-foreground: oklch(0.96 0.003 95);
+  --background: oklch(0.175 0.003 255);
+  --foreground: oklch(0.97 0.003 95);
+  --card: oklch(0.21 0.004 255);
+  --card-foreground: oklch(0.97 0.003 95);
+  --popover: oklch(0.23 0.005 255);
+  --popover-foreground: oklch(0.97 0.003 95);
+  --primary: oklch(0.97 0.003 95);
+  --primary-foreground: oklch(0.175 0.003 255);
+  --secondary: oklch(0.26 0.005 255);
+  --secondary-foreground: oklch(0.97 0.003 95);
+  --muted: oklch(0.24 0.004 255);
+  --muted-foreground: oklch(0.7 0.006 95);
+  --accent: oklch(0.28 0.006 255);
+  --accent-foreground: oklch(0.97 0.003 95);
   --destructive: oklch(0.66 0.2 20);
-  --border: oklch(0.27 0 0);
-  --input: oklch(0.32 0 0);
-  --ring: oklch(0.96 0.003 95);
-  --hairline: oklch(0.215 0 0);
-  --up: oklch(0.74 0.15 162);
-  --down: oklch(0.67 0.2 18);
+  --border: oklch(0.31 0.006 255);
+  --input: oklch(0.34 0.006 255);
+  --ring: oklch(0.97 0.003 95);
+  --hairline: oklch(0.26 0.004 255);
+  --up: oklch(0.78 0.17 162);
+  --down: oklch(0.7 0.22 20);
+  /* Pit Wall Debrief: a real accent set with named jobs, not one brand colour. Violet is scarce — the single
+     most load-bearing flagged number per screen (a personal-best session). Amber flags elevated cost/risk. */
+  --accent-best: oklch(0.72 0.19 293);
+  --accent-risk: oklch(0.8 0.17 70);
   --session-asia: oklch(0.72 0.14 300);
   --session-london: oklch(0.72 0.13 245);
   --session-ny: oklch(0.86 0.19 128);
@@ -103,17 +111,20 @@
   --color-hairline: var(--hairline);
   --color-up: var(--up);
   --color-down: var(--down);
+  --color-accent-best: var(--accent-best);
+  --color-accent-risk: var(--accent-risk);
   --color-session-asia: var(--session-asia);
   --color-session-london: var(--session-london);
   --color-session-ny: var(--session-ny);
 
-  /* The world has no curves. */
-  --radius-xs: 0px;
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 0px;
-  --radius-2xl: 0px;
+  /* Soft-radius cards replace the old hard square; the pit-wall world is comfortable, not brutal. */
+  --radius: 0.75rem;
+  --radius-xs: calc(var(--radius) - 8px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -131,6 +142,8 @@
   html {
     color-scheme: light;
     scrollbar-color: var(--input) transparent;
+    /* Comfortable reading size: every rem-based step (labels, figures, body) grows with it. */
+    font-size: 106.25%;
   }
   html.dark {
     color-scheme: dark;
@@ -171,9 +184,9 @@
 
 @utility label {
   font-family: var(--font-mono);
-  font-size: 11px;
-  line-height: 1.2;
-  letter-spacing: 0.06em;
+  font-size: 12.5px;
+  line-height: 1.3;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--muted-foreground);
 }
@@ -230,7 +243,7 @@
   }
 }
 
-/* Workspace grid (react-grid-layout), drawn in the world's terms: no shadows, square, ink placeholder. */
+/* Workspace grid (react-grid-layout): no shadows, soft-radius widgets, ink placeholder to match. */
 .crypz-grid {
   position: relative;
   transition: height 200ms ease;
@@ -254,6 +267,7 @@
   opacity: 0.08;
   outline: 1px dashed var(--foreground);
   outline-offset: -1px;
+  border-radius: var(--radius-lg);
   z-index: 2;
 }
 .crypz-grid .react-resizable-handle {
