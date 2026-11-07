@@ -4,7 +4,7 @@ import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts'
 
 // Shared setup for every lightweight-charts surface: colours from the world tokens, hollow candles, theme follow.
 
-type LW = typeof import('lightweight-charts')
+export type LW = typeof import('lightweight-charts')
 
 // lightweight-charts plots UTC; shift to the viewer's zone so axis labels read local time.
 // The offset is taken at that moment, not today, so dates across a daylight-saving change still line up.

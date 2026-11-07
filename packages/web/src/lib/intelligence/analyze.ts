@@ -1,5 +1,5 @@
 import type { Candle, LongShort, OpenInterest, Premium, TakerFlow } from '@crypz/exchanges'
-import { bookState, type BookState, type Instrument } from '@/lib/book'
+import type { BookState, Instrument } from '@/lib/book'
 import { liquidityOf } from '@/lib/indicators/liquidity'
 import { computeBias } from '@/lib/indicators/bias'
 import { profileOf } from '@/lib/profile'

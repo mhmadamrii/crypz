@@ -153,6 +153,7 @@ export function CandleChart({ exchange, symbol, bar, positions = [], focus, clas
         barMs: () => BAR_MS[live.current.bar],
         bias: () => live.current.bias,
         liveBook: true,
+        lw,
         palette: palette(),
       })
       const layer = attachDrawingLayer({

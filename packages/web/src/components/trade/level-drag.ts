@@ -56,6 +56,8 @@ export function attachLevelDrag(opts: {
   const hit = (x: number, y: number): Which | null => {
     const p = opts.position()
     if (!p) return null
+    // the oscillator panes sit under the price pane: a level scrolled out of view must not be grabbable down there
+    if (y < 0 || y > chart.paneSize(0).height) return null
     for (const c of chips()) if (x >= c.x && x <= c.x + CHIP_W && y >= c.y && y <= c.y + CHIP_H) return c.which
     if (x < 0 || x > chart.timeScale().width()) return null
     for (const which of ['stop', 'target'] as const) {

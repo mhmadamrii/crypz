@@ -16,7 +16,10 @@ import {
   FOOTPRINT_ROWS,
   FVG_SIZES,
   LIQUIDITY_TOLERANCES,
+  MACD_PRESETS,
   OB_STRENGTHS,
+  STOCH_LENGTHS,
+  STOCH_SMOOTHS,
   SWING_LENGTHS,
   activeCount,
   indicators,
@@ -331,6 +334,71 @@ export function IndicatorMenu({
             {BAR_MS[s.bias.higher] > barMs
               ? `Bias from ${s.bias.higher} structure, timed on the chart. Swing length follows Market structure.`
               : `${s.bias.higher} is not above this chart, so the bias reads the chart’s own structure.`}
+          </Note>
+        </Section>
+        <Section
+          on={s.macd.on}
+          onToggle={() => indicators.setMacd({ on: !s.macd.on })}
+          title="MACD"
+          blurb="Momentum: the gap between a fast and a slow average of price, its signal line, and the histogram between them. In its own pane under the chart."
+        >
+          <Row text="Lengths" hint="Fast, slow and signal averages, in bars. 12/26/9 is the standard.">
+            <Segmented
+              label="MACD fast, slow and signal lengths"
+              options={MACD_PRESETS}
+              value={s.macd.preset}
+              onChange={(preset) => indicators.setMacd({ preset, on: true })}
+              size="strip"
+            />
+          </Row>
+          <Note>
+            The line crossing its signal marks a momentum shift, not a trade: it lags price and is noisy in ranges.
+          </Note>
+        </Section>
+        <Section
+          on={s.stoch.on}
+          onToggle={() => indicators.setStoch({ on: !s.stoch.on })}
+          title="Stochastic"
+          blurb="Where the close sits in the recent high–low range, 0 to 100, with its average. In its own pane under the chart."
+        >
+          <Row text="%K length" hint="Bars in the high–low range the close is placed in">
+            <Segmented
+              label="Stochastic lookback, in bars"
+              options={STOCH_LENGTHS}
+              value={s.stoch.length}
+              onChange={(length) => indicators.setStoch({ length, on: true })}
+              size="strip"
+            />
+          </Row>
+          <Row
+            text="%K smoothing"
+            hint="Bars the raw %K is averaged over: 1 is the fast stochastic, 3 the usual slow one"
+          >
+            <Segmented
+              label="Stochastic %K smoothing, in bars"
+              options={STOCH_SMOOTHS}
+              value={s.stoch.smooth}
+              onChange={(smooth) => indicators.setStoch({ smooth, on: true })}
+              format={(v) => (v === 1 ? 'Fast' : `${v} bars`)}
+              size="strip"
+            />
+          </Row>
+          <Row
+            text="%D smoothing"
+            hint="Bars %K is averaged over to make %D, the signal line: 1 makes %D the same as %K"
+          >
+            <Segmented
+              label="Stochastic %D smoothing, in bars"
+              options={STOCH_SMOOTHS}
+              value={s.stoch.d}
+              onChange={(d) => indicators.setStoch({ d, on: true })}
+              format={(v) => (v === 1 ? 'None' : `${v} bars`)}
+              size="strip"
+            />
+          </Row>
+          <Note>
+            Above 80 is stretched up, below 20 stretched down. In a strong trend it can stay there, so it is not a
+            reversal signal by itself.
           </Note>
         </Section>
         {footprint && (

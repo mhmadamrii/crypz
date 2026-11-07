@@ -2,11 +2,12 @@ import type { IChartApi, ISeriesApi } from 'lightweight-charts'
 import type { Candle } from '@crypz/exchanges'
 import type { Bias } from '@/lib/indicators/bias'
 import type { createMapper } from '@/components/drawings/layer'
-import { monoFont, type Palette } from '@/components/trade/chart-kit'
+import { monoFont, type LW, type Palette } from '@/components/trade/chart-kit'
 import { attachBiasLayer } from './bias-layer'
 import { attachBookLayer } from './book-layer'
 import { attachFootprintLayer, type FootprintData } from './footprint-layer'
 import { attachFvgLayer } from './fvg-layer'
+import { attachOscillators } from './oscillator-panes'
 import { attachLiquidityLayer } from './liquidity-layer'
 import { attachOrderBlocksLayer } from './order-blocks-layer'
 import { attachSessionsLayer } from './sessions-layer'
@@ -29,9 +30,11 @@ export function attachIndicators(opts: {
   footprint?: () => FootprintData | null
   /** True on a live chart: adds the OKX order-book liquidity layer, fed through `setBook`. */
   liveBook?: boolean
+  /** The chart library, for the oscillator panes (MACD, stochastic) it creates its own series for. */
+  lw: LW
   palette: Palette
 }) {
-  const { chart, series, x, candles, barMs, bias, footprint, liveBook, palette } = opts
+  const { chart, series, x, candles, barMs, bias, footprint, liveBook, lw, palette } = opts
   const font = monoFont()
   // resting orders sit under everything else: they are a backdrop at the edge, not a mark on a candle
   const book = liveBook ? attachBookLayer({ chart, series, x, palette, font }) : null
@@ -51,6 +54,8 @@ export function attachIndicators(opts: {
   const liquidity = attachLiquidityLayer({ chart, series, x, candles, palette, font })
   const sweeps = attachSweepsLayer({ chart, series, x, candles, palette, font })
   const biasLayer = attachBiasLayer({ chart, series, x, candles, bias, palette, font })
+  // MACD and stochastic live in panes under the price, so they have no place in the draw order above
+  const oscillators = attachOscillators({ lw, chart, candles, palette })
   return {
     refresh(p?: Palette) {
       book?.refresh(p)
@@ -62,6 +67,7 @@ export function attachIndicators(opts: {
       liquidity.refresh(p)
       sweeps.refresh(p)
       biasLayer.refresh(p)
+      oscillators.refresh(p)
     },
     footprintAt: footprintLayer?.at,
     setBook: book?.setInstrument,
@@ -75,6 +81,7 @@ export function attachIndicators(opts: {
       liquidity.dispose()
       sweeps.dispose()
       biasLayer.dispose()
+      oscillators.dispose()
     },
   }
 }

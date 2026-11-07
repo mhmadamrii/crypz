@@ -60,11 +60,27 @@ export type BookMaxLevels = (typeof BOOK_MAX_LEVELS)[number]
 export const BOOK_GROUPS = [0, 1, 2] as const
 export type BookGroup = (typeof BOOK_GROUPS)[number]
 
+/** MACD fast, slow and signal lengths: the classic 12/26/9, a quicker 8/17/9, and a slower-signal 5/35/5. */
+export const MACD_PRESETS = ['12/26/9', '8/17/9', '5/35/5'] as const
+export type MacdPreset = (typeof MACD_PRESETS)[number]
+export const macdLengths = (p: MacdPreset) => {
+  const [fast, slow, signal] = p.split('/').map(Number)
+  return { fast, slow, signal }
+}
+
+/** Stochastic: the %K lookback in bars, then how many bars %K and %D are each averaged over (1 leaves it as is). */
+export const STOCH_LENGTHS = [5, 9, 14, 21] as const
+export type StochLength = (typeof STOCH_LENGTHS)[number]
+export const STOCH_SMOOTHS = [1, 3, 5] as const
+export type StochSmooth = (typeof STOCH_SMOOTHS)[number]
+
 /** How the order book is drawn: a line per level from when it appeared, or a profile of the book now at the edge. */
 export const BOOK_STYLES = ['lines', 'bars'] as const
 export type BookStyle = (typeof BOOK_STYLES)[number]
 
 export type IndicatorState = {
+  macd: { on: boolean; preset: MacdPreset }
+  stoch: { on: boolean; length: StochLength; smooth: StochSmooth; d: StochSmooth }
   book: {
     style: BookStyle
     /** Keep drawing lines for levels that have gone, faded, where they stopped. */
@@ -95,7 +111,19 @@ export type IndicatorState = {
 
 const KEY = 'crypz.indicators.v1'
 const DEFAULTS: IndicatorState = {
-  book: { on: false, style: 'lines', ended: true, sides: 'both', range: 0.02, minShare: 0.1, maxLevels: 10, group: 1, labels: true },
+  macd: { on: false, preset: '12/26/9' },
+  stoch: { on: false, length: 14, smooth: 3, d: 3 },
+  book: {
+    on: false,
+    style: 'lines',
+    ended: true,
+    sides: 'both',
+    range: 0.02,
+    minShare: 0.1,
+    maxLevels: 10,
+    group: 1,
+    labels: true,
+  },
   sessions: { on: false, asia: true, london: true, newYork: true },
   fvg: { on: false, minAtr: 0.25, showFilled: false },
   structure: { on: false, length: 5, labels: true },
@@ -119,6 +147,12 @@ function load(): IndicatorState {
     if (!BIAS_FRAMES.includes(bias.higher)) bias.higher = DEFAULTS.bias.higher
     const liquidity = { ...DEFAULTS.liquidity, ...saved.liquidity }
     if (!LIQUIDITY_TOLERANCES.includes(liquidity.tolerance)) liquidity.tolerance = DEFAULTS.liquidity.tolerance
+    const macd = { ...DEFAULTS.macd, ...saved.macd }
+    if (!MACD_PRESETS.includes(macd.preset)) macd.preset = DEFAULTS.macd.preset
+    const stoch = { ...DEFAULTS.stoch, ...saved.stoch }
+    if (!STOCH_LENGTHS.includes(stoch.length)) stoch.length = DEFAULTS.stoch.length
+    if (!STOCH_SMOOTHS.includes(stoch.smooth)) stoch.smooth = DEFAULTS.stoch.smooth
+    if (!STOCH_SMOOTHS.includes(stoch.d)) stoch.d = DEFAULTS.stoch.d
     const book = { ...DEFAULTS.book, ...saved.book }
     if (!BOOK_STYLES.includes(book.style)) book.style = DEFAULTS.book.style
     if (!BOOK_SIDES.includes(book.sides)) book.sides = DEFAULTS.book.sides
@@ -134,6 +168,8 @@ function load(): IndicatorState {
     if (!FOOTPRINT_CELLS.includes(footprint.cells)) footprint.cells = DEFAULTS.footprint.cells
     if (!FOOTPRINT_IMBALANCE.includes(footprint.imbalance)) footprint.imbalance = DEFAULTS.footprint.imbalance
     return {
+      macd,
+      stoch,
       book,
       sessions: { ...DEFAULTS.sessions, ...saved.sessions },
       fvg,
@@ -172,6 +208,8 @@ export const indicators = {
     listeners.add(fn)
     return () => listeners.delete(fn)
   },
+  setMacd: (p: Partial<IndicatorState['macd']>) => patch('macd', p),
+  setStoch: (p: Partial<IndicatorState['stoch']>) => patch('stoch', p),
   setBook: (p: Partial<IndicatorState['book']>) => patch('book', p),
   setSessions: (p: Partial<IndicatorState['sessions']>) => patch('sessions', p),
   setFvg: (p: Partial<IndicatorState['fvg']>) => patch('fvg', p),

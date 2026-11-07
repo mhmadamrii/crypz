@@ -1,5 +1,6 @@
 import type { Candle } from '@crypz/exchanges'
 import { findGaps } from './fvg'
+import { emaOf } from './oscillators'
 import { marketStructure, type Swing } from './structure'
 
 // Bias with invalidation: which way the chart leans, why, and the price that would prove it wrong. Not a
@@ -31,24 +32,6 @@ export type Bias = {
   invalidated: (Level & { side: Side; at: number }) | null
 }
 
-/** Exponential moving average of closes; NaN until `period` bars exist. */
-function ema(candles: Candle[], period: number) {
-  const out = new Array<number>(candles.length).fill(Number.NaN)
-  const k = 2 / (period + 1)
-  let value = 0
-  for (let i = 0; i < candles.length; i++) {
-    const c = candles[i].close
-    if (i < period) {
-      value += c / period
-      if (i === period - 1) out[i] = value
-    } else {
-      value = c * k + value * (1 - k)
-      out[i] = value
-    }
-  }
-  return out
-}
-
 const sideOf = (trend: 'up' | 'down' | null): Side | null =>
   trend === 'up' ? 'bull' : trend === 'down' ? 'bear' : null
 
@@ -70,7 +53,10 @@ export function computeBias(opts: {
   const factors: Factor[] = []
   if (higherSt) factors.push({ id: 'higher', label: `${opts.higherLabel} structure`, side: sideOf(higherSt.trend) })
   factors.push({ id: 'chart', label: `${opts.chartLabel} structure`, side: sideOf(chartSt.trend) })
-  const e = ema(chart, 50).at(-1)
+  const e = emaOf(
+    chart.map((k) => k.close),
+    50,
+  ).at(-1)
   factors.push({
     id: 'ema',
     label: 'Price vs EMA 50',

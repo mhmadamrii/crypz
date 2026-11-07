@@ -114,6 +114,7 @@ export function ReplayChart({
         barMs: () => live.current.barMs,
         bias: () => live.current.bias,
         footprint: () => live.current.footprint,
+        lw,
         palette: palette(),
       })
       // the stop and target handles read the pointer before the drawing layer does, so a level wins over a drawing
