@@ -20,6 +20,15 @@ export type OpenPosition = {
   liq: number
 }
 
+/** A limit order waiting for price to reach it; fills on the first bar that touches `price`. */
+export type PendingOrder = {
+  side: Side
+  price: number
+  stop: number | null
+  target: number | null
+  leverage: number
+}
+
 export type ReplayTrade = OpenPosition & {
   id: number
   exit: number
@@ -40,6 +49,8 @@ export type ReplayState = {
   /** Where the clock started, for "time elapsed" readouts. */
   start: number
   position: OpenPosition | null
+  /** At most one, and never alongside a position. */
+  pending: PendingOrder | null
   trades: ReplayTrade[]
 }
 
@@ -47,12 +58,23 @@ export type ReplayAction =
   /** Reveal `candle`, which closes at `closesAt`. */
   | { type: 'step'; candle: Candle; closesAt: number }
   | { type: 'open'; side: Side; candle: Candle; stop: number | null; target: number | null; leverage: number }
+  /** Place a limit order at `price`; the order's levels are whatever the ticket holds. */
+  | { type: 'order'; side: Side; price: number; stop: number | null; target: number | null; leverage: number }
+  /** Drag the pending order to a new price. */
+  | { type: 'move'; price: number }
+  | { type: 'cancel' }
   | { type: 'levels'; stop: number | null; target: number | null }
   | { type: 'close'; candle: Candle }
   /** Drop the open position and every trade; the clock stays where it is. */
   | { type: 'reset' }
 
-export const initialReplay = (now: number): ReplayState => ({ now, start: now, position: null, trades: [] })
+export const initialReplay = (now: number): ReplayState => ({
+  now,
+  start: now,
+  position: null,
+  pending: null,
+  trades: [],
+})
 
 const dir = (side: Side) => (side === 'long' ? 1 : -1)
 
@@ -98,34 +120,64 @@ function exitOn(p: OpenPosition, k: Candle): { price: number; reason: ExitReason
   return null
 }
 
+/** Where a bar fills a limit order, or null when it never reached it. A gap through the price fills at the open. */
+export function limitFill(o: Pick<PendingOrder, 'side' | 'price'>, k: Candle): number | null {
+  if (o.side === 'long') return k.low <= o.price ? Math.min(o.price, k.open) : null
+  return k.high >= o.price ? Math.max(o.price, k.open) : null
+}
+
+const openAt = (side: Side, entry: number, entryTime: number, o: Omit<PendingOrder, 'side' | 'price'>) => ({
+  side,
+  entry,
+  entryTime,
+  stop: o.stop,
+  target: o.target,
+  leverage: o.leverage,
+  liq: liqPrice(side, entry, o.leverage),
+})
+
 export function replayReducer(state: ReplayState, a: ReplayAction): ReplayState {
   switch (a.type) {
     case 'step': {
       const next = { ...state, now: Math.max(state.now, a.closesAt) }
+      const o = state.pending
+      const filled = o && limitFill(o, a.candle)
+      // the bar that fills an order is not also checked against its stop and target: a candle cannot say which
+      // came first, so the position starts on the next bar
+      if (o && filled !== null) return { ...next, pending: null, position: openAt(o.side, filled, a.candle.time, o) }
       const hit = state.position && exitOn(state.position, a.candle)
       return hit ? settle(next, hit.price, a.candle.time, hit.reason) : next
     }
     case 'open':
       if (state.position) return state
+      // a market order fills now and takes any limit order's place
+      return { ...state, pending: null, position: openAt(a.side, a.candle.close, a.candle.time, a) }
+    case 'order':
+      if (state.position || state.pending) return state
       return {
         ...state,
-        position: {
-          side: a.side,
-          entry: a.candle.close,
-          entryTime: a.candle.time,
-          stop: a.stop,
-          target: a.target,
-          leverage: a.leverage,
-          liq: liqPrice(a.side, a.candle.close, a.leverage),
-        },
+        pending: { side: a.side, price: a.price, stop: a.stop, target: a.target, leverage: a.leverage },
       }
+    case 'move':
+      return state.pending ? { ...state, pending: { ...state.pending, price: a.price } } : state
+    case 'cancel':
+      return { ...state, pending: null }
     case 'levels':
+      if (state.pending) return { ...state, pending: { ...state.pending, stop: a.stop, target: a.target } }
       return state.position ? { ...state, position: { ...state.position, stop: a.stop, target: a.target } } : state
     case 'close':
       return state.position ? settle(state, a.candle.close, a.candle.time, 'manual') : state
     case 'reset':
-      return { ...state, position: null, trades: [] }
+      return { ...state, position: null, pending: null, trades: [] }
   }
+}
+
+/** Why a limit order cannot rest at `price`: a buy waits below the last price, a sell above it. */
+export function limitError(side: Side, last: number, price: number, stop: number | null, target: number | null) {
+  const d = dir(side)
+  if (d * (last - price) <= 0)
+    return `A ${side === 'long' ? 'buy' : 'sell'} limit must be ${side === 'long' ? 'below' : 'above'} price.`
+  return levelError(side, price, stop, target)
 }
 
 /** Why a stop/target cannot be used for this side at this price, or null when it is fine. */

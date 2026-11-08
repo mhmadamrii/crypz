@@ -1,15 +1,27 @@
 import type { IChartApi, ISeriesApi } from 'lightweight-charts'
 import { drawings } from '@/lib/drawings/store'
-import type { OpenPosition } from '@/lib/replay'
+import type { Side } from '@/lib/replay'
 import { withAlpha, type Palette } from './chart-kit'
 import { attachPaneLayer } from '../indicators/pane-layer'
 
-// Drag the open position's stop and target on the chart. A level that is set is dragged by its line; one that is
+// Drag a limit order's price, or the open position's stop and target, on the chart. A level that is set is dragged by its line; one that is
 // not set yet shows an "SL" or "TP" chip beside the entry candle, and dragging that out sets it. The line follows
 // the pointer, kept on the right side of the last price (a long's stop below it, its target above; a short's the
 // other way round), and every move goes straight to `onLevel`, so the ticket and the lines always agree.
 
-type Which = 'stop' | 'target'
+type Which = 'entry' | 'stop' | 'target'
+
+/** What is on the chart to drag: a pending limit order (its price moves too) or the open position. */
+export type Order = {
+  side: Side
+  /** The limit price, or the entry. */
+  entry: number
+  /** Where the position opened; null for a limit order, which has not. */
+  entryTime: number | null
+  stop: number | null
+  target: number | null
+  pending: boolean
+}
 
 const CHIP_W = 26
 const CHIP_H = 16
@@ -23,8 +35,8 @@ export function attachLevelDrag(opts: {
   /** The chart box: pointer events are read here. */
   el: HTMLElement
   x: (time: number) => number | null
-  position: () => OpenPosition | null
-  /** The last price, which a level must stay on the right side of. */
+  order: () => Order | null
+  /** The last price, which a limit price (and an open position's levels) must stay on the right side of. */
   last: () => number | undefined
   onLevel: (which: Which, price: number) => void
   palette: Palette
@@ -36,11 +48,11 @@ export function attachLevelDrag(opts: {
 
   /** The chips for levels not set yet, right of the entry candle (or at the pane's right edge when it scrolled off). */
   const chips = () => {
-    const p = opts.position()
+    const p = opts.order()
     if (!p) return []
     const y = series.priceToCoordinate(p.entry)
     if (y === null) return []
-    const entryX = opts.x(p.entryTime)
+    const entryX = p.entryTime === null ? null : opts.x(p.entryTime)
     const width = chart.timeScale().width()
     const left =
       entryX !== null && entryX >= 0 && entryX <= width - 2 * CHIP_W - 3 * GAP
@@ -54,14 +66,14 @@ export function attachLevelDrag(opts: {
   }
 
   const hit = (x: number, y: number): Which | null => {
-    const p = opts.position()
+    const p = opts.order()
     if (!p) return null
     // the oscillator panes sit under the price pane: a level scrolled out of view must not be grabbable down there
     if (y < 0 || y > chart.paneSize(0).height) return null
     for (const c of chips()) if (x >= c.x && x <= c.x + CHIP_W && y >= c.y && y <= c.y + CHIP_H) return c.which
     if (x < 0 || x > chart.timeScale().width()) return null
-    for (const which of ['stop', 'target'] as const) {
-      const price = p[which]
+    for (const which of ['entry', 'stop', 'target'] as const) {
+      const price = which === 'entry' && !p.pending ? null : p[which]
       const ly = price === null ? null : series.priceToCoordinate(price)
       if (ly !== null && Math.abs(y - ly) <= GRAB) return which
     }
@@ -112,17 +124,33 @@ export function attachLevelDrag(opts: {
   }
 
   const move = (e: PointerEvent) => {
-    const p = opts.position()
+    const p = opts.order()
     const last = opts.last()
     if (!drag || !p || last === undefined) return
     const price = series.coordinateToPrice(local(e).y)
     if (price === null) return
-    // the nearest price the chart can show, so the line is never closer to the last price than one tick
+    // the nearest price the chart can show, so a line is never closer to the one it must stay beyond than a tick
     const { minMove } = series.options().priceFormat as { minMove: number }
     const long = p.side === 'long'
-    const below = (drag === 'stop') === long
-    const bound = below ? last - minMove : last + minMove
-    const clamped = below ? Math.min(price, bound) : Math.max(price, bound)
+    let lo = -Infinity
+    let hi = Infinity
+    if (drag === 'entry') {
+      // a limit waits on the far side of the last price (a buy below it) and keeps clear of its own stop and target
+      if (long) {
+        hi = Math.min(last, p.target ?? Infinity) - minMove
+        lo = (p.stop ?? -Infinity) + minMove
+      } else {
+        lo = Math.max(last, p.target ?? -Infinity) + minMove
+        hi = (p.stop ?? Infinity) - minMove
+      }
+    } else {
+      // a stop sits behind the entry and a target ahead of it; the entry is the limit price while the order waits
+      // and the last price once it is open
+      const anchor = p.pending ? p.entry : last
+      if ((drag === 'stop') === long) hi = anchor - minMove
+      else lo = anchor + minMove
+    }
+    const clamped = Math.min(hi, Math.max(lo, price))
     const decimals = Math.max(0, Math.round(-Math.log10(minMove)))
     opts.onLevel(drag, Number(clamped.toFixed(decimals)))
   }

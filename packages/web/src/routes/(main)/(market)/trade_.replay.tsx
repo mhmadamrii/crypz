@@ -332,27 +332,43 @@ function ReplaySession({
 
   const open = (side: Side) => {
     // wait for the forming candle, so the fill is the same last price every timeframe shows
-    if (loading || (fine && fq.isPending) || !current || state.position) return
+    if (loading || (fine && fq.isPending) || !current || state.position || state.pending) return
     const s = num(stop)
     const t = num(target)
     const err = levelError(side, current.close, s, t)
     setError(err)
-    if (!err) dispatch({ type: 'open', side, candle: current, stop: s, target: t, leverage })
+    // a limit order, resting at the last price until it is dragged to where you want to be filled
+    if (!err) dispatch({ type: 'order', side, price: current.close, stop: s, target: t, leverage })
   }
 
-  const close = () => current && dispatch({ type: 'close', candle: current })
+  /** Skip the wait: fill the waiting order now, at the last price. */
+  const fillNow = () => {
+    const w = state.pending
+    if (w && current)
+      dispatch({ type: 'open', side: w.side, candle: current, stop: w.stop, target: w.target, leverage: w.leverage })
+  }
+
+  // closing is also cancelling an order that has not filled
+  const close = () => {
+    if (state.pending) dispatch({ type: 'cancel' })
+    else if (current) dispatch({ type: 'close', candle: current })
+  }
 
   const editLevel = (which: 'stop' | 'target', v: string) => {
     if (which === 'stop') setStop(v)
     else setTarget(v)
-    const p = state.position
-    if (!p || !current) return
-    const s = which === 'stop' ? num(v) : p.stop
-    const t = which === 'target' ? num(v) : p.target
-    const err = levelError(p.side, current.close, s, t)
+    const o = state.position ?? state.pending
+    if (!o || !current) return
+    const s = which === 'stop' ? num(v) : o.stop
+    const t = which === 'target' ? num(v) : o.target
+    // levels are judged against the price the order opens at: the entry, or a waiting order's limit price
+    const err = levelError(o.side, state.position ? current.close : state.pending!.price, s, t)
     setError(err)
     if (!err) dispatch({ type: 'levels', stop: s, target: t })
   }
+
+  /** The waiting order's price was dragged. */
+  const moveOrder = (price: number) => dispatch({ type: 'move', price })
 
   // The timer and key handlers outlive renders; they call whatever the latest render defined.
   const live = useRef({ advance, open, close, toggle: () => {} })
@@ -386,6 +402,7 @@ function ReplaySession({
 
   const stats = sessionStats(state.trades)
   const p = state.position
+  const w = state.pending
   const openPct = p && current ? roe(p, current.close) : 0
   const openR =
     p && current && p.stop !== null
@@ -427,8 +444,9 @@ function ReplaySession({
               footprint={footprint.data}
               candles={revealed}
               position={p}
+              pending={w}
               trades={state.trades}
-              onLevel={(which, price) => editLevel(which, String(price))}
+              onLevel={(which, price) => (which === 'entry' ? moveOrder(price) : editLevel(which, String(price)))}
               className="absolute inset-0"
             />
             {loading && (
@@ -587,6 +605,27 @@ function ReplaySession({
                   Close <Kbd>X</Kbd>
                 </Button>
               </div>
+            ) : w ? (
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-0.5">
+                  <span className="flex items-baseline gap-2">
+                    <span className="label text-foreground">{w.side === 'long' ? 'buy limit' : 'sell limit'}</span>
+                    <span className="num text-xs text-foreground">{w.leverage}×</span>
+                  </span>
+                  <span className="num text-lg font-medium">{fmtPrice(w.price)}</span>
+                  <span className="text-xs text-pretty text-muted-foreground">
+                    Drag its line on the chart. It fills when a bar reaches it.
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Button variant="outline" size="sm" onClick={fillNow}>
+                    Fill now
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={close}>
+                    Cancel <Kbd>X</Kbd>
+                  </Button>
+                </div>
+              </div>
             ) : (
               <>
                 <div className="flex flex-col gap-1.5">
@@ -655,9 +694,10 @@ function ReplaySession({
               <p className="text-xs text-down">{error}</p>
             ) : (
               <p className="text-xs text-pretty text-muted-foreground">
-                Orders fill at the last close{current ? ` (${fmtPrice(current.close)})` : ''}, with your whole equity as
-                margin: a {fmtNum(100 / (p?.leverage ?? leverage), 1)}% move against you liquidates. A bar that touches
-                both stop and target counts as the stop.
+                Long and Short place a limit order at the last price{current ? ` (${fmtPrice(current.close)})` : ''}:
+                drag its line to where you want filling, with your whole equity as margin: a{' '}
+                {fmtNum(100 / (p?.leverage ?? leverage), 1)}% move against you liquidates. A bar that touches both stop
+                and target counts as the stop.
               </p>
             )}
           </div>
@@ -689,7 +729,7 @@ function ReplaySession({
                   </li>
                 ))}
               </ol>
-              <StartOver trades={state.trades.length} open={!!p} onConfirm={() => dispatch({ type: 'reset' })} />
+              <StartOver trades={state.trades.length} open={!!p || !!w} onConfirm={() => dispatch({ type: 'reset' })} />
             </div>
           ) : (
             <p className="flex-1 p-3 text-xs text-pretty text-muted-foreground">

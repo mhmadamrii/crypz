@@ -1,6 +1,6 @@
 import type { Bar, Candle } from '@crypz/exchanges'
 import type { IPriceLine, ISeriesApi, ISeriesMarkersPluginApi, SeriesMarker, Time } from 'lightweight-charts'
-import type { OpenPosition, ReplayTrade } from '@/lib/replay'
+import type { OpenPosition, PendingOrder, ReplayTrade } from '@/lib/replay'
 
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
@@ -13,7 +13,7 @@ import type { FootprintData } from '@/components/indicators/footprint-layer'
 import { useBias } from '@/components/indicators/use-bias'
 import { StrategyReadout } from '@/components/strategies/strategy-readout'
 import type { Evaluation } from '@/lib/strategies'
-import { attachLevelDrag } from './level-drag'
+import { attachLevelDrag, type Order } from './level-drag'
 import {
   createMosaicChart,
   monoFont,
@@ -43,9 +43,11 @@ type Props = {
   /** The chosen strategy's checklist on these candles, when one is chosen. */
   strategy: Evaluation | null
   position: OpenPosition | null
+  /** A limit order waiting to fill: its line can be dragged. */
+  pending: PendingOrder | null
   trades: ReplayTrade[]
-  /** The open position's stop or target was dragged to `price` (already on the right side of the last price). */
-  onLevel: (which: 'stop' | 'target', price: number) => void
+  /** A limit price, or the stop or target of the order or position, was dragged to `price` (already on the right side). */
+  onLevel: (which: 'entry' | 'stop' | 'target', price: number) => void
   className?: string
 }
 
@@ -72,6 +74,7 @@ export function ReplayChart({
   footprint,
   strategy,
   position,
+  pending,
   trades,
   onLevel,
   className,
@@ -82,8 +85,8 @@ export function ReplayChart({
   const [hover, setHover] = useState<Candle | null>(null)
   const [theme, setTheme] = useState(0)
   const bias = useBias(candles, barLabel, higher)
-  const live = useRef({ candles, barMs, bias, footprint, position, onLevel })
-  live.current = { candles, barMs, bias, footprint, position, onLevel }
+  const live = useRef({ candles, barMs, bias, footprint, position, pending, onLevel })
+  live.current = { candles, barMs, bias, footprint, position, pending, onLevel }
 
   // 1. Lifecycle: create the chart once, tear it down on unmount.
   useEffect(() => {
@@ -123,7 +126,13 @@ export function ReplayChart({
         series: made.candles,
         el: box.current,
         x: mapper.x,
-        position: () => live.current.position,
+        order: (): Order | null => {
+          const { position: o, pending: w } = live.current
+          if (o) return { ...o, pending: false }
+          return w
+            ? { side: w.side, entry: w.price, entryTime: null, stop: w.stop, target: w.target, pending: true }
+            : null
+        },
         last: () => live.current.candles.at(-1)?.close,
         onLevel: (which, price) => live.current.onLevel(which, price),
         palette: palette(),
@@ -217,18 +226,22 @@ export function ReplayChart({
 
     for (const l of c.lines) c.candles.removePriceLine(l)
     c.lines = []
+    const line = (price: number, title: string, color: string) =>
+      c.lines.push(
+        c.candles.createPriceLine({ price, title, color, lineWidth: 1, lineStyle: c.dashed, axisLabelVisible: true }),
+      )
     if (position) {
-      const line = (price: number, title: string, color: string) =>
-        c.lines.push(
-          c.candles.createPriceLine({ price, title, color, lineWidth: 1, lineStyle: c.dashed, axisLabelVisible: true }),
-        )
       line(position.entry, position.side === 'long' ? 'Long' : 'Short', p.fg)
       if (position.stop !== null) line(position.stop, 'Stop', p.down)
       if (position.target !== null) line(position.target, 'Target', p.up)
       line(position.liq, 'Liq', p.muted)
+    } else if (pending) {
+      line(pending.price, pending.side === 'long' ? 'Buy limit' : 'Sell limit', p.fg)
+      if (pending.stop !== null) line(pending.stop, 'Stop', p.down)
+      if (pending.target !== null) line(pending.target, 'Target', p.up)
     }
     c.refreshLevels()
-  }, [ready, theme, trades, position, candles])
+  }, [ready, theme, trades, position, pending, candles])
 
   const k = hover ?? candles[candles.length - 1]
   const fp = k && footprint ? ref.current?.footprintAt?.(k.time) : null
