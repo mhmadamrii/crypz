@@ -5,15 +5,29 @@ import { indicators } from '@/lib/indicators/store'
 import { attachOscillators } from './oscillator-panes'
 
 // A stand-in for the chart's pane and series API that records what is asked of it.
+type Primitive = {
+  attached: (p: { requestUpdate: () => void }) => void
+  paneViews: () => { renderer: () => { draw: (t: unknown) => void } }[]
+}
+
 type FakeSeries = {
   kind: string
   pane: () => number
   options: Record<string, unknown>
   data: { time: number; value: number; color?: string }[]
-  lines: { price: number; color: string }[]
+  lines: { price: number; color: string; axis?: boolean }[]
+  scale: Record<string, unknown>
+  primitives: Primitive[]
+  attachPrimitive: (p: Primitive) => void
+  detachPrimitive: (p: Primitive) => void
+  priceScale: () => { applyOptions: (o: Record<string, unknown>) => void }
+  /** Price to pixel: higher price, higher up, 1px per unit, zero at y = 200. */
+  priceToCoordinate: (price: number) => number
   setData: (d: FakeSeries['data']) => void
   applyOptions: (o: Record<string, unknown>) => void
-  createPriceLine: (o: { price: number; color: string }) => { applyOptions: (o: { color: string }) => void }
+  createPriceLine: (o: { price: number; color: string; axisLabelVisible?: boolean }) => {
+    applyOptions: (o: { color: string }) => void
+  }
 }
 
 function fakeChart() {
@@ -30,10 +44,19 @@ function fakeChart() {
         options: { ...options },
         data: [],
         lines: [],
+        scale: {},
+        primitives: [],
+        attachPrimitive: (prim) => {
+          s.primitives.push(prim)
+          prim.attached({ requestUpdate: () => {} })
+        },
+        detachPrimitive: (prim) => (s.primitives = s.primitives.filter((x) => x !== prim)),
+        priceScale: () => ({ applyOptions: (o) => Object.assign(s.scale, o) }),
+        priceToCoordinate: (price) => 200 - price,
         setData: (d) => (s.data = d),
         applyOptions: (o) => Object.assign(s.options, o),
         createPriceLine: (o) => {
-          const l = { price: o.price, color: o.color }
+          const l = { price: o.price, color: o.color, axis: o.axisLabelVisible }
           s.lines.push(l)
           return { applyOptions: (n) => Object.assign(l, n) }
         },
@@ -55,7 +78,7 @@ function fakeChart() {
 const lw = {
   LineSeries: { kind: 'line' },
   HistogramSeries: { kind: 'hist' },
-  LineStyle: { Dashed: 2 },
+  LineStyle: { Solid: 0, Dashed: 2 },
 } as unknown as LW
 const palette = {
   fg: 'rgba(255,255,255,1)',
@@ -203,8 +226,8 @@ describe('the oscillator panes', () => {
     indicators.setStoch({ on: true })
     t.layer.refresh({ ...palette, fg: 'rgba(1,2,3,1)', muted: 'rgba(4,5,6,1)' } as Palette)
     expect(t.panes[1].series[1].options.color).toBe('rgba(1,2,3,1)')
-    expect(t.panes[2].series[1].options.color).toBe('rgba(4,5,6,1)')
-    expect(t.panes[2].series[0].lines[0].color).toMatch(/^rgba\(4,5,6/)
+    expect(t.panes[2].series[1].options.color).toBe('rgba(1,2,3,1)')
+    expect(t.panes[2].series[0].lines[0].color).toMatch(/^rgba\(1,2,3/)
     t.layer.dispose()
   })
 
@@ -227,5 +250,121 @@ describe('the oscillator panes', () => {
     indicators.setMacd({ on: true })
     created()
     expect(t.panes).toHaveLength(1)
+  })
+})
+
+// What the pane looks like, as drawn: a recording canvas stands in for the real one.
+function paint(series: FakeSeries, width = 500, height = 300) {
+  const rects: { style: string; x: number; y: number; w: number; h: number }[] = []
+  const ctx = {
+    fillStyle: '',
+    fillRect(x: number, y: number, w: number, h: number) {
+      rects.push({ style: this.fillStyle, x, y, w, h })
+    },
+  }
+  for (const prim of series.primitives)
+    prim
+      .paneViews()[0]
+      .renderer()
+      .draw({
+        useMediaCoordinateSpace: (cb: (s: unknown) => void) => cb({ context: ctx, mediaSize: { width, height } }),
+      })
+  return rects
+}
+const alpha = (style: string) => Number(/,([\d.]+)\)$/.exec(style)![1])
+
+describe('how the oscillator panes read', () => {
+  it('draws lines two pixels wide, and the second line of each dashed so the pair differ in style, not only shade', () => {
+    const t = setup()
+    indicators.setMacd({ on: true })
+    indicators.setStoch({ on: true })
+    const [, macdLine, signal] = t.panes[1].series
+    const [k, d] = t.panes[2].series
+    for (const s of [macdLine, signal, k, d]) expect(s.options.lineWidth).toBe(2)
+    expect(macdLine.options.lineStyle).toBe(0)
+    expect(signal.options.lineStyle).toBe(2)
+    expect(k.options.lineStyle).toBe(0)
+    expect(d.options.lineStyle).toBe(2)
+    // both are ink at full strength: nothing fades into the page
+    expect(macdLine.options.color).toBe(palette.fg)
+    expect(d.options.color).toBe(palette.fg)
+    t.layer.dispose()
+  })
+
+  it('lets the data fill each pane instead of leaving the library margins around it', () => {
+    const t = setup()
+    indicators.setMacd({ on: true })
+    indicators.setStoch({ on: true })
+    expect(t.panes[1].series[1].scale).toMatchObject({ scaleMargins: { top: 0.1, bottom: 0.1 } })
+    expect(t.panes[2].series[0].scale).toMatchObject({ scaleMargins: { top: 0.1, bottom: 0.1 } })
+    t.layer.dispose()
+  })
+
+  it('tints the stochastic pane and shades the zones above 80 and below 20, with a faint middle line', () => {
+    const t = setup()
+    indicators.setStoch({ on: true })
+    const k = t.panes[1].series[0]
+    expect(k.primitives).toHaveLength(1)
+    const [tint, over, under, mid] = paint(k)
+    expect(tint).toMatchObject({ x: 0, y: 0, w: 500, h: 300 })
+    // price 80 is y 120 and 100 is y 100; 20 is y 180 and 0 is y 200 on the fake scale
+    expect(over).toMatchObject({ y: 100, h: 20 })
+    expect(under).toMatchObject({ y: 180, h: 20 })
+    expect(mid).toMatchObject({ y: 150, h: 1 })
+    // the zones are darker than the pane
+    expect(alpha(over.style)).toBeGreaterThan(alpha(tint.style))
+    expect(alpha(under.style)).toBe(alpha(over.style))
+    t.layer.dispose()
+  })
+
+  it('tints the MACD pane and draws a solid zero line to read the histogram against', () => {
+    const t = setup()
+    indicators.setMacd({ on: true })
+    const line = t.panes[1].series[1]
+    const [tint, zero] = paint(line)
+    expect(tint).toMatchObject({ x: 0, y: 0, w: 500, h: 300 })
+    expect(zero).toMatchObject({ y: 200, h: 1, w: 500 })
+    expect(alpha(zero.style)).toBeGreaterThanOrEqual(0.5)
+    t.layer.dispose()
+  })
+
+  it('leaves the zero line out when it has scrolled off the pane', () => {
+    const t = setup()
+    indicators.setMacd({ on: true })
+    const line = t.panes[1].series[1]
+    line.priceToCoordinate = () => 999
+    expect(paint(line)).toHaveLength(1) // only the tint
+    t.layer.dispose()
+  })
+
+  it('strengthens the 20 and 80 lines and labels them on the axis', () => {
+    const t = setup()
+    indicators.setStoch({ on: true })
+    const bands = t.panes[1].series[0].lines
+    expect(bands.map((b) => b.axis)).toEqual([true, true])
+    for (const b of bands) expect(alpha(b.color)).toBeGreaterThanOrEqual(0.5)
+    t.layer.dispose()
+  })
+
+  it('takes the backdrop away with the pane, and on dispose', () => {
+    const t = setup()
+    indicators.setStoch({ on: true })
+    const k = t.panes[1].series[0]
+    expect(k.primitives).toHaveLength(1)
+    indicators.setStoch({ on: false })
+    expect(k.primitives).toHaveLength(0)
+    indicators.setMacd({ on: true })
+    const line = t.panes[1].series[1]
+    t.layer.dispose()
+    expect(line.primitives).toHaveLength(0)
+  })
+
+  it('keeps the backdrop on the new theme', () => {
+    const t = setup()
+    indicators.setStoch({ on: true })
+    t.layer.refresh({ ...palette, fg: 'rgba(9,9,9,1)' } as Palette)
+    const [tint] = paint(t.panes[1].series[0])
+    expect(tint.style).toMatch(/^rgba\(9,9,9/)
+    t.layer.dispose()
   })
 })

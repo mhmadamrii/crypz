@@ -3,6 +3,7 @@ import type {
   ISeriesApi,
   ISeriesPrimitive,
   PrimitivePaneViewZOrder,
+  SeriesType,
   Time,
 } from 'lightweight-charts'
 import type { Palette } from '@/components/trade/chart-kit'
@@ -13,8 +14,8 @@ import { indicators } from '@/lib/indicators/store'
 
 export type Layer = { refresh: (palette?: Palette) => void; dispose: () => void }
 
-export function attachPaneLayer(
-  series: ISeriesApi<'Candlestick'>,
+export function attachPaneLayer<T extends SeriesType>(
+  series: ISeriesApi<T>,
   /** 'bottom' sits under the candles (zones); 'top' over them (labels). */
   zOrder: PrimitivePaneViewZOrder,
   palette: Palette,
