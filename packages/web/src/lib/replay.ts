@@ -18,7 +18,12 @@ export type OpenPosition = {
   leverage: number
   /** Price where the margin is gone (isolated margin, fees and maintenance margin ignored). */
   liq: number
+  /** Share of equity put up as margin; 1 (or absent) is the whole balance. Risk sizing makes it smaller. */
+  weight?: number
 }
+
+/** Size by risk: a stop-out loses `pct` % of equity and the target sits `rr` times the stop distance away. */
+export type RiskPlan = { pct: number; rr: number }
 
 /** A limit order waiting for price to reach it; fills on the first bar that touches `price`. */
 export type PendingOrder = {
@@ -27,6 +32,8 @@ export type PendingOrder = {
   stop: number | null
   target: number | null
   leverage: number
+  weight?: number
+  risk?: RiskPlan | null
 }
 
 export type ReplayTrade = OpenPosition & {
@@ -57,9 +64,26 @@ export type ReplayState = {
 export type ReplayAction =
   /** Reveal `candle`, which closes at `closesAt`. */
   | { type: 'step'; candle: Candle; closesAt: number }
-  | { type: 'open'; side: Side; candle: Candle; stop: number | null; target: number | null; leverage: number }
+  | {
+      type: 'open'
+      side: Side
+      candle: Candle
+      stop: number | null
+      target: number | null
+      leverage: number
+      weight?: number
+    }
   /** Place a limit order at `price`; the order's levels are whatever the ticket holds. */
-  | { type: 'order'; side: Side; price: number; stop: number | null; target: number | null; leverage: number }
+  | {
+      type: 'order'
+      side: Side
+      price: number
+      stop: number | null
+      target: number | null
+      leverage: number
+      weight?: number
+      risk?: RiskPlan | null
+    }
   /** Drag the pending order to a new price. */
   | { type: 'move'; price: number }
   | { type: 'cancel' }
@@ -134,7 +158,48 @@ const openAt = (side: Side, entry: number, entryTime: number, o: Omit<PendingOrd
   target: o.target,
   leverage: o.leverage,
   liq: liqPrice(side, entry, o.leverage),
+  ...(o.weight !== undefined && { weight: o.weight }),
 })
+
+const clean = (n: number) => Number(n.toPrecision(12))
+
+/** Share of equity to put up as margin so that being stopped out costs `riskPct` % of it (all of it at most). */
+export function riskWeight(riskPct: number, entry: number, stop: number, leverage: number) {
+  const dist = Math.abs(entry - stop) / entry
+  return dist > 0 ? Math.min(1, riskPct / 100 / (dist * leverage)) : 1
+}
+
+/** The target `rr` times the stop distance from `entry`, on the profit side. */
+export const targetFor = (side: Side, entry: number, stop: number, rr: number) =>
+  clean(entry + dir(side) * Math.abs(entry - stop) * rr)
+
+/**
+ * A risk-sized order that is filled (or dragged) at `price` instead of where it was set keeps its stop distance and
+ * reward multiple: both levels shift with the entry and the size is worked out again.
+ */
+function refit(o: PendingOrder, price: number): Pick<PendingOrder, 'stop' | 'target' | 'weight'> {
+  if (!o.risk) return { stop: o.stop, target: o.target, weight: o.weight }
+  const stop = o.stop === null ? null : clean(o.stop + price - o.price)
+  return {
+    stop,
+    target: stop === null ? null : targetFor(o.side, price, stop, o.risk.rr),
+    weight: stop === null ? 1 : riskWeight(o.risk.pct, price, stop, o.leverage),
+  }
+}
+
+/** A risk-sized order whose stop changed: the target and size follow it. */
+function restop(o: PendingOrder, stop: number | null): PendingOrder {
+  if (!o.risk) return o
+  return {
+    ...o,
+    stop,
+    target: stop === null ? null : targetFor(o.side, o.price, stop, o.risk.rr),
+    weight: stop === null ? 1 : riskWeight(o.risk.pct, o.price, stop, o.leverage),
+  }
+}
+
+/** Return on equity in %: the return on margin scaled by the share of equity that was margin. */
+export const equityReturn = (pct: number, p: { weight?: number }) => pct * (p.weight ?? 1)
 
 export function replayReducer(state: ReplayState, a: ReplayAction): ReplayState {
   switch (a.type) {
@@ -144,26 +209,56 @@ export function replayReducer(state: ReplayState, a: ReplayAction): ReplayState 
       const filled = o && limitFill(o, a.candle)
       // the bar that fills an order is not also checked against its stop and target: a candle cannot say which
       // came first, so the position starts on the next bar
-      if (o && filled !== null) return { ...next, pending: null, position: openAt(o.side, filled, a.candle.time, o) }
+      if (o && filled !== null)
+        return {
+          ...next,
+          pending: null,
+          position: openAt(o.side, filled, a.candle.time, { ...o, ...refit(o, filled) }),
+        }
       const hit = state.position && exitOn(state.position, a.candle)
       return hit ? settle(next, hit.price, a.candle.time, hit.reason) : next
     }
     case 'open':
       if (state.position) return state
       // a market order fills now and takes any limit order's place
-      return { ...state, pending: null, position: openAt(a.side, a.candle.close, a.candle.time, a) }
+      return {
+        ...state,
+        pending: null,
+        position: openAt(
+          a.side,
+          a.candle.close,
+          a.candle.time,
+          state.pending?.risk ? { ...a, ...refit(state.pending, a.candle.close) } : a,
+        ),
+      }
     case 'order':
       if (state.position || state.pending) return state
       return {
         ...state,
-        pending: { side: a.side, price: a.price, stop: a.stop, target: a.target, leverage: a.leverage },
+        pending: {
+          side: a.side,
+          price: a.price,
+          stop: a.stop,
+          target: a.target,
+          leverage: a.leverage,
+          weight: a.weight,
+          risk: a.risk ?? null,
+        },
       }
     case 'move':
-      return state.pending ? { ...state, pending: { ...state.pending, price: a.price } } : state
+      return state.pending
+        ? { ...state, pending: { ...state.pending, price: a.price, ...refit(state.pending, a.price) } }
+        : state
     case 'cancel':
       return { ...state, pending: null }
     case 'levels':
-      if (state.pending) return { ...state, pending: { ...state.pending, stop: a.stop, target: a.target } }
+      if (state.pending)
+        return {
+          ...state,
+          pending: state.pending.risk
+            ? restop(state.pending, a.stop)
+            : { ...state.pending, stop: a.stop, target: a.target },
+        }
       return state.position ? { ...state, position: { ...state.position, stop: a.stop, target: a.target } } : state
     case 'close':
       return state.position ? settle(state, a.candle.close, a.candle.time, 'manual') : state
@@ -195,7 +290,7 @@ export function sessionStats(trades: ReplayTrade[]) {
   return {
     count: trades.length,
     winRate: trades.length ? wins / trades.length : null,
-    net: trades.reduce((s, t) => s + t.pct, 0),
+    net: trades.reduce((s, t) => s + equityReturn(t.pct, t), 0),
     avgR: withR.length ? withR.reduce((s, t) => s + t.r!, 0) / withR.length : null,
   }
 }

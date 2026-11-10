@@ -39,6 +39,7 @@ import { STRATEGIES, strategyById, type Series } from '@/lib/strategies'
 import { replayCandlesQuery, replayFineQuery, useInstruments } from '@/lib/queries'
 import {
   DEFAULT_LEVERAGE,
+  equityReturn,
   fineBar,
   formingCandle,
   LEVERAGES,
@@ -46,10 +47,13 @@ import {
   levelError,
   liqPrice,
   replayReducer,
+  riskWeight,
   roe,
   sessionStats,
+  targetFor,
   type Side,
 } from '@/lib/replay'
+import { RiskSection, sizeByRisk } from '@/components/trade/risk-section'
 import {
   LOCAL_MINUTE,
   fmtDuration,
@@ -306,6 +310,11 @@ function ReplaySession({
   const [stop, setStop] = useState('')
   const [target, setTarget] = useState('')
   const [error, setError] = useState<string | null>(null)
+  // risk per trade: when on, the size comes from the risk and the stop, and the target from the reward multiple
+  const [riskOn, setRiskOn] = useState(false)
+  const [riskOpen, setRiskOpen] = useState(true)
+  const [riskPct, setRiskPct] = useState(1)
+  const [rrText, setRrText] = useState('2')
 
   // a closed trade clears the ticket (adjusting state while rendering, not in an effect)
   const [settled, setSettled] = useState(0)
@@ -334,18 +343,36 @@ function ReplaySession({
     // wait for the forming candle, so the fill is the same last price every timeframe shows
     if (loading || (fine && fq.isPending) || !current || state.position || state.pending) return
     const s = num(stop)
-    const t = num(target)
+    let t = num(target)
+    let weight: number | undefined
+    let risk: { pct: number; rr: number } | null = null
+    if (riskOn) {
+      const rr = Number(rrText)
+      if (s === null) return setError('Set a stop to size by risk.')
+      if (!(rr > 0)) return setError('Enter a reward multiple above 0.')
+      t = targetFor(side, current.close, s, rr)
+      weight = riskWeight(riskPct, current.close, s, leverage)
+      risk = { pct: riskPct, rr }
+    }
     const err = levelError(side, current.close, s, t)
     setError(err)
     // a limit order, resting at the last price until it is dragged to where you want to be filled
-    if (!err) dispatch({ type: 'order', side, price: current.close, stop: s, target: t, leverage })
+    if (!err) dispatch({ type: 'order', side, price: current.close, stop: s, target: t, leverage, weight, risk })
   }
 
   /** Skip the wait: fill the waiting order now, at the last price. */
   const fillNow = () => {
     const w = state.pending
     if (w && current)
-      dispatch({ type: 'open', side: w.side, candle: current, stop: w.stop, target: w.target, leverage: w.leverage })
+      dispatch({
+        type: 'open',
+        side: w.side,
+        candle: current,
+        stop: w.stop,
+        target: w.target,
+        leverage: w.leverage,
+        weight: w.weight,
+      })
   }
 
   // closing is also cancelling an order that has not filled
@@ -355,6 +382,8 @@ function ReplaySession({
   }
 
   const editLevel = (which: 'stop' | 'target', v: string) => {
+    // a risk-sized order's target is the stop and the reward multiple, not an input
+    if (which === 'target' && (state.pending?.risk || (riskOn && !state.position))) return
     if (which === 'stop') setStop(v)
     else setTarget(v)
     const o = state.position ?? state.pending
@@ -403,7 +432,8 @@ function ReplaySession({
   const stats = sessionStats(state.trades)
   const p = state.position
   const w = state.pending
-  const openPct = p && current ? roe(p, current.close) : 0
+  // % of equity: a risk-sized position only had part of the balance as margin
+  const openPct = p && current ? equityReturn(roe(p, current.close), p) : 0
   const openR =
     p && current && p.stop !== null
       ? ((p.side === 'long' ? 1 : -1) * (current.close - p.entry)) / Math.abs(p.entry - p.stop)
@@ -412,10 +442,51 @@ function ReplaySession({
   // Compounding: the whole balance is the margin, so each trade moves it by its return on margin.
   const start = num(equity)
   const balances = state.trades.reduce<number[]>(
-    (acc, t) => [...acc, acc[acc.length - 1] * (1 + t.pct / 100)],
+    (acc, t) => [...acc, acc[acc.length - 1] * (1 + equityReturn(t.pct, t) / 100)],
     [start ?? 0],
   )
   const closedBalance = balances[balances.length - 1]
+
+  // Risk section: a preview from the stop typed in the ticket, or the figures a waiting order was placed with.
+  const rrNum = Number(rrText)
+  const stopNum = num(stop)
+  const base = symbol.split('-')[0]
+  const previewSide: Side | null =
+    current && stopNum !== null && stopNum !== current.close ? (stopNum < current.close ? 'long' : 'short') : null
+  const sizing =
+    w?.risk && w.stop !== null
+      ? sizeByRisk({
+          side: w.side,
+          entry: w.price,
+          stop: w.stop,
+          leverage: w.leverage,
+          pct: w.risk.pct,
+          rr: w.risk.rr,
+          equity: start ? closedBalance : null,
+        })
+      : !w && riskOn && current && previewSide && stopNum !== null && rrNum > 0
+        ? sizeByRisk({
+            side: previewSide,
+            entry: current.close,
+            stop: stopNum,
+            leverage,
+            pct: riskPct,
+            rr: rrNum,
+            equity: start ? closedBalance : null,
+          })
+        : null
+  const riskHint = !riskOn
+    ? 'Off: the whole equity is margin. Turn on to size from the risk and the stop.'
+    : stopNum === null
+      ? 'Enter a stop to see the size.'
+      : !(rrNum > 0)
+        ? 'Enter a reward multiple above 0.'
+        : !start
+          ? 'Enter equity to see the size in coins.'
+          : null
+  // what the stop / target fields show: the order's own levels when they moved away from what was typed
+  const shown = (typed: string, level: number | null | undefined) =>
+    level != null && level !== num(typed) ? String(level) : typed
   const balance = closedBalance * (1 + openPct / 100)
   const growth = start ? (balance / start - 1) * 100 : 0
   const Trend = growth > 0 ? TrendingUp : growth < 0 ? TrendingDown : Minus
@@ -606,26 +677,44 @@ function ReplaySession({
                 </Button>
               </div>
             ) : w ? (
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex flex-col gap-0.5">
-                  <span className="flex items-baseline gap-2">
-                    <span className="label text-foreground">{w.side === 'long' ? 'buy limit' : 'sell limit'}</span>
-                    <span className="num text-xs text-foreground">{w.leverage}×</span>
-                  </span>
-                  <span className="num text-lg font-medium">{fmtPrice(w.price)}</span>
-                  <span className="text-xs text-pretty text-muted-foreground">
-                    Drag its line on the chart. It fills when a bar reaches it.
-                  </span>
+              <>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="flex items-baseline gap-2">
+                      <span className="label text-foreground">{w.side === 'long' ? 'buy limit' : 'sell limit'}</span>
+                      <span className="num text-xs text-foreground">{w.leverage}×</span>
+                    </span>
+                    <span className="num text-lg font-medium">{fmtPrice(w.price)}</span>
+                    <span className="text-xs text-pretty text-muted-foreground">
+                      Drag its line on the chart. It fills when a bar reaches it.
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Button variant="outline" size="sm" onClick={fillNow}>
+                      Fill now
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={close}>
+                      Cancel <Kbd>X</Kbd>
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <Button variant="outline" size="sm" onClick={fillNow}>
-                    Fill now
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={close}>
-                    Cancel <Kbd>X</Kbd>
-                  </Button>
-                </div>
-              </div>
+                {w.risk && (
+                  <RiskSection
+                    locked
+                    on
+                    onOn={() => {}}
+                    open={riskOpen}
+                    onOpen={setRiskOpen}
+                    pct={w.risk.pct}
+                    onPct={() => {}}
+                    rr={String(w.risk.rr)}
+                    onRr={() => {}}
+                    base={base}
+                    sizing={sizing}
+                    hint={null}
+                  />
+                )}
+              </>
             ) : (
               <>
                 <div className="flex flex-col gap-1.5">
@@ -658,6 +747,19 @@ function ReplaySession({
                     ))}
                   </ToggleGroup>
                 </div>
+                <RiskSection
+                  on={riskOn}
+                  onOn={setRiskOn}
+                  open={riskOpen}
+                  onOpen={setRiskOpen}
+                  pct={riskPct}
+                  onPct={setRiskPct}
+                  rr={rrText}
+                  onRr={setRrText}
+                  base={base}
+                  sizing={sizing}
+                  hint={riskHint}
+                />
                 <div className="grid grid-cols-2 gap-2">
                   <Button variant="outline" onClick={() => open('long')} disabled={!current || ended}>
                     Long <Kbd>B</Kbd>
@@ -674,7 +776,7 @@ function ReplaySession({
                 <Input
                   inputMode="decimal"
                   placeholder="optional"
-                  value={stop}
+                  value={shown(stop, (p ?? w)?.stop)}
                   onChange={(e) => editLevel('stop', e.target.value)}
                   className="h-8 num text-sm"
                 />
@@ -683,8 +785,9 @@ function ReplaySession({
                 <span className="label">Target</span>
                 <Input
                   inputMode="decimal"
-                  placeholder="optional"
-                  value={target}
+                  placeholder={riskOn && !p ? 'from R' : 'optional'}
+                  readOnly={riskOn && !p}
+                  value={riskOn && !p && !w ? (sizing ? String(sizing.target) : '') : shown(target, (p ?? w)?.target)}
                   onChange={(e) => editLevel('target', e.target.value)}
                   className="h-8 num text-sm"
                 />
@@ -716,13 +819,17 @@ function ReplaySession({
                       <span className="num text-xs text-muted-foreground">{t.leverage}×</span>
                       <span className={cn('label', t.reason === 'liquidated' && 'text-down')}>{t.reason}</span>
                     </span>
-                    <span className={cn('text-right num font-medium', tone(t.pct))}>{fmtSigned(t.pct)}%</span>
+                    <span className={cn('text-right num font-medium', tone(t.pct))}>
+                      {fmtSigned(equityReturn(t.pct, t))}%
+                    </span>
                     <span className="num text-xs text-muted-foreground">
                       {fmtPrice(t.entry)} → {fmtPrice(t.exit)}
                     </span>
                     <span className="text-right num text-xs text-muted-foreground">
                       {start !== null && (
-                        <span className={tone(t.pct)}>{fmtSigned((balances[t.id - 1] * t.pct) / 100)} · </span>
+                        <span className={tone(t.pct)}>
+                          {fmtSigned((balances[t.id - 1] * equityReturn(t.pct, t)) / 100)} ·
+                        </span>
                       )}
                       {t.r === null ? 'no stop' : `${fmtSigned(t.r)}R`}
                     </span>

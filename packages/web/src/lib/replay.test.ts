@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import type { Candle } from '@crypz/exchanges'
-import { initialReplay, limitError, limitFill, replayReducer, type ReplayAction, type ReplayState } from './replay'
+import {
+  equityReturn,
+  initialReplay,
+  limitError,
+  limitFill,
+  replayReducer,
+  riskWeight,
+  sessionStats,
+  targetFor,
+  type ReplayAction,
+  type ReplayState,
+} from './replay'
 
 const bar = (time: number, open: number, high: number, low: number, close: number): Candle => ({
   time,
@@ -97,5 +108,55 @@ describe('limit orders', () => {
     expect(limitError('long', 100, 105, null, null)).toMatch(/below/)
     expect(limitError('short', 100, 95, null, null)).toMatch(/above/)
     expect(limitError('long', 100, 95, 96, null)).toMatch(/Stop/)
+  })
+})
+
+describe('risk sizing', () => {
+  const risky = (o = {}) =>
+    replayReducer(initialReplay(0), {
+      ...order,
+      price: 100,
+      stop: 98,
+      target: 104,
+      weight: riskWeight(1, 100, 98, 10),
+      risk: { pct: 1, rr: 2 },
+      ...o,
+    })
+
+  it('puts up only the margin that makes a stop-out cost the risk', () => {
+    // a 2% stop at 10x moves the margin 20%, so 1% risk needs 5% of equity as margin
+    expect(riskWeight(1, 100, 98, 10)).toBeCloseTo(0.05)
+    expect(riskWeight(1, 100, 99.99, 10)).toBe(1)
+  })
+
+  it('sets the target at the reward multiple', () => {
+    expect(targetFor('long', 100, 98, 2.5)).toBe(105)
+    expect(targetFor('short', 100, 102, 3)).toBe(94)
+  })
+
+  it('moves stop and target with a dragged order and resizes', () => {
+    const s = replayReducer(risky(), { type: 'move', price: 90 })
+    expect(s.pending).toMatchObject({ price: 90, stop: 88, target: 94 })
+    expect(s.pending?.weight).toBeCloseTo(riskWeight(1, 90, 88, 10))
+  })
+
+  it('refits to the fill when a bar gaps through the order', () => {
+    const s = step(risky(), bar(60, 90, 92, 88, 91))
+    expect(s.position).toMatchObject({ entry: 90, stop: 88, target: 94 })
+    expect(s.position?.weight).toBeCloseTo(riskWeight(1, 90, 88, 10))
+  })
+
+  it('follows a changed stop with the target', () => {
+    const s = replayReducer(risky(), { type: 'levels', stop: 96, target: null })
+    expect(s.pending).toMatchObject({ stop: 96, target: 108 })
+  })
+
+  it('books a stop-out as the risk, in % of equity', () => {
+    const filled = step(risky(), bar(60, 100, 101, 99, 100))
+    const out = step(filled, bar(120, 100, 100, 97, 98))
+    const t = out.trades[0]
+    expect(t.reason).toBe('stop')
+    expect(equityReturn(t.pct, t)).toBeCloseTo(-1)
+    expect(sessionStats(out.trades).net).toBeCloseTo(-1)
   })
 })
