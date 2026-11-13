@@ -49,6 +49,10 @@ export const market = new Hono()
     const q = c.req.valid('query')
     return c.json(await getAdapter(q.exchange).fetchLiquidations(q.symbol))
   })
+  .get('/instrument', validate('query', z.object({ exchange, symbol })), async (c) => {
+    const q = c.req.valid('query')
+    return c.json(await getAdapter(q.exchange).fetchInstrument(q.symbol))
+  })
   .get('/premium', validate('query', z.object({ exchange, symbol })), async (c) => {
     const q = c.req.valid('query')
     return c.json(await getAdapter(q.exchange).fetchPremium(q.symbol))

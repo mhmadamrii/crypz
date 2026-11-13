@@ -5,6 +5,7 @@ import { BAR_MS, type Bar, type Candle, type ExchangeId, type LongShortKind, typ
 import { api, unwrap } from './api'
 import { DEFAULT_STATE } from '@/components/workspace/model'
 import { parseInstrument } from './book'
+import { fetchRange } from './bots/fetch'
 
 const getCandles = (exchange: ExchangeId, symbol: string, bar: Bar, before?: number) =>
   unwrap(api.market.candles.$get({ query: { exchange, symbol, bar, ...(before ? { before: String(before) } : {}) } }))
@@ -299,4 +300,23 @@ export const workspacesQuery = () =>
       return [created]
     },
     staleTime: Infinity, // this tab is the only writer; it updates the cache itself
+  })
+
+/** Contract rules (size step, minimum order, price step) the bots page sizes positions with. Barely ever change. */
+export const instrumentSpecQuery = (exchange: ExchangeId, symbol: string) =>
+  queryOptions({
+    queryKey: ['instrument', exchange, symbol],
+    queryFn: () => unwrap(api.market.instrument.$get({ query: { exchange, symbol } })),
+    staleTime: 60 * 60_000,
+    retry: false,
+  })
+
+/** Every closed candle from `from` to `to` (ms) for a backtest, paged backwards. Closed candles never change. */
+export const backtestCandlesQuery = (exchange: ExchangeId, symbol: string, bar: Bar, from: number, to: number) =>
+  queryOptions({
+    queryKey: ['backtest-candles', exchange, symbol, bar, from, to],
+    queryFn: () => fetchRange((before) => getCandles(exchange, symbol, bar, before), bar, from, to),
+    staleTime: Infinity,
+    gcTime: 15 * 60_000,
+    retry: false,
   })

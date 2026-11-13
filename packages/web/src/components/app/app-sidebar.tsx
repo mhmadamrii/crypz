@@ -12,6 +12,7 @@ import {
   ChartColumn,
   ChevronsUpDown,
   ListChecks,
+  Bot,
   KeyRound,
   LayoutGrid,
   LogOut,
@@ -53,7 +54,7 @@ import {
 type MarketItem = {
   label: string
   icon: LucideIcon
-  to: '/workspace' | '/intelligence' | '/trade' | '/trade/replay' | '/strategies' | '/news'
+  to: '/workspace' | '/intelligence' | '/trade' | '/trade/replay' | '/strategies' | '/bots' | '/news'
 }
 type AccountItem = { label: string; icon: LucideIcon; to: '/$exchange/overview' | '/$exchange/positions' }
 type SoonItem = { label: string; icon: LucideIcon; soon: true }
@@ -65,6 +66,7 @@ const MARKET: (MarketItem | SoonItem)[] = [
   { label: 'Trade', icon: CandlestickChart, to: '/trade' },
   { label: 'Replay', icon: Rewind, to: '/trade/replay' },
   { label: 'Strategies', icon: ListChecks, to: '/strategies' },
+  { label: 'Bots', icon: Bot, to: '/bots' },
   { label: 'News', icon: Newspaper, to: '/news' },
 ]
 const ACCOUNT: (AccountItem | SoonItem)[] = [

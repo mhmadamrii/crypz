@@ -33,6 +33,9 @@ export const binance: ExchangeAdapter = {
   fetchLiquidations: async () => {
     throw new Error('Binance adapter not implemented yet')
   },
+  fetchInstrument: async () => {
+    throw new Error('Binance adapter not implemented yet')
+  },
   fetchPremium: async () => {
     throw new Error('Binance adapter not implemented yet')
   },

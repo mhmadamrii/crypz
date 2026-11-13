@@ -252,6 +252,21 @@ export const okx: ExchangeAdapter = {
     return { contractValue: instruments, events }
   },
 
+  async fetchInstrument(symbol) {
+    const [i] = await okxPublic<
+      { instId: string; ctType: string; ctVal: string; ctMult: string; lotSz: string; minSz: string; tickSz: string }[]
+    >('/api/v5/public/instruments', { instType: 'SWAP', instId: symbol })
+    if (!i) throw new Error(`${symbol} is not an OKX perpetual swap`)
+    if (i.ctType !== 'linear') throw new Error(`${symbol} is not USDT-margined (linear); only linear swaps are sized`)
+    return {
+      symbol,
+      ctVal: num(i.ctVal) * num(i.ctMult || '1'),
+      lotSz: num(i.lotSz),
+      minSz: num(i.minSz),
+      tickSz: num(i.tickSz),
+    }
+  },
+
   async fetchPremium(symbol) {
     const rows = await okxPublic<{ premium: string; ts: string }[]>('/api/v5/public/premium-history', {
       instId: symbol,

@@ -16,6 +16,7 @@ import { Route as mainPositionsRouteImport } from './routes/(main)/positions'
 import { Route as publicIndexRouteImport } from './routes/(public)/index'
 import { Route as publicLoginRouteImport } from './routes/(public)/login'
 import { Route as mainaccountExchangeRouteRouteImport } from './routes/(main)/(account)/$exchange/route'
+import { Route as mainmarketBotsRouteImport } from './routes/(main)/(market)/bots'
 import { Route as mainmarketIntelligenceRouteImport } from './routes/(main)/(market)/intelligence'
 import { Route as mainmarketNewsRouteImport } from './routes/(main)/(market)/news'
 import { Route as mainmarketStrategiesRouteImport } from './routes/(main)/(market)/strategies'
@@ -62,6 +63,11 @@ const mainaccountExchangeRouteRoute =
     path: '/$exchange',
     getParentRoute: () => mainRouteRoute,
   } as any)
+const mainmarketBotsRoute = mainmarketBotsRouteImport.update({
+  id: '/(market)/bots',
+  path: '/bots',
+  getParentRoute: () => mainRouteRoute,
+} as any)
 const mainmarketIntelligenceRoute = mainmarketIntelligenceRouteImport.update({
   id: '/(market)/intelligence',
   path: '/intelligence',
@@ -126,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof publicLoginRoute
   '/': typeof publicIndexRoute
   '/$exchange': typeof mainaccountExchangeRouteRouteWithChildren
+  '/bots': typeof mainmarketBotsRoute
   '/intelligence': typeof mainmarketIntelligenceRoute
   '/news': typeof mainmarketNewsRoute
   '/strategies': typeof mainmarketStrategiesRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/login': typeof publicLoginRoute
   '/': typeof publicIndexRoute
   '/$exchange': typeof mainaccountExchangeRouteRouteWithChildren
+  '/bots': typeof mainmarketBotsRoute
   '/intelligence': typeof mainmarketIntelligenceRoute
   '/news': typeof mainmarketNewsRoute
   '/strategies': typeof mainmarketStrategiesRoute
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/(public)/login': typeof publicLoginRoute
   '/(public)/': typeof publicIndexRoute
   '/(main)/(account)/$exchange': typeof mainaccountExchangeRouteRouteWithChildren
+  '/(main)/(market)/bots': typeof mainmarketBotsRoute
   '/(main)/(market)/intelligence': typeof mainmarketIntelligenceRoute
   '/(main)/(market)/news': typeof mainmarketNewsRoute
   '/(main)/(market)/strategies': typeof mainmarketStrategiesRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/'
     | '/$exchange'
+    | '/bots'
     | '/intelligence'
     | '/news'
     | '/strategies'
@@ -203,6 +213,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/'
     | '/$exchange'
+    | '/bots'
     | '/intelligence'
     | '/news'
     | '/strategies'
@@ -223,6 +234,7 @@ export interface FileRouteTypes {
     | '/(public)/login'
     | '/(public)/'
     | '/(main)/(account)/$exchange'
+    | '/(main)/(market)/bots'
     | '/(main)/(market)/intelligence'
     | '/(main)/(market)/news'
     | '/(main)/(market)/strategies'
@@ -290,6 +302,13 @@ declare module '@tanstack/react-router' {
       path: '/$exchange'
       fullPath: '/$exchange'
       preLoaderRoute: typeof mainaccountExchangeRouteRouteImport
+      parentRoute: typeof mainRouteRoute
+    }
+    '/(main)/(market)/bots': {
+      id: '/(main)/(market)/bots'
+      path: '/bots'
+      fullPath: '/bots'
+      preLoaderRoute: typeof mainmarketBotsRouteImport
       parentRoute: typeof mainRouteRoute
     }
     '/(main)/(market)/intelligence': {
@@ -392,6 +411,7 @@ interface mainRouteRouteChildren {
   mainDashboardRoute: typeof mainDashboardRoute
   mainPositionsRoute: typeof mainPositionsRoute
   mainaccountExchangeRouteRoute: typeof mainaccountExchangeRouteRouteWithChildren
+  mainmarketBotsRoute: typeof mainmarketBotsRoute
   mainmarketIntelligenceRoute: typeof mainmarketIntelligenceRoute
   mainmarketNewsRoute: typeof mainmarketNewsRoute
   mainmarketStrategiesRoute: typeof mainmarketStrategiesRoute
@@ -405,6 +425,7 @@ const mainRouteRouteChildren: mainRouteRouteChildren = {
   mainDashboardRoute: mainDashboardRoute,
   mainPositionsRoute: mainPositionsRoute,
   mainaccountExchangeRouteRoute: mainaccountExchangeRouteRouteWithChildren,
+  mainmarketBotsRoute: mainmarketBotsRoute,
   mainmarketIntelligenceRoute: mainmarketIntelligenceRoute,
   mainmarketNewsRoute: mainmarketNewsRoute,
   mainmarketStrategiesRoute: mainmarketStrategiesRoute,

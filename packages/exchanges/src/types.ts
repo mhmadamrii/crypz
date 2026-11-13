@@ -109,6 +109,19 @@ export type Liquidations = { contractValue: number; events: Liquidation[] }
 /** Perpetual premium over the index, as a fraction (−0.0004 = 4bp under). */
 export type Premium = { time: number; premium: number }
 
+/** Contract rules of a linear (USDT-margined) perpetual swap, from the exchange. One contract is `ctVal` base coins. */
+export type InstrumentSpec = {
+  symbol: string
+  /** Base coins per contract (already times the contract multiplier). */
+  ctVal: number
+  /** Order size step, in contracts. */
+  lotSz: number
+  /** Smallest order, in contracts. */
+  minSz: number
+  /** Price step. */
+  tickSz: number
+}
+
 export type Ticker = {
   symbol: string
   last: number
@@ -145,5 +158,7 @@ export interface ExchangeAdapter {
   fetchLiquidations(symbol: string): Promise<Liquidations>
   /** Premium history over roughly the last hour and a half, oldest first. */
   fetchPremium(symbol: string): Promise<Premium[]>
+  /** Contract rules for sizing an order; rejects instruments that are not linear USDT swaps. Public data. */
+  fetchInstrument(symbol: string): Promise<InstrumentSpec>
   tradeUrl(symbol: string): string
 }
